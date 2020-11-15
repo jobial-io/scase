@@ -19,6 +19,11 @@
     <description>©Jobial OÜ. All rights reserved.</description>
 
     <dependencies>
+        <dependency>
+            <groupId>com.lihaoyi</groupId>
+            <artifactId>sourcecode_2.11</artifactId>
+            <version>0.1.4</version>
+        </dependency>
     </dependencies>
     <build>
         <sourceDirectory>src/main/scala</sourceDirectory>
