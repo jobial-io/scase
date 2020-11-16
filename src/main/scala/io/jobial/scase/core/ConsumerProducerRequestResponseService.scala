@@ -65,7 +65,8 @@ case class ConsumerProducerRequestResponseService[REQ: Marshallable, RESP](
             val processorResult: Future[SendResponseResult[RESP]] = Future {
               requestProcessor.processRequestOrFail(new RequestContext {
 
-                def send[RESPONSE](r: RESPONSE): SendResponseResult[RESPONSE] = {
+                def send[REQUEST, RESPONSE](req: REQUEST, r: RESPONSE)
+                  (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): SendResponseResult[RESPONSE] = {
                   logger.debug(s"context sending response ${r.toString.take(500)}")
                   val re = r.asInstanceOf[RESP]
                   response.complete(Success(re))

@@ -13,12 +13,12 @@ import scala.concurrent.duration._
 
 package object core extends Logging {
   implicit lazy val executionContext = ExecutionContextWithShutdown(Executors.newCachedThreadPool)
-  
+
   implicit def requestResultToResult[RESPONSE](requestResult: RequestResult[RESPONSE]) =
     requestResult.response.map(_.message)
 
-  implicit def sendRequest[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP : ClassTag](request: REQUEST with Request[RESPONSE])(
-    implicit client: RequestResponseClient[_ >: REQ, _ >: RESP], sendRequestContext: SendRequestContext): Future[RESPONSE] =
+  implicit def sendRequest[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP : ClassTag](request: REQUEST)(
+    implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], client: RequestResponseClient[_ >: REQ, _ >: RESP], sendRequestContext: SendRequestContext): Future[RESPONSE] =
     client.?(request)
 
   /**
@@ -42,4 +42,6 @@ package object core extends Logging {
 
   val forwarderExecutionContext = executionContext
 
+  implicit def inheritanceBasedRequestResponseMapping[REQUEST <: Any with Request[RESPONSE], RESPONSE] =
+    new RequestResponseMapping[REQUEST, RESPONSE] {}
 }

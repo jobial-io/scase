@@ -104,8 +104,8 @@ case class ConsumerProducerRequestResponseClient[REQ: Marshallable, RESP](
     def commit = response.flatMap(_.commit())
   }
 
-  def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST with Request[RESPONSE])
-    (implicit sendRequestContext: SendRequestContext) =
+  def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST)
+    (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext) =
     ConsumerProducerRequestResult {
 
       val producer = messageProducer()
