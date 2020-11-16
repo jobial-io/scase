@@ -26,7 +26,7 @@ trait RequestContext {
   /**
    * This function can only be called from Request.reply to enforce type safety.
    */
-  private[core] def send[REQUEST, RESPONSE](request: REQUEST, response: RESPONSE)
+  private[core] def reply[REQUEST, RESPONSE](request: REQUEST, response: RESPONSE)
     (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): SendResponseResult[RESPONSE]
 
   def requestTimeout: Duration
@@ -62,10 +62,7 @@ trait RequestContext {
  * if extending the trait will ever become a constraint.
  *
  */
-trait Request[RESPONSE] {
-  def reply(response: RESPONSE)(implicit requestResponseMapping: RequestResponseMapping[Request[RESPONSE], RESPONSE], context: RequestContext) =
-    context.send(this, response)
-}
+trait Request[RESPONSE]
 
 // The actual service logic is separated from the message producer and consumers in the RequestProcessor
 trait RequestProcessor[REQ, RESP] {

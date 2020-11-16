@@ -42,6 +42,12 @@ package object core extends Logging {
 
   val forwarderExecutionContext = executionContext
 
+  implicit class RequestExtension[REQUEST](request: REQUEST) {
+
+    def reply[RESPONSE](response: RESPONSE)(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], context: RequestContext) =
+      context.reply(request, response)
+  }
+
   implicit def inheritanceBasedRequestResponseMapping[REQUEST <: Any with Request[RESPONSE], RESPONSE] =
     new RequestResponseMapping[REQUEST, RESPONSE] {}
 }
