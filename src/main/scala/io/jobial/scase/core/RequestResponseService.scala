@@ -4,7 +4,8 @@ import scala.concurrent.Future
 import scala.concurrent.Future.failed
 import scala.concurrent.duration._
 import scala.util.Try
-
+import cats.effect.IO
+import cats.effect.IO.raiseError
 
 case class RequestWrapper[REQ](
   payload: REQ,
@@ -23,10 +24,7 @@ trait SendResponseResult[+RESP]
 
 trait RequestContext {
 
-  /**
-   * This function can only be called from Request.reply to enforce type safety.
-   */
-  private[core] def reply[REQUEST, RESPONSE](request: REQUEST, response: RESPONSE)
+  def reply[REQUEST, RESPONSE](request: REQUEST, response: RESPONSE)
     (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): SendResponseResult[RESPONSE]
 
   def requestTimeout: Duration
@@ -67,11 +65,11 @@ trait Request[RESPONSE]
 // The actual service logic is separated from the message producer and consumers in the RequestProcessor
 trait RequestProcessor[REQ, RESP] {
 
-  type Processor = PartialFunction[REQ, Future[SendResponseResult[RESP]]]
+  type Processor = PartialFunction[REQ, IO[SendResponseResult[RESP]]]
 
   def processor(f: Processor): Processor = f
 
-  def responseTransformer(f: Future[SendResponseResult[RESP]] => Future[SendResponseResult[RESP]]) = f
+  def responseTransformer(f: IO[SendResponseResult[RESP]] => IO[SendResponseResult[RESP]]) = f
 
   case class UnknownRequest(request: REQ) extends IllegalStateException
 
@@ -79,10 +77,10 @@ trait RequestProcessor[REQ, RESP] {
    * Reply is sent through the sender to enforce the response type specific for the request. 
    * Return type is SendResponseResult to make sure a reply has been sent by processRequest. 
    */
-  def processRequestOrFail(implicit context: RequestContext): Function[REQ, Future[SendResponseResult[RESP]]] =
+  def processRequestOrFail(implicit context: RequestContext): Function[REQ, IO[SendResponseResult[RESP]]] =
     processRequest orElse {
       case request =>
-        failed(UnknownRequest(request))
+        raiseError(UnknownRequest(request))
     }
 
   def processRequest(implicit context: RequestContext): Processor
@@ -101,7 +99,7 @@ trait RequestProcessor[REQ, RESP] {
   def sequentialRequestProcessing = false
 
   def sequentialRequestProcessingTimeout = 1 hour
-    
+
 }
 
 /**

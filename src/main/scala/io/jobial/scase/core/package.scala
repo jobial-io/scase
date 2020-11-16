@@ -2,6 +2,7 @@ package io.jobial.scase
 
 import java.util.concurrent._
 
+import cats.effect.IO
 import io.jobial.scase.logging.Logging
 
 import scala.concurrent.ExecutionContext
@@ -18,7 +19,7 @@ package object core extends Logging {
     requestResult.response.map(_.message)
 
   implicit def sendRequest[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP : ClassTag](request: REQUEST)(
-    implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], client: RequestResponseClient[_ >: REQ, _ >: RESP], sendRequestContext: SendRequestContext): Future[RESPONSE] =
+    implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], client: RequestResponseClient[_ >: REQ, _ >: RESP], sendRequestContext: SendRequestContext): IO[RESPONSE] =
     client.?(request)
 
   /**
@@ -44,10 +45,13 @@ package object core extends Logging {
 
   implicit class RequestExtension[REQUEST](request: REQUEST) {
 
+    /**
+     * Syntactic sugar to allow the syntax request.reply(...).
+     */
     def reply[RESPONSE](response: RESPONSE)(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], context: RequestContext) =
       context.reply(request, response)
   }
 
-  implicit def inheritanceBasedRequestResponseMapping[REQUEST <: Any with Request[RESPONSE], RESPONSE] =
+  implicit def requestTagBasedRequestResponseMapping[REQUEST <: Request[RESPONSE], RESPONSE] =
     new RequestResponseMapping[REQUEST, RESPONSE] {}
 }

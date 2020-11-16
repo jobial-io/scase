@@ -16,6 +16,8 @@ class RequestResponseTest {
         // successful(context.send(x, TestResponse1(TestRequest1(""), "hello")))
         // or
         successful(x.reply(TestResponse1(TestRequest1(""), "hello")))
+      case x: TestRequest2 =>
+        successful(x.reply(TestResponse1(TestRequest1(""), "hello")))
     }
   }
 }

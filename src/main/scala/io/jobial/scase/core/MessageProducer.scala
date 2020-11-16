@@ -1,5 +1,6 @@
 package io.jobial.scase.core
 
+import cats.effect.IO
 import io.jobial.scase.marshalling.Marshallable
 
 import scala.concurrent.Future
@@ -10,5 +11,5 @@ case class MessageSendResult[M: Marshallable]()
 
 trait MessageProducer[M] {
 
-  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshallable[M]): Future[MessageSendResult[M]]
+  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshallable[M]): IO[MessageSendResult[M]]
 }

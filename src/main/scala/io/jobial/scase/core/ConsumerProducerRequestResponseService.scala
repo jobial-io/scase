@@ -3,6 +3,7 @@ package io.jobial.scase.core
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
+import cats.effect.IO
 import io.jobial.scase.future.futureWithTimeout
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshallable
@@ -24,7 +25,7 @@ case class ConsumerProducerRequestResponseServiceState[REQ, RESP](
 ) extends RequestResponseServiceState[REQ]
   with Logging {
 
-  def stopService: Future[RequestResponseServiceState[REQ]] =
+  def stopService: IO[RequestResponseServiceState[REQ]] =
     for {
       r <- subscription.cancel
       _ <- subscription.subscription
@@ -52,7 +53,7 @@ case class ConsumerProducerRequestResponseService[REQ: Marshallable, RESP](
 
   private def handleRequest(request: MessageReceiveResult[REQ]) = {
     logger.info(s"received request in service: ${request.toString.take(500)}")
-    val r: Future[SendResponseResult[RESP]] = (
+    val r: IO[SendResponseResult[RESP]] = (
       request.responseConsumerId match {
         case Some(responseConsumerId) =>
           
@@ -62,7 +63,7 @@ case class ConsumerProducerRequestResponseService[REQ: Marshallable, RESP](
             logger.debug(s"found response producer $producer for request in service: ${request.toString.take(500)}")
             val response = Promise[RESP]
 
-            val processorResult: Future[SendResponseResult[RESP]] = Future {
+            val processorResult: IO[SendResponseResult[RESP]] = Future {
               requestProcessor.processRequestOrFail(new RequestContext {
 
                 def reply[REQUEST, RESPONSE](req: REQUEST, r: RESPONSE)

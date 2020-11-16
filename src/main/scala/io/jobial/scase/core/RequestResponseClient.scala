@@ -1,16 +1,17 @@
 package io.jobial.scase.core
 
+import cats.effect.IO
+
 import scala.annotation.implicitNotFound
-import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
 
 
 trait RequestResult[RESPONSE] {
 
-  def response: Future[MessageReceiveResult[RESPONSE]]
+  def response: IO[MessageReceiveResult[RESPONSE]]
 
-  def commit: Future[_]
+  def commit: IO[_]
 }
 
 case class SendRequestContext(

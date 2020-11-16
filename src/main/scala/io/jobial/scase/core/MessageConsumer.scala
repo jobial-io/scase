@@ -1,5 +1,6 @@
 package io.jobial.scase.core
 
+import cats.effect.IO
 import io.jobial.scase.marshalling.Marshallable
 
 import scala.concurrent.Future
@@ -8,8 +9,8 @@ import scala.concurrent.duration._
 case class MessageReceiveResult[M](
   message: M,
   attributes: Map[String, String],
-  commit: () => Future[_], // commit the message
-  rollback: () => Future[_]
+  commit: () => IO[_], // commit the message
+  rollback: () => IO[_]
 ) {
 
   def correlationId = attributes.get(CorrelationIdKey)

@@ -2,6 +2,7 @@ package io.jobial.scase.core
 
 import java.util.UUID.randomUUID
 
+import cats.effect.IO
 import io.jobial.scase.future.scheduledFuture
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshallable
@@ -100,7 +101,7 @@ case class ConsumerProducerRequestResponseClient[REQ: Marshallable, RESP](
     }
   }
 
-  case class ConsumerProducerRequestResult[RESPONSE <: RESP](response: Future[MessageReceiveResult[RESPONSE]]) extends RequestResult[RESPONSE] {
+  case class ConsumerProducerRequestResult[RESPONSE <: RESP](response: IO[MessageReceiveResult[RESPONSE]]) extends RequestResult[RESPONSE] {
     def commit = response.flatMap(_.commit())
   }
 
