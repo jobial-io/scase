@@ -1,5 +1,7 @@
 package io.jobial.scase.marshalling
 
+import cats.effect.IO
+
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, ObjectInputStream, ObjectOutputStream, OutputStream}
 import java.util.Base64
 import java.util.zip.{GZIPInputStream, GZIPOutputStream}
@@ -14,14 +16,11 @@ package object serialization {
       b.toByteArray
     }
 
-    def marshal(o: T, out: OutputStream) = try {
+    def marshal(o: T, out: OutputStream) = IO {
       val oos = new ObjectOutputStream(new GZIPOutputStream(out))
       oos.writeObject(o)
       oos.close
-    } catch {
-      case x: Throwable =>
-        println(o)
-        x.printStackTrace
+      oos
     }
 
     def marshalToText(o: T) =

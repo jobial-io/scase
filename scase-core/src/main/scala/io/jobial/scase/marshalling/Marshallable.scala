@@ -1,12 +1,14 @@
 package io.jobial.scase.marshalling
 
+import cats.effect.IO
+
 import java.io.InputStream
 import java.io.OutputStream
 
 trait Marshaller[M] {
   def marshal(o: M): Array[Byte]
 
-  def marshal(o: M, out: OutputStream): Unit
+  def marshal(o: M, out: OutputStream): IO[OutputStream]
 
   def marshalToText(o: M): String
 }
