@@ -2,12 +2,12 @@ package io.jobial.scase.inmemory
 
 import cats.effect.IO
 import io.jobial.scase.core.{MessageConsumer, MessageProducer, MessageReceiveResult, MessageSendResult, MessageSubscription}
-import io.jobial.scase.marshalling.Marshallable
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Future._
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import io.jobial.scase.core.executionContext
+import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 
 trait InMemoryConsumerProducer[M] extends MessageConsumer[M] with MessageProducer[M] {
@@ -21,7 +21,7 @@ trait InMemoryConsumerProducer[M] extends MessageConsumer[M] with MessageProduce
    *  - to allow SNS topics to not commit failed deliveries. This behaviour should be reviewed. Also,
    *  - the subscribers here are not required to commit. This should also be reviewed.
    */
-  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshallable[M]): IO[MessageSendResult[M]] = {
+  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M]): IO[MessageSendResult[M]] = {
 
     val messageReceiveResult = MessageReceiveResult(message, attributes, { () => IO() }, { () => IO() })
 
@@ -52,7 +52,7 @@ trait InMemoryConsumerProducer[M] extends MessageConsumer[M] with MessageProduce
   val subscriptions = TrieMap[MessageReceiveResult[M] => _, MessageReceiveResult[M] => _]()
 
   // TODO: the marshallable is ignored here
-  override def subscribe[T](callback: MessageReceiveResult[M] => T)(implicit u: Marshallable[M]) = {
+  override def subscribe[T](callback: MessageReceiveResult[M] => T)(implicit u: Unmarshaller[M]) = {
     if (subscriptions.size > 0 && !allowMultipleSubscribers)
       throw new IllegalStateException("Trying to subscribe multiple times")
 

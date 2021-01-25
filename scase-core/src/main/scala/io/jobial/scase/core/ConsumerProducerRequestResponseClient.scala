@@ -4,7 +4,7 @@ import java.util.UUID.randomUUID
 import cats.effect.{ContextShift, IO}
 import io.jobial.scase.future.scheduledFuture
 import io.jobial.scase.logging.Logging
-import io.jobial.scase.marshalling.Marshallable
+import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 import io.jobial.scase.monitoring.MonitoringPublisher
 import io.jobial.scase.monitoring.noPublisher
 
@@ -15,7 +15,7 @@ import scala.util.Success
 import scala.util.Try
 import scala.concurrent.duration._
 
-case class ConsumerProducerRequestResponseClient[REQ: Marshallable, RESP](  
+case class ConsumerProducerRequestResponseClient[REQ: Marshaller, RESP](  
   messageConsumer: MessageConsumer[Try[RESP]],
   messageProducer: () => MessageProducer[REQ],
   responseConsumerId: String,
@@ -23,7 +23,7 @@ case class ConsumerProducerRequestResponseClient[REQ: Marshallable, RESP](
   name: String = randomUUID.toString
 )(
   //implicit executionContext: ExecutionContext,
-  implicit responseMarshallable: Marshallable[Try[RESP]],
+  implicit responseMarshallable: Unmarshaller[Try[RESP]],
   monitoringPublisher: MonitoringPublisher = noPublisher
 ) extends RequestResponseClient[REQ, RESP] with Logging {
 

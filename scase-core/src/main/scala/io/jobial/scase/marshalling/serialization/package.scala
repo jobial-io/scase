@@ -6,7 +6,7 @@ import java.util.zip.{GZIPInputStream, GZIPOutputStream}
 
 package object serialization {
 
-  implicit def javaSerializationWithGzipObjectMarshallable[T] = new Marshallable[T] {
+  implicit def javaSerializationWithGzipObjectMarshaller[T] = new Marshaller[T] {
     def marshal(o: T): Array[Byte] = {
       val b = new ByteArrayOutputStream(8192)
       marshal(o, b)
@@ -24,6 +24,11 @@ package object serialization {
         x.printStackTrace
     }
 
+    def marshalToText(o: T) =
+      Base64.getEncoder.encodeToString(marshal(o))
+  }
+
+  implicit def javaSerializationWithGzipObjectUnmarshaller[T] = new Unmarshaller[T] {
     def unmarshal(bytes: Array[Byte]) =
       unmarshal(new ByteArrayInputStream(bytes))
 
@@ -32,10 +37,8 @@ package object serialization {
       ois.readObject.asInstanceOf[T]
     }
 
-    def marshalToText(o: T) =
-      Base64.getEncoder.encodeToString(marshal(o))
-
     def unmarshalFromText(text: String) =
       unmarshal(Base64.getDecoder.decode(text))
   }
+
 }

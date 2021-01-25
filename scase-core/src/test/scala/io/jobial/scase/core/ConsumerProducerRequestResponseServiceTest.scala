@@ -4,5 +4,5 @@ import org.scalatest.flatspec.AsyncFlatSpec
 
 class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec {
 
-  
+  ConsumerProducerRequestResponseService
 }

@@ -1,15 +1,15 @@
 package io.jobial.scase.core
 
 import cats.effect.IO
-import io.jobial.scase.marshalling.Marshallable
+import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 import scala.concurrent.Future
 
 // TODO: review why we need this; it used to have the messageId returned by the underlying transport, but this is
 //  - no longer required.
-case class MessageSendResult[M: Marshallable]()
+case class MessageSendResult[M: Marshaller]()
 
 trait MessageProducer[M] {
 
-  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshallable[M]): IO[MessageSendResult[M]]
+  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M]): IO[MessageSendResult[M]]
 }

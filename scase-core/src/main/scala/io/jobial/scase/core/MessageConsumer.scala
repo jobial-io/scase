@@ -1,7 +1,7 @@
 package io.jobial.scase.core
 
 import cats.effect.IO
-import io.jobial.scase.marshalling.Marshallable
+import io.jobial.scase.marshalling.Unmarshaller
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -31,7 +31,7 @@ trait MessageSubscription[M] {
 
 trait MessageConsumer[M] {
 
-  def subscribe[T](callback: MessageReceiveResult[M] => T)(implicit u: Marshallable[M]): MessageSubscription[M]
+  def subscribe[T](callback: MessageReceiveResult[M] => T)(implicit u: Unmarshaller[M]): MessageSubscription[M]
 }
 
 case class CouldNotFindMessageToCommit[M](

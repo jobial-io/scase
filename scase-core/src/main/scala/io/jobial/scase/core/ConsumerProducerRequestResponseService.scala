@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import cats.effect.IO
 import io.jobial.scase.future.futureWithTimeout
 import io.jobial.scase.logging.Logging
-import io.jobial.scase.marshalling.Marshallable
+import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 import io.jobial.scase.monitoring.SourceContext
 
 import scala.concurrent.Await.result
@@ -34,7 +34,7 @@ case class ConsumerProducerRequestResponseServiceState[REQ, RESP](
     }
 }
 
-case class ConsumerProducerRequestResponseService[REQ: Marshallable, RESP](
+case class ConsumerProducerRequestResponseService[REQ: Unmarshaller, RESP](
   messageConsumer: MessageConsumer[REQ],
   messageProducer: String => IO[MessageProducer[Try[RESP]]], // TODO: add support for fixed producer case
   requestProcessor: RequestProcessor[REQ, RESP],
@@ -42,7 +42,7 @@ case class ConsumerProducerRequestResponseService[REQ: Marshallable, RESP](
   autoCommitRequest: Boolean = true,
   autoCommitFailedRequest: Boolean = true
 )(
-  implicit responseMarshallable: Marshallable[Try[RESP]],
+  implicit responseMarshallable: Marshaller[Try[RESP]],
   sourceContext: SourceContext
 ) extends RequestResponseService[REQ, RESP] with Logging {
 
