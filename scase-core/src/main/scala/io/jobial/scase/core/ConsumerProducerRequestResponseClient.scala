@@ -1,8 +1,7 @@
 package io.jobial.scase.core
 
 import java.util.UUID.randomUUID
-
-import cats.effect.IO
+import cats.effect.{ContextShift, IO}
 import io.jobial.scase.future.scheduledFuture
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshallable
@@ -10,13 +9,11 @@ import io.jobial.scase.monitoring.MonitoringPublisher
 import io.jobial.scase.monitoring.noPublisher
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.Future
-import scala.concurrent.Promise
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 import scala.concurrent.duration._
-
 
 case class ConsumerProducerRequestResponseClient[REQ: Marshallable, RESP](  
   messageConsumer: MessageConsumer[Try[RESP]],
@@ -129,6 +126,8 @@ case class ConsumerProducerRequestResponseClient[REQ: Marshallable, RESP](
         else
           None
       ))
+      
+      implicit val cs = IO.contextShift(ExecutionContext.global)
 
       for {
         sendResult <- producer.send(
@@ -139,7 +138,7 @@ case class ConsumerProducerRequestResponseClient[REQ: Marshallable, RESP](
               RequestTimeoutKey -> sendRequestContext.requestTimeout.toMillis.toString
             )
           )
-        receiveResult <- promise.future
+        receiveResult <- IO.fromFuture(IO(promise.future))
       } yield
         // TODO: revisit this - maybe Marshallable[RESPONSE] should be an implicit
         receiveResult.asInstanceOf[MessageReceiveResult[RESPONSE]]

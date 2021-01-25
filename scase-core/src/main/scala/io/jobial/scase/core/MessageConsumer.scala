@@ -22,9 +22,9 @@ case class MessageReceiveResult[M](
 
 trait MessageSubscription[M] {
 
-  def subscription: Future[_]
+  def subscription: IO[_]
 
-  def cancel: Future[_] // cancel the subscription
+  def cancel: IO[_] // cancel the subscription
   
   def isCancelled: Boolean
 }

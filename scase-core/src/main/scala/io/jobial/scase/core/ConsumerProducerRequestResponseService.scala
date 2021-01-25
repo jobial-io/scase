@@ -2,7 +2,6 @@ package io.jobial.scase.core
 
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
-
 import cats.effect.IO
 import io.jobial.scase.future.futureWithTimeout
 import io.jobial.scase.logging.Logging
@@ -10,10 +9,9 @@ import io.jobial.scase.marshalling.Marshallable
 import io.jobial.scase.monitoring.SourceContext
 
 import scala.concurrent.Await.result
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.Future.failed
 import scala.concurrent.Future.successful
-import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 import scala.util.Failure
 import scala.util.Success
@@ -38,7 +36,7 @@ case class ConsumerProducerRequestResponseServiceState[REQ, RESP](
 
 case class ConsumerProducerRequestResponseService[REQ: Marshallable, RESP](
   messageConsumer: MessageConsumer[REQ],
-  messageProducer: String => Future[MessageProducer[Try[RESP]]], // TODO: add support for fixed producer case
+  messageProducer: String => IO[MessageProducer[Try[RESP]]], // TODO: add support for fixed producer case
   requestProcessor: RequestProcessor[REQ, RESP],
   messageProducerForErrors: Option[MessageProducer[REQ]] = None, // TODO: implement this
   autoCommitRequest: Boolean = true,
@@ -56,14 +54,16 @@ case class ConsumerProducerRequestResponseService[REQ: Marshallable, RESP](
     val r: IO[SendResponseResult[RESP]] = (
       request.responseConsumerId match {
         case Some(responseConsumerId) =>
-          
-          (for {
+
+          implicit val cs = IO.contextShift(ExecutionContext.global)
+
+          IO.fromFuture(IO(for {
             producer <- messageProducer(responseConsumerId)
           } yield {
             logger.debug(s"found response producer $producer for request in service: ${request.toString.take(500)}")
             val response = Promise[RESP]
 
-            val processorResult: IO[SendResponseResult[RESP]] = Future {
+            val processorResult = IO {
               requestProcessor.processRequestOrFail(new RequestContext {
 
                 def reply[REQUEST, RESPONSE](req: REQUEST, r: RESPONSE)
@@ -77,7 +77,7 @@ case class ConsumerProducerRequestResponseService[REQ: Marshallable, RESP](
                 val requestTimeout = request.requestTimeout.getOrElse(Duration.Inf)
 
               })(request.message)
-            }.flatMap(identity)
+            }.flatMap(identity).unsafeToFuture
 
             processorResult.recoverWith { case t =>
               logger.error(s"request processing failed: ${request.toString.take(500)}", t)
@@ -92,7 +92,7 @@ case class ConsumerProducerRequestResponseService[REQ: Marshallable, RESP](
             }
 
             val responseAttributes = request.correlationId.map(correlationId => Map(CorrelationIdKey -> correlationId)).getOrElse(Map())
-            
+
             // send response when ready
             response.future andThen {
               case Success(r) =>
@@ -116,17 +116,18 @@ case class ConsumerProducerRequestResponseService[REQ: Marshallable, RESP](
             }
 
             processorResult
-          }).flatMap(identity)
+          }).flatMap(identity))
         case None =>
           logger.error(s"response consumer id not found for request: ${request.toString.take(500)}")
-          failed[SendResponseResult[RESP]](ResponseConsumerIdNotFound())
+          IO.raiseError[SendResponseResult[RESP]](ResponseConsumerIdNotFound())
       }
-      ).andThen(requestProcessor.afterResponse(request.message))
+      )
+      // TODO: implement this with IO: .andThen(requestProcessor.afterResponse(request.message))
 
     r
   }
 
-  def startService = successful {
+  def startService = IO {
     logger.info(s"starting service for processor $requestProcessor")
 
     val requestQueue = new LinkedBlockingQueue[() => Future[SendResponseResult[RESP]]]
@@ -138,10 +139,10 @@ case class ConsumerProducerRequestResponseService[REQ: Marshallable, RESP](
 
           val subscription = messageConsumer.subscribe { request: MessageReceiveResult[REQ] =>
             requestQueue.add({ () =>
-              handleRequest(request)
+              handleRequest(request).unsafeToFuture()
             })
           }
-          
+
           def pollRequestQueue: Future[_] =
             Future {
               // TODO: make this recursive to yield (trampolining)

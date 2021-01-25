@@ -118,11 +118,11 @@ trait RequestResponseServiceDefinition[REQ, RESP] {
 
 trait RequestResponseService[REQ, RESP] {
 
-  def startService: Future[RequestResponseServiceState[REQ]]
+  def startService: IO[RequestResponseServiceState[REQ]]
 }
 
 trait RequestResponseServiceState[REQ] {
 
-  def stopService: Future[RequestResponseServiceState[REQ]]
+  def stopService: IO[RequestResponseServiceState[REQ]]
 }
 
