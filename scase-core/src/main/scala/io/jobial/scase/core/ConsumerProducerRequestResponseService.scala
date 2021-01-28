@@ -59,7 +59,7 @@ case class ConsumerProducerRequestResponseService[REQ: Unmarshaller, RESP: Marsh
 
           implicit val cs = IO.contextShift(ExecutionContext.global)
 
-          for {
+          (for {
             producer <- messageProducer(responseConsumerId)
             response <- Deferred[IO, Either[Throwable, RESP]]
             processorResult <- {
@@ -70,7 +70,7 @@ case class ConsumerProducerRequestResponseService[REQ: Unmarshaller, RESP: Marsh
                 requestProcessor.processRequestOrFail(new RequestContext {
 
                   def reply[REQUEST, RESPONSE](req: REQUEST, r: RESPONSE)
-                    (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): IO[SendResponseResult[RESPONSE]] =  {
+                    (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): IO[SendResponseResult[RESPONSE]] = {
                     logger.debug(s"context sending response ${r.toString.take(500)}")
                     val re = r.asInstanceOf[RESP]
 
@@ -84,10 +84,11 @@ case class ConsumerProducerRequestResponseService[REQ: Unmarshaller, RESP: Marsh
 
                 })(request.message)
 
-              val processResultWithErrorHandling = processorResult.handleErrorWith { case t =>
+              val processResultWithErrorHandling = processorResult.map(Right(_)).handleErrorWith { case t =>
                 logger.error(s"request processing failed: ${request.toString.take(500)}", t)
-                response.complete(Left(t))
-                IO.raiseError(t)
+                for {
+                  _ <- response.complete(Left(t))
+                } yield Left(t)
               }
 
               // handle processor timeout
@@ -100,7 +101,7 @@ case class ConsumerProducerRequestResponseService[REQ: Unmarshaller, RESP: Marsh
 
               // send response when ready
               for {
-                r <- processorResult
+                r <- processResultWithErrorHandling
                 x <- response.get
                 y <- x match {
                   case Right(r) =>
@@ -126,16 +127,20 @@ case class ConsumerProducerRequestResponseService[REQ: Unmarshaller, RESP: Marsh
                 }
               } yield {
                 println("finished sending reply")
-                r
+                r match {
+                  case Right(r) =>
+                    IO(r)
+                  case Left(t) =>
+                    // TODO: revisit this...
+                    IO(new SendResponseResult[RESP] {})
+                }
               }
             }
-          } yield processorResult
+          } yield processorResult).flatten
         case None =>
           logger.error(s"response consumer id not found for request: ${request.toString.take(500)}")
           IO.raiseError[SendResponseResult[RESP]](ResponseConsumerIdNotFound())
       }
-
-    // TODO: implement this with IO: .andThen(requestProcessor.afterResponse(request.message))
 
     r
   }
