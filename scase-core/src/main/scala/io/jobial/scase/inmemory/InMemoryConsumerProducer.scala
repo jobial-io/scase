@@ -1,15 +1,12 @@
 package io.jobial.scase.inmemory
 
 import cats.effect.IO
-import cats.implicits._
 import cats.effect.concurrent.Ref
+import cats.implicits._
 import io.jobial.scase.core.{MessageConsumer, MessageProducer, MessageReceiveResult, MessageSendResult, MessageSubscription}
-
-import scala.collection.concurrent.TrieMap
-import scala.concurrent.Future._
-import scala.concurrent.{ExecutionContext, Future, Promise}
-import io.jobial.scase.core.executionContext
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
+
+import scala.concurrent.{ExecutionContext, Promise}
 
 
 trait InMemoryConsumerProducer[M] extends MessageConsumer[M] with MessageProducer[M] {

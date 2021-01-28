@@ -1,15 +1,11 @@
 package io.jobial.scase
 
-import java.util.concurrent._
-
 import cats.effect.IO
 import io.jobial.scase.logging.Logging
 
+import java.util.concurrent._
 import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.Promise
 import scala.reflect.ClassTag
-import scala.concurrent.duration._
 
 
 package object core extends Logging {

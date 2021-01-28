@@ -1,7 +1,5 @@
 package io.jobial.scase.core
 
-import scala.concurrent.Future
-import scala.concurrent.Future.failed
 import scala.concurrent.duration._
 import scala.util.Try
 import cats.effect.IO
