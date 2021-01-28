@@ -1,6 +1,8 @@
 package io.jobial.scase.inmemory
 
 import cats.effect.IO
+import cats.implicits._
+import cats.effect.concurrent.Ref
 import io.jobial.scase.core.{MessageConsumer, MessageProducer, MessageReceiveResult, MessageSendResult, MessageSubscription}
 
 import scala.collection.concurrent.TrieMap
@@ -16,6 +18,11 @@ trait InMemoryConsumerProducer[M] extends MessageConsumer[M] with MessageProduce
 
   val allowMultipleSubscribers: Boolean
 
+  implicit val cs = IO.contextShift(ExecutionContext.global)
+
+  def subscriptions: Ref[IO, List[MessageReceiveResult[M] => IO[_]]]
+
+
   /**
    * TODO: currently this implementation propagates failures from the subscriptions to the sender mainly
    *  - to allow SNS topics to not commit failed deliveries. This behaviour should be reviewed. Also,
@@ -25,56 +32,61 @@ trait InMemoryConsumerProducer[M] extends MessageConsumer[M] with MessageProduce
 
     val messageReceiveResult = MessageReceiveResult(message, attributes, { () => IO() }, { () => IO() })
 
-    implicit val cs = IO.contextShift(ExecutionContext.global)
+    val x = for {
+      r <- subscriptions.get
+      _ = println(r)
+    } yield (for {
+      subscription <- r
+    } yield {
+      println(s"calling subscription on queue with $messageReceiveResult")
+      subscription(messageReceiveResult)
+    }).sequence
 
-    IO.fromFuture(
-      IO(
-        for {
-          _ <- sequence(for {
-            subscription <-
-              //        if (deliverToAllSubscribers)
-              subscriptions.keys
-            //        else {
-            //          val size = subscriptions.size
-            //          if (size > 0) {
-            //            val subscription = subscriptions.keys.drop(Random.nextInt(size)).headOption
-            //            subscription.orElse(subscriptions.keys.lastOption).toSeq
-            //          } else Seq()
-            //        }
-          } yield Future {
-            subscription(messageReceiveResult)
-          })
-        } yield MessageSendResult[M]()
-      )
-    )
+    x.flatten *> IO(MessageSendResult[M]())
+    //        if (deliverToAllSubscribers)
+    //        else {
+    //          val size = subscriptions.size
+    //          if (size > 0) {
+    //            val subscription = subscriptions.keys.drop(Random.nextInt(size)).headOption
+    //            subscription.orElse(subscriptions.keys.lastOption).toSeq
+    //          } else Seq()
+    //        }
   }
 
-  val subscriptions = TrieMap[MessageReceiveResult[M] => _, MessageReceiveResult[M] => _]()
-
   // TODO: the marshallable is ignored here
-  override def subscribe[T](callback: MessageReceiveResult[M] => T)(implicit u: Unmarshaller[M]) = {
-    if (subscriptions.size > 0 && !allowMultipleSubscribers)
-      throw new IllegalStateException("Trying to subscribe multiple times")
-
-    subscriptions.put(callback, callback)
-
-    implicit val cs = IO.contextShift(ExecutionContext.global)
-    
-    new MessageSubscription[M] {
+  override def subscribe[T](callback: MessageReceiveResult[M] => IO[T])(implicit u: Unmarshaller[M]) = {
+    for {
+      r <- subscriptions.update(callback :: _)
+      _ = println(callback)
+    } yield new MessageSubscription[M] {
       val subscriptionPromise = Promise[Unit]()
 
       override def subscription =
         IO.fromFuture(IO(subscriptionPromise.future))
 
       override def cancel =
-        IO {
-          subscriptionPromise.trySuccess {
-            subscriptions.remove(callback)
-          }
-        }
+        ???
+
+      //        IO {
+      //          subscriptionPromise.trySuccess {
+      //            subscriptions.remove(callback)
+      //          }
+      //        }
 
       override def isCancelled =
-        !subscriptions.contains(callback)
+        ???
+
+      //        !subscriptions.contains(callback)
     }
+
+
+
+    //    if (subscriptions.size > 0 && !allowMultipleSubscribers)
+    //      throw new IllegalStateException("Trying to subscribe multiple times")
+    //
+    //    subscriptions.put(callback, callback)
+    //
+    //    implicit val cs = IO.contextShift(ExecutionContext.global)
+
   }
 }

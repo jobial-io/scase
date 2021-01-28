@@ -25,7 +25,7 @@ trait SendResponseResult[+RESP]
 trait RequestContext {
 
   def reply[REQUEST, RESPONSE](request: REQUEST, response: RESPONSE)
-    (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): SendResponseResult[RESPONSE]
+    (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): IO[SendResponseResult[RESPONSE]]
 
   def requestTimeout: Duration
 }

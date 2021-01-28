@@ -15,15 +15,15 @@ import scala.util.Success
 import scala.util.Try
 import scala.concurrent.duration._
 
-case class ConsumerProducerRequestResponseClient[REQ: Marshaller, RESP](  
-  messageConsumer: MessageConsumer[Try[RESP]],
+case class ConsumerProducerRequestResponseClient[REQ: Marshaller, RESP](
+  messageConsumer: MessageConsumer[Either[Throwable, RESP]],
   messageProducer: () => MessageProducer[REQ],
   responseConsumerId: String,
   autoCommitResponse: Boolean = true,
   name: String = randomUUID.toString
 )(
   //implicit executionContext: ExecutionContext,
-  implicit responseMarshallable: Unmarshaller[Try[RESP]],
+  implicit responseMarshallable: Unmarshaller[Either[Throwable, RESP]],
   monitoringPublisher: MonitoringPublisher = noPublisher
 ) extends RequestResponseClient[REQ, RESP] with Logging {
 
@@ -46,55 +46,57 @@ case class ConsumerProducerRequestResponseClient[REQ: Marshaller, RESP](
     }
 
   scheduleLogOutstanding
-  
+
   val subscription = messageConsumer.subscribe { response =>
-    logger.debug(s"received response ${response.toString.take(500)}")
-    
-    response.correlationId match {
-      case Some(correlationId) =>
-        correlations.get(correlationId) match {
-          case Some(correlationInfo) =>
-            response.message match {
-              case Success(payload) =>
-                logger.debug(s"client received success: ${response.toString.take(500)}")
-                correlationInfo.responsePromise.success(
-                  MessageReceiveResult(
-                    payload,
-                    response.attributes,
-                    {
-                      response.commit
-                      // TODO: add removal
-                    },
-                    {
-                      response.rollback
-                      // TODO: add removal
-                    }
+    IO {
+      logger.debug(s"received response ${response.toString.take(500)}")
+
+      response.correlationId match {
+        case Some(correlationId) =>
+          correlations.get(correlationId) match {
+            case Some(correlationInfo) =>
+              response.message match {
+                case Right(payload) =>
+                  logger.debug(s"client received success: ${response.toString.take(500)}")
+                  correlationInfo.responsePromise.success(
+                    MessageReceiveResult(
+                      payload,
+                      response.attributes,
+                      {
+                        response.commit
+                        // TODO: add removal
+                      },
+                      {
+                        response.rollback
+                        // TODO: add removal
+                      }
+                    )
                   )
-                )
-                for {
-                  request <- correlationInfo.request
-                } yield
-                  monitoringPublisher.timing(request.getClass.getName, correlationInfo.sendTime)
-              case Failure(t) =>
-                logger.error(s"client received failure: ${response.toString.take(500)}", t)
-                correlationInfo.responsePromise.failure(t)
-            }
+                  for {
+                    request <- correlationInfo.request
+                  } yield
+                    monitoringPublisher.timing(request.getClass.getName, correlationInfo.sendTime)
+                case Left(t) =>
+                  logger.error(s"client received failure: ${response.toString.take(500)}", t)
+                  correlationInfo.responsePromise.failure(t)
+              }
 
-            correlations.remove(correlationId)
+              correlations.remove(correlationId)
 
-            if (autoCommitResponse) {
-              response.commit()
-              logger.debug(s"client committed response ${response.toString.take(500)}")
-            }
-          case None =>
-            logger.error(s"${System.identityHashCode(this)} received message that cannot be correlated to a request: ${response.toString.take(500)}")
-            if (autoCommitResponse)
-              response.commit()
-        }
-      case None =>
-        logger.error(s"${System.identityHashCode(this)} received message without correlation id: ${response.toString.take(500)}")
-        if (autoCommitResponse)
-          response.commit()
+              if (autoCommitResponse) {
+                response.commit()
+                logger.debug(s"client committed response ${response.toString.take(500)}")
+              }
+            case None =>
+              logger.error(s"${System.identityHashCode(this)} received message that cannot be correlated to a request: ${response.toString.take(500)}")
+              if (autoCommitResponse)
+                response.commit()
+          }
+        case None =>
+          logger.error(s"${System.identityHashCode(this)} received message without correlation id: ${response.toString.take(500)}")
+          if (autoCommitResponse)
+            response.commit()
+      }
     }
   }
 
@@ -117,7 +119,7 @@ case class ConsumerProducerRequestResponseClient[REQ: Marshaller, RESP](
 
       monitoringPublisher.increment(request.getClass.getName)
       logger.info(s"sending ${request.toString.take(500)} with $correlationId using $this")
-      
+
       correlations.put(correlationId, CorrelationInfo(
         promise,
         System.currentTimeMillis,
@@ -126,18 +128,18 @@ case class ConsumerProducerRequestResponseClient[REQ: Marshaller, RESP](
         else
           None
       ))
-      
+
       implicit val cs = IO.contextShift(ExecutionContext.global)
 
       for {
         sendResult <- producer.send(
-            request,
-            Map(
-              CorrelationIdKey -> correlationId,
-              ResponseConsumerIdKey -> responseConsumerId,
-              RequestTimeoutKey -> sendRequestContext.requestTimeout.toMillis.toString
-            )
+          request,
+          Map(
+            CorrelationIdKey -> correlationId,
+            ResponseConsumerIdKey -> responseConsumerId,
+            RequestTimeoutKey -> sendRequestContext.requestTimeout.toMillis.toString
           )
+        )
         receiveResult <- IO.fromFuture(IO(promise.future))
       } yield
         // TODO: revisit this - maybe Marshallable[RESPONSE] should be an implicit

@@ -31,7 +31,7 @@ trait MessageSubscription[M] {
 
 trait MessageConsumer[M] {
 
-  def subscribe[T](callback: MessageReceiveResult[M] => T)(implicit u: Unmarshaller[M]): MessageSubscription[M]
+  def subscribe[T](callback: MessageReceiveResult[M] => IO[T])(implicit u: Unmarshaller[M]): IO[MessageSubscription[M]]
 }
 
 case class CouldNotFindMessageToCommit[M](
