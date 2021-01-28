@@ -61,7 +61,7 @@ case class ConsumerProducerRequestResponseService[REQ: Unmarshaller, RESP: Marsh
 
           for {
             producer <- messageProducer(responseConsumerId)
-            response <- Deferred[IO, Try[RESP]]
+            response <- Deferred[IO, Either[Throwable, RESP]]
             processorResult <- {
               logger.debug(s"found response producer $producer for request in service: ${request.toString.take(500)}")
               // TODO: make this a Deferred
@@ -76,7 +76,7 @@ case class ConsumerProducerRequestResponseService[REQ: Unmarshaller, RESP: Marsh
 
                     println("setting reply")
                     for {
-                      _ <- response.complete(Success(re))
+                      _ <- response.complete(Right(re))
                     } yield new SendResponseResult[RESPONSE] {}
                   }
 
@@ -86,7 +86,7 @@ case class ConsumerProducerRequestResponseService[REQ: Unmarshaller, RESP: Marsh
 
               val processResultWithErrorHandling = processorResult.handleErrorWith { case t =>
                 logger.error(s"request processing failed: ${request.toString.take(500)}", t)
-                response.complete(Failure(t))
+                response.complete(Left(t))
                 IO.raiseError(t)
               }
 
@@ -103,7 +103,7 @@ case class ConsumerProducerRequestResponseService[REQ: Unmarshaller, RESP: Marsh
                 r <- processorResult
                 x <- response.get
                 y <- x match {
-                  case Success(r) =>
+                  case Right(r) =>
                     println("sending")
                     logger.debug(s"sending success to client for request: ${request.toString.take(500)} on $producer")
                     val sendResult = producer.send(Right(r), responseAttributes)
@@ -113,7 +113,7 @@ case class ConsumerProducerRequestResponseService[REQ: Unmarshaller, RESP: Marsh
                       logger.debug(s"service committed request: ${request.toString.take(500)} on $producer")
                     }
                     sendResult
-                  case Failure(t) =>
+                  case Left(t) =>
                     println("failure")
                     logger.error(s"sending failure to client for request: ${request.toString.take(500)}", t)
                     for {
