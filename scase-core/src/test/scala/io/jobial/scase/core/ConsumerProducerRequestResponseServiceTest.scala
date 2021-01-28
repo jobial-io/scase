@@ -16,7 +16,6 @@ class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec {
 
     val response1 = TestResponse1(request1, "1")
 
-
     implicit val cs = IO.contextShift(ExecutionContext.global)
 
     (for {
@@ -35,14 +34,14 @@ class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec {
         testRequestProcessor
       )
       s <- service.startService
-      d <- Deferred[IO, TestResponse]
+      d <- Deferred[IO, Either[Throwable, TestResponse]]
       _ <- testMessageProducer.subscribe({ m =>
         println("complete")
-        d.complete(m.message.getOrElse(???))
+        d.complete(m.message)
       })
       _ <- testMessageConsumer.send(request1, Map(ResponseConsumerIdKey -> ""))
       r <- d.get
-    } yield assert(r == response1)).unsafeToFuture()
+    } yield assert(r == Right(response1))).unsafeToFuture()
 
   }
 }
