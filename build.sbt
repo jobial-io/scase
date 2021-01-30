@@ -68,4 +68,4 @@ lazy val `scase-aws` = project
       "com.amazonaws" % "amazon-sqs-java-extended-client-lib" % "master-SNAPSHOT"
     )
   )
-  .dependsOn(`scase-core`)
+  .dependsOn(`scase-core` % "compile->compile;test->test")
