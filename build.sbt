@@ -23,18 +23,17 @@ import xerial.sbt.Sonatype._
 lazy val commonSettings = Seq(
   publishConfiguration := publishConfiguration.value.withOverwrite(true),
   publishLocalConfiguration := publishLocalConfiguration.value.withOverwrite(true),
-  publishTo := publishTo.value.getOrElse(sonatypePublishToBundle.value),
+  publishTo := publishTo.value.orElse(sonatypePublishToBundle.value),
   sonatypeProjectHosting := Some(GitHubHosting("jobial-io", "scase", "orbang@jobial.io")),
   organizationName := "Jobial OÜ",
   licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt"))
 )
 
-
-
 lazy val CatsVersion = "2.0.0"
 lazy val ScalaLoggingVersion = "3.9.2"
 lazy val ScalatestVersion = "3.2.3"
 lazy val SourcecodeVersion = "0.1.4"
+lazy val AwsVersion = "1.11.557"
 
 lazy val root: Project = project
   .in(file("."))
@@ -60,3 +59,13 @@ lazy val `scase-core` = project
     )
   )
 
+lazy val `scase-aws` = project
+  .in(file("scase-aws"))
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "com.amazonaws" % "aws-java-sdk-sqs" % AwsVersion,
+      "com.amazonaws" % "amazon-sqs-java-extended-client-lib" % "master-SNAPSHOT"
+    )
+  )
+  .dependsOn(`scase-core`)
