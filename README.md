@@ -1,6 +1,6 @@
 # Scase
 
-Deploy Scala code as a service or function without any boilerplate
+Deploy Scala code as a service or serverless function without boilerplate
 
 When we think of implementing a microservice or a serverless function, we typically want to do something like:
 
@@ -8,9 +8,9 @@ When we think of implementing a microservice or a serverless function, we typica
 
 // My service logic...
 case m@MyRequest1 =>
-  m.reply(MyResponse())
+  m.reply(MyResponse1())
 case m@MyRequest2 =>
-  m.reply()
+  m.reply(MyResponse2())
 ```
 
 and then
@@ -18,9 +18,11 @@ and then
 ```scala
 // My client code...
 myClient.sendRequest(MyRequest1("hello")) // : F[MyResponse1]
+
+myClient.sendRequest(MyRequest2("hello")) // : F[MyResponse2]
 ```
 
-We want this to be as type safe as possible, without any boilerplate, with no possibility of receiving the "wrong"
+We want this to be as type safe as possible, without any boilerplate, with no possibility of replying with the "wrong"
 type of forgetting to send a reply entirely.
 
 We definitely don't want to care if the service is eventually deployed as a Lambda, an Apache Pulsar function, or a
@@ -28,19 +30,18 @@ standalone app in a container, maybe run in an Akka Cluster, or perhaps run as a
 
 We just want to be able to run it somewhere 'out there' in the cloud, or maybe run the same code locally in a test,
 without having to make changes. We want to focus on the business logic and implement it on top of an elegant and concise
-API, without any boilerplate.
+API, with no boilerplate.
 
-We want to be able to access the service from anywhere in a type safe way.
+In addition to that, we want to
 
-We want to decouple the business logic from complicated frameworks like Akka.
+* be able to access the service from anywhere in a type safe way
 
-We want to be able to write an immutable, idiomatic Scala model for the service API, completely decoupled from the
-underlying implementation.
+* decouple the business logic from complicated frameworks like Akka
 
-We want to use concurrency seamlessly and safely.
+* be able to write an immutable, idiomatic Scala model for the service API, completely decoupled from the underlying
+  implementation
 
-If later have to change our mind about the target environment, we don't want to rewrite anything, just deploy it to the
-new environment as it is and expect it to work.
+* use concurrency seamlessly and safely.
 
 **Scase** gives you exactly that, with the additional benefit of:
 
@@ -57,7 +58,7 @@ new environment as it is and expect it to work.
   framework"
 * Additional Java-friendly client API to allow easy interop with Java and other JVM languages
 * Test support
-* Well defined error handling semantics
+* Well defined error handling
 * Purely functional, from top to bottom, but without the need to understand or directly depend on any of the complicated
   FP constructs
 
