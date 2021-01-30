@@ -1,11 +1,11 @@
 package io.jobial.scase.core
 
 
-sealed trait TestRequest
+sealed trait TestRequest[RESP] extends Request[RESP]
 
-case class TestRequest1(id: String) extends TestRequest with Request[TestResponse1]
+case class TestRequest1(id: String) extends TestRequest[TestResponse1]
 
-case class TestRequest2(id: String) extends TestRequest // with Request[TestResponse2]
+case class TestRequest2(id: String) extends TestRequest[TestResponse2]
 
 sealed trait TestResponse
 

@@ -11,6 +11,8 @@ import org.scalatest.compatible.Assertion
 import org.scalatest.flatspec.AsyncFlatSpec
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
+
 
 class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec {
 
@@ -45,10 +47,31 @@ class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec {
       r <- d.get
     } yield assert(r == response)
 
+  implicit val sendRequestContext = SendRequestContext(10.seconds)
+
+  def testRequestResponseClient[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP](testRequestProcessor: RequestProcessor[REQ, RESP], request: REQUEST, response: Either[Throwable, RESPONSE])(
+    implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]
+  ) =
+    for {
+      testMessageConsumer <- InMemoryQueue.create[REQ]
+      testMessageProducer <- InMemoryQueue.create[Either[Throwable, RESP]]
+      service = ConsumerProducerRequestResponseService[REQ, RESP](
+        testMessageConsumer,
+        { _ => IO(testMessageProducer) },
+        testRequestProcessor
+      )
+      s <- service.startService
+      client <- ConsumerProducerRequestResponseClient[REQ, RESP](
+        testMessageProducer,
+        () => testMessageConsumer,
+        ""
+      )
+      r <- client.sendRequest(request)
+    } yield assert(Right(r) == response)
 
   "request-response service" should "reply successfully" in {
     testRequestResponse(
-      new RequestProcessor[TestRequest, TestResponse] {
+      new RequestProcessor[TestRequest[_ <: TestResponse], TestResponse] {
         override def processRequest(implicit context: RequestContext): Processor = {
           case r: TestRequest1 =>
             println("replying...")
@@ -62,7 +85,7 @@ class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec {
 
   "request-response service" should "reply with error" in {
     testRequestResponse(
-      new RequestProcessor[TestRequest, TestResponse] {
+      new RequestProcessor[TestRequest[_ <: TestResponse], TestResponse] {
         override def processRequest(implicit context: RequestContext): Processor = {
           case r: TestRequest1 =>
             println("replying...")
@@ -73,6 +96,20 @@ class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec {
       },
       request2,
       Left(TestException)
+    )
+  }
+
+  "request-response client" should "get reply successfully" in {
+    testRequestResponseClient(
+      new RequestProcessor[TestRequest[_ <: TestResponse], TestResponse] {
+        override def processRequest(implicit context: RequestContext): Processor = {
+          case r: TestRequest1 =>
+            println("replying...")
+            r.reply(response1)
+        }
+      },
+      request1,
+      Right(response1)
     )
   }
 
