@@ -1,6 +1,6 @@
 # Scase
 
-Deploy scala code as a service or function with no boilerplate
+Deploy Scala code as a service or function without any boilerplate
 
 When we think of implementing a microservice or a serverless function, we typically want to do something like:
 
@@ -17,7 +17,7 @@ and then
 
 ```scala
 // My client code...
-myClient.sendRequest(MyRequest1("hello"))
+myClient.sendRequest(MyRequest1("hello")) // : F[MyResponse1]
 ```
 
 We want this to be as type safe as possible, without any boilerplate, with no possibility of receiving the "wrong"
@@ -39,7 +39,7 @@ underlying implementation.
 
 We want to use concurrency seamlessly and safely.
 
-If you later change your mind about the target environment, you don't want to rewrite anything, just deploy it to the
+If later have to change our mind about the target environment, we don't want to rewrite anything, just deploy it to the
 new environment as it is and expect it to work.
 
 **Scase** gives you exactly that, with the additional benefit of:
@@ -51,10 +51,11 @@ new environment as it is and expect it to work.
 * Simple, future proof, platform independent code for your application logic
 * Straightforward integration with Cloudformation and Terraform
 * Extendable support for serialization and network protocols, with built-in support for Spray Json, Circe, Java
-  Serialization
+  serialization
 * Well integrated with the Future, Cats Effect and other common Scala libraries and standard APIs
-* Lightweight, extendable library that provides simple layer between runtime and application code - no "framework"
-* Additional Java-friendly client API to allow easy interop with Java code
+* Lightweight, modular, extendable design that provides a simple layer between runtime and application code - no "
+  framework"
+* Additional Java-friendly client API to allow easy interop with Java and other JVM languages
 * Test support
 * Well defined error handling semantics
 * Purely functional, from top to bottom, but without the need to understand or directly depend on any of the complicated
