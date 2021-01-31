@@ -1,17 +1,14 @@
 package io.jobial.scase.core
 
-import cats.effect.concurrent.{Deferred, Ref}
 import java.util.UUID.randomUUID
 
-import cats.effect.{ContextShift, IO}
-import io.jobial.scase.future.scheduledFuture
+import cats.effect.IO
+import cats.effect.concurrent.{Deferred, Ref}
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
-import io.jobial.scase.monitoring.MonitoringPublisher
-import io.jobial.scase.monitoring.noPublisher
+import io.jobial.scase.monitoring.{MonitoringPublisher, noPublisher}
 
-import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext
 
 case class CorrelationInfo[REQ, RESP](
   responseDeferred: Deferred[IO, Either[Throwable, MessageReceiveResult[RESP]]],
@@ -28,7 +25,6 @@ case class ConsumerProducerRequestResponseClient[REQ: Marshaller, RESP](
   autoCommitResponse: Boolean,
   name: String
 )(
-  //implicit executionContext: ExecutionContext,
   implicit responseMarshallable: Unmarshaller[Either[Throwable, RESP]],
   monitoringPublisher: MonitoringPublisher
 ) extends RequestResponseClient[REQ, RESP] with Logging {

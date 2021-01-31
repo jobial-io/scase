@@ -1,12 +1,10 @@
 package io.jobial.scase.inmemory
 
-import cats.effect.IO
-import cats.effect.concurrent.Ref
+import cats.effect.{ContextShift, IO}
+import cats.effect.concurrent.{Deferred, Ref}
 import cats.implicits._
 import io.jobial.scase.core.{MessageConsumer, MessageProducer, MessageReceiveResult, MessageSendResult, MessageSubscription}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
-
-import scala.concurrent.{ExecutionContext, Promise}
 
 
 trait InMemoryConsumerProducer[M] extends MessageConsumer[M] with MessageProducer[M] {
@@ -15,7 +13,7 @@ trait InMemoryConsumerProducer[M] extends MessageConsumer[M] with MessageProduce
 
   val allowMultipleSubscribers: Boolean
 
-  implicit val cs = IO.contextShift(ExecutionContext.global)
+  implicit def cs: ContextShift[IO]
 
   def subscriptions: Ref[IO, List[MessageReceiveResult[M] => IO[_]]]
 
@@ -30,17 +28,17 @@ trait InMemoryConsumerProducer[M] extends MessageConsumer[M] with MessageProduce
 
     val messageReceiveResult = MessageReceiveResult(message, attributes, { () => IO() }, { () => IO() })
 
-    val x = for {
+    for {
       r <- subscriptions.get
       _ = println(r)
-    } yield (for {
-      subscription <- r
-    } yield {
-      println(s"calling subscription on queue with $messageReceiveResult")
-      subscription(messageReceiveResult)
-    }).sequence
+      _ <- (for {
+        subscription <- r
+      } yield {
+        println(s"calling subscription on queue with $messageReceiveResult")
+        subscription(messageReceiveResult)
+      }).sequence
+    } yield MessageSendResult[M]()
 
-    x.flatten *> IO(MessageSendResult[M]())
     //        if (deliverToAllSubscribers)
     //        else {
     //          val size = subscriptions.size
@@ -51,30 +49,32 @@ trait InMemoryConsumerProducer[M] extends MessageConsumer[M] with MessageProduce
     //        }
   }
 
-  // TODO: the marshallable is ignored here
+  /**
+   *
+   * Warning: the Unmarshaller is not used here, the message is delivered directly to the consumer.
+   *
+   * @param callback
+   * @param u
+   * @tparam T
+   * @return
+   */
   override def subscribe[T](callback: MessageReceiveResult[M] => IO[T])(implicit u: Unmarshaller[M]) = {
     for {
-      r <- subscriptions.update(callback :: _)
+      _ <- subscriptions.update(callback :: _)
       _ = println(callback)
+      cancelled <- Deferred[IO, Boolean]
     } yield new MessageSubscription[M] {
-      val subscriptionPromise = Promise[Unit]()
 
-      override def subscription =
-        IO.fromFuture(IO(subscriptionPromise.future))
+      override def join =
+        cancelled.get
 
       override def cancel =
-        ???
+        cancelled.complete(true)
 
-      //        IO {
-      //          subscriptionPromise.trySuccess {
-      //            subscriptions.remove(callback)
-      //          }
-      //        }
-
-      override def isCancelled =
-        ???
-
-      //        !subscriptions.contains(callback)
+      override def isCancelled = {
+        // TODO: make this non-blocking
+        cancelled.get
+      }
     }
 
 

@@ -1,22 +1,20 @@
 package io.jobial.scase.aws.sqs
 
 import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicBoolean
 
-import cats._
-import cats.implicits._
 import cats.effect._
 import cats.effect.concurrent.Ref
+import cats.implicits._
 import io.jobial.scase.aws.util.identitymap.identityTrieMap
 import io.jobial.scase.aws.util.{AwsContext, S3Client, SqsClient}
 import io.jobial.scase.core._
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
-import scala.concurrent.duration._
-import scala.util.{Failure, Success}
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
+import scala.util.{Failure, Success}
 
 /**
  * Queue implementation using AWS SQS.
@@ -128,7 +126,7 @@ case class SqsQueue[M](
               else IO()
           } yield ()
 
-        val subscription = receiveMessages
+        val join = receiveMessages
 
         def cancel =
           cancelled.set(true)
@@ -136,6 +134,7 @@ case class SqsQueue[M](
         def isCancelled =
           cancelled.get
       }
+      // TODO: make this an implicit
       f <- subscription.receiveMessages.start(IO.contextShift(ExecutionContext.fromExecutor(Executors.newCachedThreadPool())))
       _ = println(f)
     } yield subscription

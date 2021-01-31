@@ -21,7 +21,7 @@ case class MessageReceiveResult[M](
 
 trait MessageSubscription[M] {
 
-  def subscription: IO[_]
+  def join: IO[_]
 
   def cancel: IO[_] // cancel the subscription
 

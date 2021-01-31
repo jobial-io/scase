@@ -1,23 +1,15 @@
 package io.jobial.scase.core
 
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit
+
 import cats.effect.IO
-import cats.implicits._
 import cats.effect.concurrent.Deferred
-import io.jobial.scase.future.futureWithTimeout
+import cats.implicits._
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
-import io.jobial.scase.monitoring.SourceContext
 
-import scala.concurrent.Await.result
-import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.concurrent.Future.failed
-import scala.concurrent.Future.successful
-import scala.concurrent.duration.{Duration, DurationInt}
-import scala.util.Failure
-import scala.util.Success
-import scala.util.Try
+import scala.concurrent.duration.Duration
+import scala.concurrent.{ExecutionContext, Future}
 
 case class ConsumerProducerRequestResponseServiceState[REQ, RESP](
   subscription: MessageSubscription[REQ],
@@ -28,7 +20,7 @@ case class ConsumerProducerRequestResponseServiceState[REQ, RESP](
   def stopService: IO[RequestResponseServiceState[REQ]] =
     for {
       r <- subscription.cancel
-      _ <- subscription.subscription
+      _ <- subscription.join
     } yield {
       logger.info(s"Shutting down $service")
       //service.executionContext.shutdown
