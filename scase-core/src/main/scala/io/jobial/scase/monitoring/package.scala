@@ -50,9 +50,9 @@ package object monitoring {
         println(s"found pid $pid")
         Future {
           if (repeat)
-            Seq("/bin/sh", "-c", s"while true; do jstack $pid ; sleep ${delay.toSeconds} ; done") !
+            Seq("/bin/sh", "-c", s"while true; do jstack $pid ; sleep ${delay.toSeconds} ; done").!
           else
-            s"jstack $pid" !
+            s"jstack $pid".!
         }
       case _ =>
         println("could not find process pid")
