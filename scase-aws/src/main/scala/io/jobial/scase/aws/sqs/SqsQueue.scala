@@ -21,8 +21,8 @@ import scala.util.{Failure, Success}
  */
 case class SqsQueue[M](
   name: String,
-  messageRetentionPeriod: Option[Duration] = Some(1 hour),
-  visibilityTimeout: Option[Duration] = Some(10 minutes),
+  messageRetentionPeriod: Option[Duration] = Some(1.hour),
+  visibilityTimeout: Option[Duration] = Some(10.minutes),
   cleanup: Boolean = false
 )(
   implicit val awsContext: AwsContext

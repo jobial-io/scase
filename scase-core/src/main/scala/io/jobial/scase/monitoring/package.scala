@@ -44,7 +44,7 @@ package object monitoring {
       None
   }
 
-  def runJstack(repeat: Boolean = false, delay: Duration = 10 seconds)(implicit ec: ExecutionContext) = {
+  def runJstack(repeat: Boolean = false, delay: Duration = 10.seconds)(implicit ec: ExecutionContext) = {
     getProcessId match {
       case Some(pid) =>
         println(s"found pid $pid")

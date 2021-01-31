@@ -96,7 +96,7 @@ trait RequestProcessor[REQ, RESP] {
    */
   def sequentialRequestProcessing = false
 
-  def sequentialRequestProcessingTimeout = 1 hour
+  def sequentialRequestProcessingTimeout = 1.hour
 
 }
 
