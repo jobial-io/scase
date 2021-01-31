@@ -1,0 +1,14 @@
+image:
+  name: 193290311924.dkr.ecr.eu-west-1.amazonaws.com/cloudtemp/sbt-build:latest
+  aws:
+    access-key: $AWS_ACCESS_KEY_ID
+    secret-key: $AWS_SECRET_ACCESS_KEY
+
+pipelines:
+  default:
+    - step:
+       script:
+       - build-with-sbt
+
+options:
+  max-time: 30
