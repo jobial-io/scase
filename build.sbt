@@ -32,7 +32,7 @@ lazy val commonSettings = Seq(
 lazy val CatsVersion = "2.0.0"
 lazy val ScalaLoggingVersion = "3.9.2"
 lazy val ScalatestVersion = "3.2.3"
-lazy val SourcecodeVersion = "0.1.4"
+lazy val SourcecodeVersion = "0.2.3"
 lazy val AwsVersion = "1.11.557"
 lazy val CommonsIoVersion = "2.8.0"
 
