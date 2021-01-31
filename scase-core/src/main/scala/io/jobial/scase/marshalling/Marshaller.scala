@@ -1,9 +1,8 @@
 package io.jobial.scase.marshalling
 
-import cats.effect.IO
-
-import java.io.InputStream
 import java.io.OutputStream
+
+import cats.effect.IO
 
 trait Marshaller[M] {
   def marshal(o: M): Array[Byte]
@@ -13,10 +12,7 @@ trait Marshaller[M] {
   def marshalToText(o: M): String
 }
 
-trait Unmarshaller[M] {
-  def unmarshal(bytes: Array[Byte]): M
+object Marshaller {
 
-  def unmarshal(in: InputStream): M
-
-  def unmarshalFromText(text: String): M
+  def apply[M: Marshaller] = implicitly[Marshaller[M]]
 }

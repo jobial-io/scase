@@ -6,33 +6,30 @@ When we think of implementing a microservice or a serverless function, we typica
 
 ```scala
 
-// My service logic...
-case m@MyRequest1 =>
-  m.reply(MyResponse1())
-case m@MyRequest2 =>
-  m.reply(MyResponse2())
+// My service logic
+case m@MyRequest =>
+  m.reply(MyResponse())
+...
 ```
 
 and then
 
 ```scala
 // My client code...
-myClient.sendRequest(MyRequest1("hello")) // : F[MyResponse1]
-
-myClient.sendRequest(MyRequest2("hello")) // : F[MyResponse2]
+myClient.sendRequest(MyRequest("hello")) // : F[MyResponse]
 ```
 
-We want this to be as type safe as possible, without any boilerplate, with no possibility of replying with the "wrong"
-type of forgetting to send a reply entirely.
+We want this to be as type safe as possible, with no possibility of replying with the "wrong"
+type or forgetting to send a reply entirely, and without any unnecessary boilerplate.
 
 We definitely don't want to care if the service is eventually deployed as a Lambda, an Apache Pulsar function, or a
 standalone app in a container, maybe run in an Akka Cluster, or perhaps run as a test locally.
 
 We just want to be able to run it somewhere 'out there' in the cloud, or maybe run the same code locally in a test,
-without having to make changes. We want to focus on the business logic and implement it on top of an elegant and concise
-API, with no boilerplate.
+without having to make changes. Basically, we want to focus on the business logic and implement it on top of an elegant
+and concise API, with no boilerplate.
 
-In addition to that, we want to
+In addition to that, we would like to
 
 * be able to access the service from anywhere in a type safe way
 
@@ -41,7 +38,9 @@ In addition to that, we want to
 * be able to write an immutable, idiomatic Scala model for the service API, completely decoupled from the underlying
   implementation
 
-* use concurrency seamlessly and safely.
+* use concurrency seamlessly and safely
+
+* still be able to access some common features of messaging and serverless runtimes if needed (e.g. message attributes).
 
 **Scase** gives you exactly that, with the additional benefit of:
 
@@ -53,8 +52,8 @@ In addition to that, we want to
 * Straightforward integration with Cloudformation and Terraform
 * Extendable support for serialization and network protocols, with built-in support for Spray Json, Circe, Java
   serialization
-* Well integrated with the Future, Cats Effect and other common Scala libraries and standard APIs
-* Lightweight, modular, extendable design that provides a simple layer between runtime and application code - no "
+* Integrated with the Future, Cats Effect, Monix and other common Scala libraries and standard APIs
+* Lightweight, modular, extendable design that provides a simple layer between runtime and application code - not a "
   framework"
 * Additional Java-friendly client API to allow easy interop with Java and other JVM languages
 * Test support
@@ -62,6 +61,10 @@ In addition to that, we want to
 * Purely functional, from top to bottom, but without the need to understand or directly depend on any of the complicated
   FP constructs
 
-On top of this, **Scase** does not force you to use any "convention" in how you model your messages or correlate
-requests to responses. It comes with sensible defaults and support for common styles, but all this is pluggable and easy
-to customize. 
+Additionally, **Scase** does not force you to use a specific "convention" when it comes to modelling your messages or
+correlating request and response types. It comes with sensible defaults and support for common styles, but all of these
+are pluggable and easy to customize.
+
+## An example
+
+

@@ -19,11 +19,12 @@ trait InMemoryConsumerProducer[M] extends MessageConsumer[M] with MessageProduce
 
   def subscriptions: Ref[IO, List[MessageReceiveResult[M] => IO[_]]]
 
-
   /**
    * TODO: currently this implementation propagates failures from the subscriptions to the sender mainly
    *  - to allow SNS topics to not commit failed deliveries. This behaviour should be reviewed. Also,
    *  - the subscribers here are not required to commit. This should also be reviewed.
+   *
+   * Warning: Marshaller (and the Unmarshaller in subscribe) is not used here, the message is delivered directly to the consumer.
    */
   def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M]): IO[MessageSendResult[M]] = {
 

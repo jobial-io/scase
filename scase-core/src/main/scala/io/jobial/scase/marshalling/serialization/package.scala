@@ -11,12 +11,15 @@ package object serialization {
   implicit def javaSerializationWithGzipObjectMarshaller[T] = new Marshaller[T] {
     def marshal(o: T): Array[Byte] = {
       val b = new ByteArrayOutputStream(8192)
-      marshal(o, b)
+      marshalToOutputStream(o, b)
       b.close
       b.toByteArray
     }
 
-    def marshal(o: T, out: OutputStream) = IO {
+    def marshal(o: T, out: OutputStream) =
+      IO(marshalToOutputStream(o, out))
+
+    private def marshalToOutputStream(o: T, out: OutputStream) = {
       val oos = new ObjectOutputStream(new GZIPOutputStream(out))
       oos.writeObject(o)
       oos.close
@@ -29,9 +32,12 @@ package object serialization {
 
   implicit def javaSerializationWithGzipObjectUnmarshaller[T] = new Unmarshaller[T] {
     def unmarshal(bytes: Array[Byte]) =
-      unmarshal(new ByteArrayInputStream(bytes))
+      unmarshalFromInputStream(new ByteArrayInputStream(bytes))
 
-    def unmarshal(in: InputStream): T = {
+    def unmarshal(in: InputStream) =
+      IO(unmarshalFromInputStream(in))
+
+    private def unmarshalFromInputStream(in: InputStream) = {
       val ois = new ObjectInputStream(new GZIPInputStream(in))
       ois.readObject.asInstanceOf[T]
     }

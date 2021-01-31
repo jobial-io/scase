@@ -15,7 +15,7 @@ case class MessageReceiveResult[M](
   def correlationId = attributes.get(CorrelationIdKey)
 
   def requestTimeout = attributes.get(RequestTimeoutKey).map(_.toLong millis)
-  
+
   def responseConsumerId = attributes.get(ResponseConsumerIdKey)
 }
 
@@ -24,12 +24,13 @@ trait MessageSubscription[M] {
   def subscription: IO[_]
 
   def cancel: IO[_] // cancel the subscription
-  
-  def isCancelled: Boolean
+
+  def isCancelled: IO[Boolean]
 }
 
 trait MessageConsumer[M] {
 
+  // Subscribes to the message source. In the background, subscribe might start async processing (e.g. a Fiber to poll messages in a source).
   def subscribe[T](callback: MessageReceiveResult[M] => IO[T])(implicit u: Unmarshaller[M]): IO[MessageSubscription[M]]
 }
 

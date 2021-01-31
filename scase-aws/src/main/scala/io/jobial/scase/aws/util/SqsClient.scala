@@ -24,7 +24,7 @@ trait SqsClient extends AwsClient with Logging {
     new AmazonSQSExtendedClient(sqs, new ExtendedClientConfiguration()
       .withLargePayloadSupportEnabled(s3, sqsExtendedS3BucketName))
   }
-  
+
   val defaultMaxReceiveMessageWaitTime = 20
 
   def createQueue(queueName: String): Try[CreateQueueResult] = {
@@ -61,7 +61,7 @@ trait SqsClient extends AwsClient with Logging {
           })
           )
         logger.debug(s"message attributes: ${request.getMessageAttributes.toMap}")
-        logger.debug(s"calling sendMessage on queue $queueUrl with $request")
+        logger.debug(s"calling sendMessage on queue $queueUrl with ${request.toString.take(200)}")
         sqsExtended.getOrElse(sqs).sendMessage(request)
       } catch {
         case t =>
@@ -74,9 +74,9 @@ trait SqsClient extends AwsClient with Logging {
         Failure(t)
     }
 
-//  def sendMessage(queueUrl: String, message: JsValue): Try[SendMessageResult] =
-//    sendMessage(queueUrl, message.prettyPrint)
-//
+  //  def sendMessage(queueUrl: String, message: JsValue): Try[SendMessageResult] =
+  //    sendMessage(queueUrl, message.prettyPrint)
+  //
   def enableLongPolling(queueUrl: String) =
     sqs.setQueueAttributes(new SetQueueAttributesRequest().withQueueUrl(queueUrl)
       .addAttributesEntry(QueueAttributeName.ReceiveMessageWaitTimeSeconds.toString, defaultMaxReceiveMessageWaitTime.toString))

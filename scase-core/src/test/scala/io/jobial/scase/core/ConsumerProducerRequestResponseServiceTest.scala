@@ -14,9 +14,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
 
-class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec {
-
-  implicit val cs = IO.contextShift(ExecutionContext.global)
+class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec with ScaseTestHelper {
 
   val request1 = TestRequest1("1")
 
@@ -24,14 +22,12 @@ class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec {
 
   val response1 = TestResponse1(request1, "1")
 
-  implicit def runIOResult(r: IO[Assertion]) = r.unsafeToFuture
-
   case object TestException extends Exception
 
   def testRequestResponse[REQ, RESP](testRequestProcessor: RequestProcessor[REQ, RESP], request: REQ, response: Either[Throwable, RESP]) =
     for {
-      testMessageConsumer <- InMemoryQueue.create[REQ]
-      testMessageProducer <- InMemoryQueue.create[Either[Throwable, RESP]]
+      testMessageConsumer <- InMemoryQueue[REQ]
+      testMessageProducer <- InMemoryQueue[Either[Throwable, RESP]]
       service = ConsumerProducerRequestResponseService[REQ, RESP](
         testMessageConsumer,
         { _ => IO(testMessageProducer) },
@@ -53,8 +49,8 @@ class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec {
     implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]
   ) =
     for {
-      testMessageConsumer <- InMemoryQueue.create[REQ]
-      testMessageProducer <- InMemoryQueue.create[Either[Throwable, RESP]]
+      testMessageConsumer <- InMemoryQueue[REQ]
+      testMessageProducer <- InMemoryQueue[Either[Throwable, RESP]]
       service = ConsumerProducerRequestResponseService[REQ, RESP](
         testMessageConsumer,
         { _ => IO(testMessageProducer) },

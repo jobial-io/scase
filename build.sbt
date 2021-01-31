@@ -34,6 +34,7 @@ lazy val ScalaLoggingVersion = "3.9.2"
 lazy val ScalatestVersion = "3.2.3"
 lazy val SourcecodeVersion = "0.1.4"
 lazy val AwsVersion = "1.11.557"
+lazy val CommonsIoVersion = "2.8.0"
 
 lazy val root: Project = project
   .in(file("."))
@@ -55,7 +56,9 @@ lazy val `scase-core` = project
       "org.typelevel" %% "cats-free" % CatsVersion,
       "com.typesafe.scala-logging" %% "scala-logging" % ScalaLoggingVersion,
       "com.lihaoyi" %% "sourcecode" % SourcecodeVersion,
-      "org.scalatest" %% "scalatest" % ScalatestVersion % "test"
+      "org.scalatest" %% "scalatest" % ScalatestVersion % "test",
+      "commons-io" % "commons-io" % CommonsIoVersion,
+      "ch.qos.logback" % "logback-classic" % "1.2.3" % "test"
     )
   )
 
