@@ -14,7 +14,7 @@ case class MessageReceiveResult[M](
 
   def correlationId = attributes.get(CorrelationIdKey)
 
-  def requestTimeout = attributes.get(RequestTimeoutKey).map(_.toLong millis)
+  def requestTimeout = attributes.get(RequestTimeoutKey).map(_.toLong.millis)
 
   def responseConsumerId = attributes.get(ResponseConsumerIdKey)
 }
