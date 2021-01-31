@@ -6,7 +6,7 @@ import cats.effect.IO
 import cats.effect.concurrent.{Deferred, Ref}
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
-import io.jobial.scase.monitoring.{MonitoringPublisher, noPublisher}
+import io.jobial.scase.monitoring.{MonitoringPublisher, dummyPublisher}
 
 import scala.concurrent.ExecutionContext
 
@@ -112,9 +112,8 @@ object ConsumerProducerRequestResponseClient extends Logging {
     autoCommitResponse: Boolean = true,
     name: String = randomUUID.toString
   )(
-    //implicit executionContext: ExecutionContext,
     implicit responseMarshallable: Unmarshaller[Either[Throwable, RESP]],
-    monitoringPublisher: MonitoringPublisher = noPublisher
+    monitoringPublisher: MonitoringPublisher = dummyPublisher
   ): IO[ConsumerProducerRequestResponseClient[REQ, RESP]] =
     for {
       correlationsRef <- Ref.of[IO, Map[String, CorrelationInfo[REQ, RESP]]](Map())

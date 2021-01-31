@@ -8,8 +8,8 @@ import scala.concurrent.Future
 import scala.sys.process._
 
 package object monitoring {
-  
-  val noPublisher = new MonitoringPublisher {
+
+  val dummyPublisher = new MonitoringPublisher {
     override def gauge(name: String, value: Any) = {}
 
     override def timing(name: String, start: Long) = {}
@@ -18,14 +18,14 @@ package object monitoring {
 
     override def decrement(name: String, count: Int) = {}
   }
-  
+
   def timing[T](name: String)(f: => T)(implicit publisher: MonitoringPublisher) = {
     val start = System.currentTimeMillis
     val r = f
     publisher.timing(name, start)
     r
   }
-  
+
   def getProcessId = {
     val jvmName = ManagementFactory.getRuntimeMXBean.getName
     val index = jvmName.indexOf('@')
@@ -44,19 +44,4 @@ package object monitoring {
       None
   }
 
-  def runJstack(repeat: Boolean = false, delay: Duration = 10.seconds)(implicit ec: ExecutionContext) = {
-    getProcessId match {
-      case Some(pid) =>
-        println(s"found pid $pid")
-        Future {
-          if (repeat)
-            Seq("/bin/sh", "-c", s"while true; do jstack $pid ; sleep ${delay.toSeconds} ; done") !
-          else
-            s"jstack $pid" !
-        }
-      case _ =>
-        println("could not find process pid")
-        Future.failed(new IllegalStateException("could not find process pid"))
-    }
-  }
 }
