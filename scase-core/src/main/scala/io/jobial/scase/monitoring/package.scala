@@ -44,4 +44,19 @@ package object monitoring {
       None
   }
 
+  def runJStack(repeat: Boolean = false, delay: Duration = 10.seconds)(implicit ec: ExecutionContext) = {
+    getProcessId match {
+      case Some(pid) =>
+        println(s"found pid $pid")
+        Future {
+          if (repeat)
+            Seq("/bin/sh", "-c", s"while true; do jstack $pid ; sleep ${delay.toSeconds} ; done") !
+          else
+            s"jstack $pid" !
+        }
+      case _ =>
+        println("could not find process pid")
+        Future.failed(new IllegalStateException("could not find process pid"))
+    }
+  }
 }
