@@ -1,8 +1,13 @@
 package io.jobial.scase.aws.util
 
+import java.util.concurrent.ExecutionException
+
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.client.builder.{AwsAsyncClientBuilder, AwsSyncClientBuilder}
+
+import scala.concurrent.Future.failed
+import scala.concurrent.{ExecutionContext, Future}
 
 trait AwsClient {
 
@@ -40,5 +45,15 @@ trait AwsClient {
 
     b3.build
   }
-  
+
+  implicit def toScalaFuture[T](f: java.util.concurrent.Future[T])(implicit ec: ExecutionContext) = Future {
+    // unfortunately we cannot do any better here...
+    f.get
+  } recoverWith {
+    case t: ExecutionException =>
+      failed(t.getCause)
+    case t =>
+      failed(t)
+  }
+
 }

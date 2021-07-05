@@ -101,15 +101,14 @@ trait RequestProcessor[REQ, RESP] {
 }
 
 /**
- * Defines a request-response service. It acts as a lightweight service definition, the actual service is created and started
- * using startService or a client can be acquired using the client function. This design allows sharing the same service
- * definition between the server and client side.
+ * Configuration for a service. The service definition can be used to create or deploy the service as well as
+ * creating a client for it. The service definition can be shared between the server and client side.
  */
-trait RequestResponseServiceDefinition[REQ, RESP] {
+trait RequestResponseServiceConfiguration[REQ, RESP] {
 
   def serviceName: String
 
-  def service(requestProcessor: RequestProcessor[REQ, RESP]): RequestResponseService[REQ, RESP]
+  def service: RequestResponseService[REQ, RESP]
 
   def client: RequestResponseClient[REQ, RESP]
 }

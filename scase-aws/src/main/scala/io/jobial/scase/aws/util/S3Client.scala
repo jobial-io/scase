@@ -13,11 +13,7 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 import collection.JavaConverters._
 
-case class AwsContext(
-  region: String,
-  credentials: Option[AWSCredentials] = None,
-  sqsExtendedS3BucketName: Option[String] = None
-)
+
 
 trait S3Client extends AwsClient {
 

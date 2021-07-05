@@ -34,7 +34,11 @@ lazy val ScalaLoggingVersion = "3.9.2"
 lazy val ScalatestVersion = "3.2.3"
 lazy val SourcecodeVersion = "0.2.3"
 lazy val AwsVersion = "1.11.557"
+lazy val AwsLambdaJavaCoreVersion = "1.2.1"
 lazy val CommonsIoVersion = "2.8.0"
+lazy val CommonsLangVersion = "3.12.0"
+lazy val CloudformationTemplateGeneratorVersion = "3.10.0"
+lazy val SclapVersion = "1.0.0"
 
 lazy val root: Project = project
   .in(file("."))
@@ -43,8 +47,8 @@ lazy val root: Project = project
     publishArtifact := false,
     publishArtifact in makePom := true
   )
-  .aggregate(`scase-core`)
-  .dependsOn(`scase-core`)
+  .aggregate(`scase-core`, `scase-aws`, `scase-cloudformation`)
+  .dependsOn(`scase-core`, `scase-aws`, `scase-cloudformation`)
 
 lazy val `scase-core` = project
   .in(file("scase-core"))
@@ -58,6 +62,7 @@ lazy val `scase-core` = project
       "com.lihaoyi" %% "sourcecode" % SourcecodeVersion,
       "org.scalatest" %% "scalatest" % ScalatestVersion % "test",
       "commons-io" % "commons-io" % CommonsIoVersion,
+      "org.apache.commons" % "commons-lang3" % CommonsLangVersion,
       "ch.qos.logback" % "logback-classic" % "1.2.3" % "test"
     )
   )
@@ -68,7 +73,21 @@ lazy val `scase-aws` = project
   .settings(
     libraryDependencies ++= Seq(
       "com.amazonaws" % "aws-java-sdk-sqs" % AwsVersion,
-      "com.amazonaws" % "amazon-sqs-java-extended-client-lib" % "master-SNAPSHOT"
+      "com.amazonaws" % "amazon-sqs-java-extended-client-lib" % "master-SNAPSHOT",
+      "com.amazonaws" % "aws-java-sdk-lambda" % AwsVersion,
+      "com.amazonaws" % "aws-java-sdk-cloudformation" % AwsVersion,
+      "com.amazonaws" % "aws-lambda-java-core" % AwsLambdaJavaCoreVersion
     )
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
+
+lazy val `scase-cloudformation` = project
+  .in(file("scase-cloudformation"))
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "com.monsanto.arch" % "cloud-formation-template-generator_2.11" % CloudformationTemplateGeneratorVersion,
+      "io.jobial" %% "sclap" % SclapVersion
+    )
+  )
+  .dependsOn(`scase-aws` % "compile->compile;test->test")
