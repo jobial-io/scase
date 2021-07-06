@@ -1,31 +1,36 @@
 package io.jobial.scase.core
 
-import java.util.UUID.randomUUID
+import cats.{Monad, MonadError}
 
-import cats.effect.IO
+import java.util.UUID.randomUUID
+import cats.effect.{Concurrent, IO}
 import cats.effect.concurrent.{Deferred, Ref}
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 import io.jobial.scase.monitoring.{MonitoringPublisher, dummyPublisher}
+import cats.implicits._
 
 import scala.concurrent.ExecutionContext
 
-case class CorrelationInfo[REQ, RESP](
-  responseDeferred: Deferred[IO, Either[Throwable, MessageReceiveResult[RESP]]],
+case class CorrelationInfo[F[_], REQ, RESP](
+  responseDeferred: Deferred[F, Either[Throwable, MessageReceiveResult[F, RESP]]],
   sendTime: Long,
   request: Option[REQ]
 )
 
-case class ConsumerProducerRequestResponseClient[REQ: Marshaller, RESP](
-  correlationsRef: Ref[IO, Map[String, CorrelationInfo[REQ, RESP]]],
-  messageSubscription: MessageSubscription[Either[Throwable, RESP]],
-  messageConsumer: MessageConsumer[Either[Throwable, RESP]],
-  messageProducer: () => MessageProducer[REQ],
+case class ConsumerProducerRequestResponseClient[F[_], REQ: Marshaller, RESP](
+  correlationsRef: Ref[F, Map[String, CorrelationInfo[F, REQ, RESP]]],
+  messageSubscription: MessageSubscription[F, Either[Throwable, RESP]],
+  messageConsumer: MessageConsumer[F, Either[Throwable, RESP]],
+  messageProducer: () => MessageProducer[F, REQ],
   responseConsumerId: String,
   autoCommitResponse: Boolean,
   name: String
 )(
-  implicit responseMarshallable: Unmarshaller[Either[Throwable, RESP]],
+  implicit m: Monad[F],
+  c: Concurrent[F],
+  me: MonadError[F, Throwable],
+  responseMarshallable: Unmarshaller[Either[Throwable, RESP]],
   monitoringPublisher: MonitoringPublisher
 ) extends RequestResponseClient[REQ, RESP] with Logging {
 
@@ -48,7 +53,7 @@ case class ConsumerProducerRequestResponseClient[REQ: Marshaller, RESP](
   //
   //  scheduleLogOutstanding
 
-  case class ConsumerProducerRequestResult[RESPONSE <: RESP](response: IO[MessageReceiveResult[RESPONSE]]) extends RequestResult[RESPONSE] {
+  case class ConsumerProducerRequestResult[RESPONSE <: RESP](response: F[MessageReceiveResult[F, RESPONSE]]) extends RequestResult[RESPONSE] {
     def commit = response.flatMap(_.commit())
   }
 
@@ -67,10 +72,10 @@ case class ConsumerProducerRequestResponseClient[REQ: Marshaller, RESP](
       monitoringPublisher.increment(request.getClass.getName)
       logger.info(s"sending ${request.toString.take(500)} with $correlationId using $this")
 
-      implicit val cs = IO.contextShift(ExecutionContext.global)
+      //implicit val cs = IO.contextShift(ExecutionContext.global)
 
       for {
-        receiveResultDeferred <- Deferred[IO, Either[Throwable, MessageReceiveResult[RESP]]]
+        receiveResultDeferred <- Deferred[F, Either[Throwable, MessageReceiveResult[RESP]]]
         _ <- correlationsRef.update { correlations =>
           correlations + ((correlationId, CorrelationInfo(
             receiveResultDeferred,
@@ -94,9 +99,9 @@ case class ConsumerProducerRequestResponseClient[REQ: Marshaller, RESP](
         // TODO: revisit this - maybe Marshallable[RESPONSE] should be an implicit
         r <- receiveResult.asInstanceOf[Either[Throwable, MessageReceiveResult[RESPONSE]]] match {
           case Right(r) =>
-            IO(r)
+            Monad[F].pure(r)
           case Left(t) =>
-            IO.raiseError(t)
+            MonadError[F, Throwable].raiseError(t)
         }
       } yield r
     }
@@ -105,16 +110,19 @@ case class ConsumerProducerRequestResponseClient[REQ: Marshaller, RESP](
 
 object ConsumerProducerRequestResponseClient extends Logging {
 
-  def apply[REQ: Marshaller, RESP](
+  def apply[F[_], REQ: Marshaller, RESP](
     messageConsumer: MessageConsumer[Either[Throwable, RESP]],
     messageProducer: () => MessageProducer[REQ],
     responseConsumerId: String,
     autoCommitResponse: Boolean = true,
     name: String = randomUUID.toString
   )(
-    implicit responseMarshallable: Unmarshaller[Either[Throwable, RESP]],
+    implicit m: Monad[F],
+    c: Concurrent[F],
+    me: MonadError[F, Throwable],
+    responseMarshallable: Unmarshaller[Either[Throwable, RESP]],
     monitoringPublisher: MonitoringPublisher = dummyPublisher
-  ): IO[ConsumerProducerRequestResponseClient[REQ, RESP]] =
+  ): F[ConsumerProducerRequestResponseClient[REQ, RESP]] =
     for {
       correlationsRef <- Ref.of[IO, Map[String, CorrelationInfo[REQ, RESP]]](Map())
       subscription <- messageConsumer.subscribe { response =>

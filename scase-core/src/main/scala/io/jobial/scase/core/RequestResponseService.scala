@@ -1,5 +1,7 @@
 package io.jobial.scase.core
 
+import cats.MonadError
+
 import scala.concurrent.duration._
 import scala.util.Try
 import cats.effect.IO
@@ -20,10 +22,10 @@ case class ResponseWrapper[RESP](
 
 trait SendResponseResult[+RESP]
 
-trait RequestContext {
+trait RequestContext[F[_]] {
 
   def reply[REQUEST, RESPONSE](request: REQUEST, response: RESPONSE)
-    (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): IO[SendResponseResult[RESPONSE]]
+    (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): F[SendResponseResult[RESPONSE]]
 
   def requestTimeout: Duration
 }
@@ -61,13 +63,13 @@ trait RequestContext {
 trait Request[RESPONSE]
 
 // The actual service logic is separated from the message producer and consumers in the RequestProcessor
-trait RequestProcessor[REQ, RESP] {
+trait RequestProcessor[F[_], REQ, RESP] {
 
-  type Processor = PartialFunction[REQ, IO[SendResponseResult[RESP]]]
+  type Processor = PartialFunction[REQ, F[SendResponseResult[RESP]]]
 
   def processor(f: Processor): Processor = f
 
-  def responseTransformer(f: IO[SendResponseResult[RESP]] => IO[SendResponseResult[RESP]]) = f
+  def responseTransformer(f: F[SendResponseResult[RESP]] => F[SendResponseResult[RESP]]) = f
 
   case class UnknownRequest(request: REQ) extends IllegalStateException
 
@@ -75,13 +77,13 @@ trait RequestProcessor[REQ, RESP] {
    * Reply is sent through the sender to enforce the response type specific for the request. 
    * Return type is SendResponseResult to make sure a reply has been sent by processRequest. 
    */
-  def processRequestOrFail(implicit context: RequestContext): Function[REQ, IO[SendResponseResult[RESP]]] =
+  def processRequestOrFail(implicit context: RequestContext[F], me: MonadError[F, Throwable]): Function[REQ, F[SendResponseResult[RESP]]] =
     processRequest orElse {
       case request =>
-        raiseError(UnknownRequest(request))
+        MonadError[F, Throwable].raiseError(UnknownRequest(request))
     }
 
-  def processRequest(implicit context: RequestContext): Processor
+  def processRequest(implicit context: RequestContext[F]): Processor
 
   def afterResponse(request: REQ): PartialFunction[Try[SendResponseResult[RESP]], Unit] = {
     case _ =>
@@ -104,22 +106,22 @@ trait RequestProcessor[REQ, RESP] {
  * Configuration for a service. The service definition can be used to create or deploy the service as well as
  * creating a client for it. The service definition can be shared between the server and client side.
  */
-trait RequestResponseServiceConfiguration[REQ, RESP] {
+trait RequestResponseServiceConfiguration[F[_], REQ, RESP] {
 
   def serviceName: String
 
-  def service: RequestResponseService[REQ, RESP]
+  def service: RequestResponseService[F, REQ, RESP]
 
   def client: RequestResponseClient[REQ, RESP]
 }
 
-trait RequestResponseService[REQ, RESP] {
+trait RequestResponseService[F[_], REQ, RESP] {
 
-  def startService: IO[RequestResponseServiceState[REQ]]
+  def startService: F[RequestResponseServiceState[F, REQ]]
 }
 
-trait RequestResponseServiceState[REQ] {
+trait RequestResponseServiceState[F[_], REQ] {
 
-  def stopService: IO[RequestResponseServiceState[REQ]]
+  def stopService: F[RequestResponseServiceState[F, REQ]]
 }
 

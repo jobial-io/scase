@@ -1,3 +1,3 @@
 package io.jobial.scase.core
 
-trait Queue[M] extends MessageConsumer[M] with MessageProducer[M]
+trait Queue[F[_], M] extends MessageConsumer[F, M] with MessageProducer[F, M]

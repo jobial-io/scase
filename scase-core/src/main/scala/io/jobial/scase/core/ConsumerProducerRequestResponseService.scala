@@ -1,8 +1,9 @@
 package io.jobial.scase.core
 
-import java.util.concurrent.LinkedBlockingQueue
+import cats.effect.Concurrent
+import cats.{Monad, MonadError}
 
-import cats.effect.IO
+import java.util.concurrent.LinkedBlockingQueue
 import cats.effect.concurrent.Deferred
 import cats.implicits._
 import io.jobial.scase.logging.Logging
@@ -11,13 +12,13 @@ import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
-case class ConsumerProducerRequestResponseServiceState[REQ, RESP](
-  subscription: MessageSubscription[REQ],
-  service: ConsumerProducerRequestResponseService[REQ, RESP]
-) extends RequestResponseServiceState[REQ]
+case class ConsumerProducerRequestResponseServiceState[F[_], REQ, RESP](
+  subscription: MessageSubscription[F, REQ],
+  service: ConsumerProducerRequestResponseService[F, REQ, RESP]
+)(implicit m: Monad[F]) extends RequestResponseServiceState[F, REQ]
   with Logging {
 
-  def stopService: IO[RequestResponseServiceState[REQ]] =
+  def stopService: F[RequestResponseServiceState[F, REQ]] =
     for {
       r <- subscription.cancel
       _ <- subscription.join
@@ -28,41 +29,45 @@ case class ConsumerProducerRequestResponseServiceState[REQ, RESP](
     }
 }
 
-case class ConsumerProducerRequestResponseService[REQ: Unmarshaller, RESP: Marshaller](
-  messageConsumer: MessageConsumer[REQ],
-  messageProducer: String => IO[MessageProducer[Either[Throwable, RESP]]], // TODO: add support for fixed producer case
-  requestProcessor: RequestProcessor[REQ, RESP],
-  messageProducerForErrors: Option[MessageProducer[REQ]] = None, // TODO: implement this
+case class ConsumerProducerRequestResponseService[F[_], REQ: Unmarshaller, RESP: Marshaller](
+  messageConsumer: MessageConsumer[F, REQ],
+  messageProducer: String => F[MessageProducer[F, Either[Throwable, RESP]]], // TODO: add support for fixed producer case
+  requestProcessor: RequestProcessor[F, REQ, RESP],
+  messageProducerForErrors: Option[MessageProducer[F, REQ]] = None, // TODO: implement this
   autoCommitRequest: Boolean = true,
   autoCommitFailedRequest: Boolean = true
 )(
-  implicit responseMarshallable: Marshaller[Either[Throwable, RESP]]
+  implicit m: Monad[F],
+  d: Deferred[F, Either[Throwable, RESP]],
+  c: Concurrent[F],
+  me: MonadError[F, Throwable],
+  responseMarshallable: Marshaller[Either[Throwable, RESP]]
   //sourceContext: SourceContext
-) extends RequestResponseService[REQ, RESP] with Logging {
+) extends RequestResponseService[F, REQ, RESP] with Logging {
 
   //logger.error(s"created ConsumerProducerRequestResponseService", new RuntimeException)
   implicit val executionContext = serviceExecutionContext
 
-  private def handleRequest(request: MessageReceiveResult[REQ]) = {
+  private def handleRequest(request: MessageReceiveResult[F, REQ]) = {
     logger.info(s"received request in service: ${request.toString.take(500)}")
-    val r: IO[SendResponseResult[RESP]] =
+    val r: F[SendResponseResult[RESP]] =
       request.responseConsumerId match {
         case Some(responseConsumerId) =>
 
-          implicit val cs = IO.contextShift(ExecutionContext.global)
+//          implicit val cs = F.contextShift(ExecutionContext.global)
 
           (for {
             producer <- messageProducer(responseConsumerId)
-            response <- Deferred[IO, Either[Throwable, RESP]]
+            response <- Deferred[F, Either[Throwable, RESP]]
             processorResult <- {
               logger.debug(s"found response producer $producer for request in service: ${request.toString.take(500)}")
               // TODO: make this a Deferred
 
               val processorResult =
-                requestProcessor.processRequestOrFail(new RequestContext {
+                requestProcessor.processRequestOrFail(new RequestContext[F] {
 
                   def reply[REQUEST, RESPONSE](req: REQUEST, r: RESPONSE)
-                    (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): IO[SendResponseResult[RESPONSE]] = {
+                    (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): F[SendResponseResult[RESPONSE]] = {
                     logger.debug(s"context sending response ${r.toString.take(500)}")
                     val re = r.asInstanceOf[RESP]
 
@@ -74,13 +79,14 @@ case class ConsumerProducerRequestResponseService[REQ: Unmarshaller, RESP: Marsh
 
                   val requestTimeout = request.requestTimeout.getOrElse(Duration.Inf)
 
-                })(request.message)
+                }, me)(request.message)
 
-              val processResultWithErrorHandling = processorResult.map(Right(_)).handleErrorWith { case t =>
+              val processResultWithErrorHandling = processorResult.map(Right[Throwable, SendResponseResult[RESP]](_): Either[Throwable, SendResponseResult[RESP]]).handleErrorWith { case t =>
                 logger.error(s"request processing failed: ${request.toString.take(500)}", t)
-                for {
+                val x = for {
                   _ <- response.complete(Left(t))
-                } yield Left(t)
+                } yield (Left(t): Either[Throwable, SendResponseResult[RESP]])
+                x
               }
 
               // handle processor timeout
@@ -121,17 +127,17 @@ case class ConsumerProducerRequestResponseService[REQ: Unmarshaller, RESP: Marsh
                 println("finished sending reply")
                 r match {
                   case Right(r) =>
-                    IO(r)
+                    Monad[F].pure(r)
                   case Left(t) =>
                     // TODO: revisit this...
-                    IO(new SendResponseResult[RESP] {})
+                    Monad[F].pure(new SendResponseResult[RESP] {})
                 }
               }
             }
           } yield processorResult).flatten
         case None =>
           logger.error(s"response consumer id not found for request: ${request.toString.take(500)}")
-          IO.raiseError[SendResponseResult[RESP]](ResponseConsumerIdNotFound())
+          MonadError[F, Throwable].raiseError[SendResponseResult[RESP]](ResponseConsumerIdNotFound())
       }
 
     r

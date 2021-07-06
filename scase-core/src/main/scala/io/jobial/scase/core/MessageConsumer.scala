@@ -5,11 +5,11 @@ import io.jobial.scase.marshalling.Unmarshaller
 
 import scala.concurrent.duration._
 
-case class MessageReceiveResult[M](
+case class MessageReceiveResult[F[_], M](
   message: M,
   attributes: Map[String, String],
-  commit: () => IO[_], // commit the message
-  rollback: () => IO[_]
+  commit: () => F[_], // commit the message
+  rollback: () => F[_]
 ) {
 
   def correlationId = attributes.get(CorrelationIdKey)
@@ -19,19 +19,19 @@ case class MessageReceiveResult[M](
   def responseConsumerId = attributes.get(ResponseConsumerIdKey)
 }
 
-trait MessageSubscription[M] {
+trait MessageSubscription[F[_], M] {
 
-  def join: IO[_]
+  def join: F[_]
 
-  def cancel: IO[_] // cancel the subscription
+  def cancel: F[_] // cancel the subscription
 
-  def isCancelled: IO[Boolean]
+  def isCancelled: F[Boolean]
 }
 
-trait MessageConsumer[M] {
+trait MessageConsumer[F[_], M] {
 
   // Subscribes to the message source. In the background, subscribe might start async processing (e.g. a Fiber to poll messages in a source).
-  def subscribe[T](callback: MessageReceiveResult[M] => IO[T])(implicit u: Unmarshaller[M]): IO[MessageSubscription[M]]
+  def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M]): F[MessageSubscription[F, M]]
 }
 
 case class CouldNotFindMessageToCommit[M](

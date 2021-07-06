@@ -7,7 +7,7 @@ import io.jobial.scase.marshalling.Marshaller
 //  - no longer required.
 case class MessageSendResult[M: Marshaller]()
 
-trait MessageProducer[M] {
+trait MessageProducer[F[_], M] {
 
-  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M]): IO[MessageSendResult[M]]
+  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M]): F[MessageSendResult[M]]
 }
