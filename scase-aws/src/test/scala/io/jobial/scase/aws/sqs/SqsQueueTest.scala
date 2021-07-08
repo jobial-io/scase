@@ -32,33 +32,33 @@ class SqsQueueTest extends AsyncFlatSpec with ScaseTestHelper {
 
   val testQueueLarge = SqsQueue[IO, Array[Byte]](s"test-queue-${uuid(5)}")
 
-  //  "sending to queue" should "succeed" in {
-  //    for {
-  //      r1 <- testQueue.send(message1)
-  //      r2 <- testQueue.send(message2)
-  //    } yield {
-  ////      println(r1)
-  ////      println(r2)
-  //      succeed
-  //    }
-  //  }
-  //
-  //  "receiving from queue" should "be the right order" in {
-  //    val messages = new ConcurrentLinkedQueue[TestRequest]
-  //
-  //    testQueue.subscribe { result =>
-  //      result.commit()
-  //      println(result.message)
-  //      messages.add(result.message)
-  //    }.subscription
-  //
-  //    sleep(3 seconds)
-  //
-  //    assert(messages.size === 2)
-  //    println(messages)
-  //    // ordering is not preserved on standard queues!
-  //    assert(messages.toSet === Set(message1, message2))
-  //  }
+//  "sending to queue" should "succeed" in {
+//    for {
+//      r1 <- testQueue.send(message1)
+//      r2 <- testQueue.send(message2)
+//    } yield {
+//      println(r1)
+//      println(r2)
+//      succeed
+//    }
+//  }
+//
+//  "receiving from queue" should "be the right order" in {
+//    val messages = new ConcurrentLinkedQueue[TestRequest[_ <: TestResponse]]
+//
+//    testQueue.subscribe { result =>
+//      result.commit()
+//      println(result.message)
+//      messages.add(result.message)
+//    }.subscription
+//
+//    sleep(3 seconds)
+//
+//    assert(messages.size == 2)
+//    println(messages)
+//    // ordering is not preserved on standard queues!
+//    assert(messages.toSet === Set(message1, message2))
+//  }
 
   val largeMessage = (0 until 300000).map(_.toByte).toArray[Byte]
 
@@ -74,17 +74,16 @@ class SqsQueueTest extends AsyncFlatSpec with ScaseTestHelper {
   "receiving a large message" should "succeed" in {
     for {
       messages <- MVar[IO].empty[Array[Byte]]
-      _ <- testQueueLarge.subscribe { result =>
+      m <- IO.race(testQueueLarge.subscribe { result =>
         for {
           _ <- result.commit()
           _ = println("putting message into var")
           _ <- messages.put(result.message)
         } yield ()
-      }
-      _ = println("taking message")
-      m <- messages.take
+      },
+      messages.take)
     } yield
-      assert(m.deep == largeMessage.deep)
+      assert(m.right.map(_.deep == largeMessage.deep).getOrElse(fail))
   }
 
 
