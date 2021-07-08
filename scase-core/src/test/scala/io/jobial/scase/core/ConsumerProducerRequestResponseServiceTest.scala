@@ -8,7 +8,6 @@ import io.jobial.scase.marshalling.serialization._
 import org.scalatest.flatspec.AsyncFlatSpec
 
 import scala.concurrent.duration.DurationInt
-import scala.reflect.ClassTag
 
 
 class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec with ScaseTestHelper {
@@ -42,7 +41,7 @@ class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec with Scas
 
   implicit val sendRequestContext = SendRequestContext(10.seconds)
 
-  def testRequestResponseClient[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP : ClassTag](testRequestProcessor: RequestProcessor[IO, REQ, RESP], request: REQUEST, response: Either[Throwable, RESPONSE])(
+  def testRequestResponseClient[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP](testRequestProcessor: RequestProcessor[IO, REQ, RESP], request: REQUEST, response: Either[Throwable, RESPONSE])(
     implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]
   ) =
     for {
@@ -60,8 +59,8 @@ class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec with Scas
         ""
       )
       r <- {
-        implicit val c = client //.asInstanceOf[RequestResponseClient[IO, REQ, RESP]]
-        
+        implicit val c = client
+
         // We do it this way to test if the implicit request sending is working, obviously we could also use client.sendRequest here 
         for {
           r <- request
