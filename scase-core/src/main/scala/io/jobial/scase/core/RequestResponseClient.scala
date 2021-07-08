@@ -27,7 +27,7 @@ trait RequestResponseClient[F[_], REQ, RESP] {
   def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST)
     (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext): RequestResult[F, RESPONSE]
 
-  def ?[REQUEST <: REQ, RESPONSE <: RESP : ClassTag](request: REQUEST)
+  def ?[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST)
     (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext, m: Monad[F]) =
       Monad[F].map(sendRequest(request).response)(_.message)
 }

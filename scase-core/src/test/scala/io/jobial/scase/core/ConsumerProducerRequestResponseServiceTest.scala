@@ -12,6 +12,7 @@ import org.scalatest.flatspec.AsyncFlatSpec
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
+import scala.reflect.ClassTag
 
 
 class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec with ScaseTestHelper {
@@ -45,7 +46,7 @@ class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec with Scas
 
   implicit val sendRequestContext = SendRequestContext(10.seconds)
 
-  def testRequestResponseClient[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP](testRequestProcessor: RequestProcessor[IO, REQ, RESP], request: REQUEST, response: Either[Throwable, RESPONSE])(
+  def testRequestResponseClient[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP : ClassTag](testRequestProcessor: RequestProcessor[IO, REQ, RESP], request: REQUEST, response: Either[Throwable, RESPONSE])(
     implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]
   ) =
     for {
@@ -62,7 +63,11 @@ class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec with Scas
         () => testMessageConsumer,
         ""
       )
-      r <- client.sendRequest(request)
+      r <- {
+        implicit val c = client //.asInstanceOf[RequestResponseClient[IO, REQ, RESP]]
+        
+        sendRequest(request) //(implicitly[ClassTag[RESPONSE]], requestResponseMapping, client, sendRequestContext)
+      }
     } yield assert(Right(r) == response)
 
   "request-response service" should "reply successfully" in {

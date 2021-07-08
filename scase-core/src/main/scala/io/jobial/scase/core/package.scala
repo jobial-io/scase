@@ -15,10 +15,9 @@ package object core extends Logging {
   implicit def requestResultToResult[F[_], RESPONSE](requestResult: RequestResult[F, RESPONSE])(implicit m: Monad[F]) =
     Monad[F].map(requestResult.response)(_.message)
 
-  implicit def sendRequest[F[_], REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP : ClassTag](request: REQUEST)(
-    implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE],
-    client: RequestResponseClient[F, _ >: REQ, _ >: RESP], sendRequestContext: SendRequestContext,
-    m: Monad[F]): F[RESPONSE] =
+  implicit def sendRequest[REQ1, RESP1, REQUEST1 <: REQ1, RESPONSE1 <: RESP1: ClassTag](request: REQUEST1)(
+    implicit requestResponseMapping: RequestResponseMapping[REQUEST1, RESPONSE1],
+    client: RequestResponseClient[IO, _ >: REQ1, _ >: RESP1], sendRequestContext: SendRequestContext): IO[RESPONSE1] =
     client.?(request)
 
   /**
