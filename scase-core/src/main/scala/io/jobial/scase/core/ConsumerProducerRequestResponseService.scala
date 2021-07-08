@@ -48,8 +48,6 @@ case class ConsumerProducerRequestResponseService[F[_], REQ: Unmarshaller, RESP:
       request.responseConsumerId match {
         case Some(responseConsumerId) =>
 
-//          implicit val cs = F.contextShift(ExecutionContext.global)
-
           (for {
             producer <- messageProducer(responseConsumerId)
             response <- Deferred[F, Either[Throwable, RESP]]

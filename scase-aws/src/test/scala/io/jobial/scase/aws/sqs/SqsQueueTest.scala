@@ -1,24 +1,13 @@
 package io.jobial.scase.aws.sqs
 
-import java.util.concurrent.ConcurrentLinkedQueue
-
-import cats._
-import cats.implicits._
 import cats.effect.IO
 import cats.effect.concurrent.MVar
 import io.jobial.scase.aws.util.AwsContext
 import io.jobial.scase.aws.util.Hash.uuid
 import io.jobial.scase.core._
-import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Millis, Seconds, Span}
-
-import scala.concurrent.Await.result
-import scala.concurrent.duration._
-//import cats.implicits._
-import java.lang.Thread.sleep
-import org.scalatest.flatspec.AsyncFlatSpec
-import scala.collection.JavaConversions._
+import cats.implicits._
 import io.jobial.scase.marshalling.serialization._
+import org.scalatest.flatspec.AsyncFlatSpec
 
 class SqsQueueTest extends AsyncFlatSpec with ScaseTestHelper {
 
