@@ -112,7 +112,7 @@ trait RequestResponseServiceConfiguration[F[_], REQ, RESP] {
 
   def service: RequestResponseService[F, REQ, RESP]
 
-  def client: RequestResponseClient[REQ, RESP]
+  def client: RequestResponseClient[F, REQ, RESP]
 }
 
 trait RequestResponseService[F[_], REQ, RESP] {

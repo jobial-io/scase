@@ -1,6 +1,7 @@
 package io.jobial.scase.core
 
-import cats.effect.IO
+import cats.Monad
+import cats.effect.{Concurrent, IO}
 import io.jobial.scase.marshalling.Unmarshaller
 
 import scala.concurrent.duration._
@@ -8,7 +9,7 @@ import scala.concurrent.duration._
 case class MessageReceiveResult[F[_], M](
   message: M,
   attributes: Map[String, String],
-  commit: () => F[_], // commit the message
+  commit: () => F[Unit], // commit the message
   rollback: () => F[_]
 ) {
 
@@ -31,7 +32,7 @@ trait MessageSubscription[F[_], M] {
 trait MessageConsumer[F[_], M] {
 
   // Subscribes to the message source. In the background, subscribe might start async processing (e.g. a Fiber to poll messages in a source).
-  def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M]): F[MessageSubscription[F, M]]
+  def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M], c: Concurrent[F]): F[MessageSubscription[F, M]]
 }
 
 case class CouldNotFindMessageToCommit[M](

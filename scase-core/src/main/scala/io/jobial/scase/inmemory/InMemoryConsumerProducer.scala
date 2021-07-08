@@ -1,21 +1,21 @@
 package io.jobial.scase.inmemory
 
-import cats.effect.{ContextShift, IO}
+import cats.effect.Concurrent
+import cats.{Monad, Traverse}
 import cats.effect.concurrent.{Deferred, Ref}
 import cats.implicits._
+import cats.effect.implicits._
 import io.jobial.scase.core.{MessageConsumer, MessageProducer, MessageReceiveResult, MessageSendResult, MessageSubscription}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 
-trait InMemoryConsumerProducer[M] extends MessageConsumer[M] with MessageProducer[M] {
+trait InMemoryConsumerProducer[F[_], M] extends MessageConsumer[F, M] with MessageProducer[F, M] {
 
   val deliverToAllSubscribers: Boolean
 
   val allowMultipleSubscribers: Boolean
 
-  implicit def cs: ContextShift[IO]
-
-  def subscriptions: Ref[IO, List[MessageReceiveResult[M] => IO[_]]]
+  def subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]]
 
   /**
    * TODO: currently this implementation propagates failures from the subscriptions to the sender mainly
@@ -24,19 +24,19 @@ trait InMemoryConsumerProducer[M] extends MessageConsumer[M] with MessageProduce
    *
    * Warning: Marshaller (and the Unmarshaller in subscribe) is not used here, the message is delivered directly to the consumer.
    */
-  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M]): IO[MessageSendResult[M]] = {
+  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M], mf: Monad[F]): F[MessageSendResult[M]] = {
 
-    val messageReceiveResult = MessageReceiveResult(message, attributes, { () => IO() }, { () => IO() })
+    val messageReceiveResult = MessageReceiveResult(message, attributes, { () => Monad[F].pure() }, { () => Monad[F].pure() })
 
     for {
       r <- subscriptions.get
       _ = println(r)
-      _ <- (for {
-        subscription <- r
+      _ <- Traverse[List].sequence[F, Any](for {
+        subscription <- r.asInstanceOf[List[MessageReceiveResult[F, M] => F[Any]]]
       } yield {
         println(s"calling subscription on queue with $messageReceiveResult")
         subscription(messageReceiveResult)
-      }).sequence
+      })
     } yield MessageSendResult[M]()
 
     //        if (deliverToAllSubscribers)
@@ -58,12 +58,12 @@ trait InMemoryConsumerProducer[M] extends MessageConsumer[M] with MessageProduce
    * @tparam T
    * @return
    */
-  override def subscribe[T](callback: MessageReceiveResult[M] => IO[T])(implicit u: Unmarshaller[M]) = {
+  override def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M], c: Concurrent[F]) = {
     for {
       _ <- subscriptions.update(callback :: _)
       _ = println(callback)
-      cancelled <- Deferred[IO, Boolean]
-    } yield new MessageSubscription[M] {
+      cancelled <- Deferred[F, Boolean]
+    } yield new MessageSubscription[F, M] {
 
       override def join =
         cancelled.get

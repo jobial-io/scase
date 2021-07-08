@@ -9,7 +9,6 @@ import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 import io.jobial.scase.monitoring.{MonitoringPublisher, dummyPublisher}
 import cats.implicits._
-
 import scala.concurrent.ExecutionContext
 
 case class CorrelationInfo[F[_], REQ, RESP](
@@ -27,12 +26,10 @@ case class ConsumerProducerRequestResponseClient[F[_], REQ: Marshaller, RESP](
   autoCommitResponse: Boolean,
   name: String
 )(
-  implicit m: Monad[F],
-  c: Concurrent[F],
-  me: MonadError[F, Throwable],
+  implicit c: Concurrent[F],
   responseMarshallable: Unmarshaller[Either[Throwable, RESP]],
   monitoringPublisher: MonitoringPublisher
-) extends RequestResponseClient[REQ, RESP] with Logging {
+) extends RequestResponseClient[F, REQ, RESP] with Logging {
 
   val holdOntoOutstandingRequest = true
 
@@ -53,8 +50,8 @@ case class ConsumerProducerRequestResponseClient[F[_], REQ: Marshaller, RESP](
   //
   //  scheduleLogOutstanding
 
-  case class ConsumerProducerRequestResult[RESPONSE <: RESP](response: F[MessageReceiveResult[F, RESPONSE]]) extends RequestResult[RESPONSE] {
-    def commit = response.flatMap(_.commit())
+  case class ConsumerProducerRequestResult[RESPONSE <: RESP](response: F[MessageReceiveResult[F, RESPONSE]]) extends RequestResult[F, RESPONSE] {
+    def commit = Monad[F].flatMap[MessageReceiveResult[F, RESPONSE], Unit](response)(x => x.commit())
   }
 
   def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST)
@@ -75,7 +72,7 @@ case class ConsumerProducerRequestResponseClient[F[_], REQ: Marshaller, RESP](
       //implicit val cs = IO.contextShift(ExecutionContext.global)
 
       for {
-        receiveResultDeferred <- Deferred[F, Either[Throwable, MessageReceiveResult[RESP]]]
+        receiveResultDeferred <- Deferred[F, Either[Throwable, MessageReceiveResult[F, RESP]]]
         _ <- correlationsRef.update { correlations =>
           correlations + ((correlationId, CorrelationInfo(
             receiveResultDeferred,
@@ -97,7 +94,7 @@ case class ConsumerProducerRequestResponseClient[F[_], REQ: Marshaller, RESP](
         _ = println("waiting for result...")
         receiveResult <- receiveResultDeferred.get
         // TODO: revisit this - maybe Marshallable[RESPONSE] should be an implicit
-        r <- receiveResult.asInstanceOf[Either[Throwable, MessageReceiveResult[RESPONSE]]] match {
+        r <- receiveResult.asInstanceOf[Either[Throwable, MessageReceiveResult[F, RESPONSE]]] match {
           case Right(r) =>
             Monad[F].pure(r)
           case Left(t) =>
@@ -111,20 +108,18 @@ case class ConsumerProducerRequestResponseClient[F[_], REQ: Marshaller, RESP](
 object ConsumerProducerRequestResponseClient extends Logging {
 
   def apply[F[_], REQ: Marshaller, RESP](
-    messageConsumer: MessageConsumer[Either[Throwable, RESP]],
-    messageProducer: () => MessageProducer[REQ],
+    messageConsumer: MessageConsumer[F, Either[Throwable, RESP]],
+    messageProducer: () => MessageProducer[F, REQ],
     responseConsumerId: String,
     autoCommitResponse: Boolean = true,
     name: String = randomUUID.toString
   )(
-    implicit m: Monad[F],
-    c: Concurrent[F],
-    me: MonadError[F, Throwable],
+    implicit c: Concurrent[F],
     responseMarshallable: Unmarshaller[Either[Throwable, RESP]],
     monitoringPublisher: MonitoringPublisher = dummyPublisher
-  ): F[ConsumerProducerRequestResponseClient[REQ, RESP]] =
+  ): F[ConsumerProducerRequestResponseClient[F, REQ, RESP]] =
     for {
-      correlationsRef <- Ref.of[IO, Map[String, CorrelationInfo[REQ, RESP]]](Map())
+      correlationsRef <- Ref.of[F, Map[String, CorrelationInfo[F, REQ, RESP]]](Map())
       subscription <- messageConsumer.subscribe { response =>
         println(s"received response ${response.toString.take(500)}")
         logger.debug(s"received response ${response.toString.take(500)}")
@@ -168,20 +163,19 @@ object ConsumerProducerRequestResponseClient extends Logging {
                 //                  
                 case None =>
                   logger.error(s"${System.identityHashCode(this)} received message that cannot be correlated to a request: ${response.toString.take(500)}")
-                  IO()
+                  Monad[F].pure()
               }
               _ <- correlationsRef.update(_ - correlationId)
               _ <- if (autoCommitResponse) {
                 val r = response.commit()
                 logger.debug(s"client committed response ${response.toString.take(500)}")
                 r
-              } else IO()
+              } else Monad[F].pure()
             } yield ()
           case None =>
             logger.error(s"${System.identityHashCode(this)} received message without correlation id: ${response.toString.take(500)}")
-            IO()
+            Monad[F].pure()
         }
-
       }
     } yield ConsumerProducerRequestResponseClient(correlationsRef, subscription, messageConsumer, messageProducer, responseConsumerId, autoCommitResponse, name)
 

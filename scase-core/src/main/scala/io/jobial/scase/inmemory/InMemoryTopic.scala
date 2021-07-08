@@ -5,11 +5,11 @@ import cats.effect.concurrent.Ref
 import cats.effect.{ContextShift, IO}
 import io.jobial.scase.core.{MessageReceiveResult, Topic}
 
-case class InMemoryTopic[M](
-  subscriptions: Ref[IO, List[MessageReceiveResult[M] => IO[_]]]
+case class InMemoryTopic[F[_], M](
+  subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]]
 )(
   implicit val cs: ContextShift[IO]
-) extends Topic[M] with InMemoryConsumerProducer[M] {
+) extends Topic[F, M] with InMemoryConsumerProducer[F, M] {
 
   val deliverToAllSubscribers = true
 

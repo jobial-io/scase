@@ -1,5 +1,6 @@
 package io.jobial.scase
 
+import cats.Monad
 import cats.effect.IO
 import io.jobial.scase.logging.Logging
 
@@ -11,11 +12,13 @@ import scala.reflect.ClassTag
 package object core extends Logging {
   implicit lazy val executionContext = ExecutionContextWithShutdown(Executors.newCachedThreadPool)
 
-  implicit def requestResultToResult[RESPONSE](requestResult: RequestResult[RESPONSE]) =
-    requestResult.response.map(_.message)
+  implicit def requestResultToResult[F[_], RESPONSE](requestResult: RequestResult[F, RESPONSE])(implicit m: Monad[F]) =
+    Monad[F].map(requestResult.response)(_.message)
 
-  implicit def sendRequest[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP : ClassTag](request: REQUEST)(
-    implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], client: RequestResponseClient[_ >: REQ, _ >: RESP], sendRequestContext: SendRequestContext): IO[RESPONSE] =
+  implicit def sendRequest[F[_], REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP : ClassTag](request: REQUEST)(
+    implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE],
+    client: RequestResponseClient[F, _ >: REQ, _ >: RESP], sendRequestContext: SendRequestContext,
+    m: Monad[F]): F[RESPONSE] =
     client.?(request)
 
   /**
@@ -39,12 +42,12 @@ package object core extends Logging {
 
   val forwarderExecutionContext = executionContext
 
-  implicit class RequestExtension[REQUEST](request: REQUEST) {
+  implicit class RequestExtension[F[_], REQUEST](request: REQUEST) {
 
     /**
      * Syntactic sugar to allow the syntax request.reply(...).
      */
-    def reply[RESPONSE](response: RESPONSE)(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], context: RequestContext) =
+    def reply[RESPONSE](response: RESPONSE)(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], context: RequestContext[F]) =
       context.reply(request, response)
   }
 
