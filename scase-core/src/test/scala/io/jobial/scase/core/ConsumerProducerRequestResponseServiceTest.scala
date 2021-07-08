@@ -1,16 +1,12 @@
 package io.jobial.scase.core
 
-import cats._
-import cats.implicits._
-import cats.syntax._
 import cats.effect.IO
 import cats.effect.concurrent.Deferred
+import cats.implicits._
 import io.jobial.scase.inmemory.InMemoryQueue
 import io.jobial.scase.marshalling.serialization._
-import org.scalatest.compatible.Assertion
 import org.scalatest.flatspec.AsyncFlatSpec
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 import scala.reflect.ClassTag
 
@@ -66,7 +62,10 @@ class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec with Scas
       r <- {
         implicit val c = client //.asInstanceOf[RequestResponseClient[IO, REQ, RESP]]
         
-        sendRequest(request) //(implicitly[ClassTag[RESPONSE]], requestResponseMapping, client, sendRequestContext)
+        // We do it this way to test if the implicit request sending is working, obviously we could also use client.sendRequest here 
+        for {
+          r <- request
+        } yield r
       }
     } yield assert(Right(r) == response)
 
