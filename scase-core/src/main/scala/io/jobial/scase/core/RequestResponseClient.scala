@@ -1,7 +1,6 @@
 package io.jobial.scase.core
 
 import cats.Monad
-import cats.effect.IO
 
 import scala.annotation.implicitNotFound
 import scala.concurrent.duration.Duration

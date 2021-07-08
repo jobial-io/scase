@@ -37,10 +37,7 @@ case class ConsumerProducerRequestResponseService[F[_], REQ: Unmarshaller, RESP:
   autoCommitRequest: Boolean = true,
   autoCommitFailedRequest: Boolean = true
 )(
-  implicit m: Monad[F],
-  //d: Deferred[F, Either[Throwable, RESP]],
-  c: Concurrent[F],
-  me: MonadError[F, Throwable],
+  implicit concurrent: Concurrent[F],
   responseMarshallable: Marshaller[Either[Throwable, RESP]]
   //sourceContext: SourceContext
 ) extends RequestResponseService[F, REQ, RESP] with Logging {
@@ -79,7 +76,7 @@ case class ConsumerProducerRequestResponseService[F[_], REQ: Unmarshaller, RESP:
 
                   val requestTimeout = request.requestTimeout.getOrElse(Duration.Inf)
 
-                }, me)(request.message)
+                }, concurrent)(request.message)
 
               val processResultWithErrorHandling = processorResult.map(Right[Throwable, SendResponseResult[RESP]](_): Either[Throwable, SendResponseResult[RESP]]).handleErrorWith { case t =>
                 logger.error(s"request processing failed: ${request.toString.take(500)}", t)

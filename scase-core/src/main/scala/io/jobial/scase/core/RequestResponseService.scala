@@ -4,8 +4,6 @@ import cats.MonadError
 
 import scala.concurrent.duration._
 import scala.util.Try
-import cats.effect.IO
-import cats.effect.IO.raiseError
 
 case class RequestWrapper[REQ](
   payload: REQ,

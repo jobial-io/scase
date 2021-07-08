@@ -10,5 +10,5 @@ case class MessageSendResult[M: Marshaller]()
 
 trait MessageProducer[F[_], M] {
 
-  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M], mf: Concurrent[F]): F[MessageSendResult[M]]
+  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M], concurrent: Concurrent[F]): F[MessageSendResult[M]]
 }
