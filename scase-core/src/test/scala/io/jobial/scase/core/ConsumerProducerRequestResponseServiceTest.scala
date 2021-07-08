@@ -24,11 +24,11 @@ class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec with Scas
 
   case object TestException extends Exception
 
-  def testRequestResponse[REQ, RESP](testRequestProcessor: RequestProcessor[REQ, RESP], request: REQ, response: Either[Throwable, RESP]) =
+  def testRequestResponse[REQ, RESP](testRequestProcessor: RequestProcessor[IO, REQ, RESP], request: REQ, response: Either[Throwable, RESP]) =
     for {
-      testMessageConsumer <- InMemoryQueue[REQ]
-      testMessageProducer <- InMemoryQueue[Either[Throwable, RESP]]
-      service = ConsumerProducerRequestResponseService[REQ, RESP](
+      testMessageConsumer <- InMemoryQueue[IO, REQ]
+      testMessageProducer <- InMemoryQueue[IO, Either[Throwable, RESP]]
+      service = ConsumerProducerRequestResponseService[IO, REQ, RESP](
         testMessageConsumer,
         { _ => IO(testMessageProducer) },
         testRequestProcessor
@@ -45,19 +45,19 @@ class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec with Scas
 
   implicit val sendRequestContext = SendRequestContext(10.seconds)
 
-  def testRequestResponseClient[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP](testRequestProcessor: RequestProcessor[REQ, RESP], request: REQUEST, response: Either[Throwable, RESPONSE])(
+  def testRequestResponseClient[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP](testRequestProcessor: RequestProcessor[IO, REQ, RESP], request: REQUEST, response: Either[Throwable, RESPONSE])(
     implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]
   ) =
     for {
-      testMessageConsumer <- InMemoryQueue[REQ]
-      testMessageProducer <- InMemoryQueue[Either[Throwable, RESP]]
-      service = ConsumerProducerRequestResponseService[REQ, RESP](
+      testMessageConsumer <- InMemoryQueue[IO, REQ]
+      testMessageProducer <- InMemoryQueue[IO, Either[Throwable, RESP]]
+      service = ConsumerProducerRequestResponseService[IO, REQ, RESP](
         testMessageConsumer,
         { _ => IO(testMessageProducer) },
         testRequestProcessor
       )
       s <- service.startService
-      client <- ConsumerProducerRequestResponseClient[REQ, RESP](
+      client <- ConsumerProducerRequestResponseClient[IO, REQ, RESP](
         testMessageProducer,
         () => testMessageConsumer,
         ""
@@ -67,8 +67,8 @@ class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec with Scas
 
   "request-response service" should "reply successfully" in {
     testRequestResponse(
-      new RequestProcessor[TestRequest[_ <: TestResponse], TestResponse] {
-        override def processRequest(implicit context: RequestContext): Processor = {
+      new RequestProcessor[IO, TestRequest[_ <: TestResponse], TestResponse] {
+        override def processRequest(implicit context: RequestContext[IO]): Processor = {
           case r: TestRequest1 =>
             println("replying...")
             r.reply(response1)
@@ -81,8 +81,8 @@ class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec with Scas
 
   "request-response service" should "reply with error" in {
     testRequestResponse(
-      new RequestProcessor[TestRequest[_ <: TestResponse], TestResponse] {
-        override def processRequest(implicit context: RequestContext): Processor = {
+      new RequestProcessor[IO, TestRequest[_ <: TestResponse], TestResponse] {
+        override def processRequest(implicit context: RequestContext[IO]): Processor = {
           case r: TestRequest1 =>
             println("replying...")
             r.reply(response1)
@@ -97,8 +97,8 @@ class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec with Scas
 
   "request-response client" should "get reply successfully" in {
     testRequestResponseClient(
-      new RequestProcessor[TestRequest[_ <: TestResponse], TestResponse] {
-        override def processRequest(implicit context: RequestContext): Processor = {
+      new RequestProcessor[IO, TestRequest[_ <: TestResponse], TestResponse] {
+        override def processRequest(implicit context: RequestContext[IO]): Processor = {
           case r: TestRequest1 =>
             println("replying...")
             r.reply(response1)

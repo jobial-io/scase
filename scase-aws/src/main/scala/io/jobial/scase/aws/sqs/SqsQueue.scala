@@ -1,8 +1,9 @@
 package io.jobial.scase.aws.sqs
 
-import java.util.concurrent.Executors
+import cats.{Monad, Traverse}
+import cats.effect.{Concurrent, Sync}
 
-import cats.effect._
+import java.util.concurrent.Executors
 import cats.effect.concurrent.Ref
 import cats.implicits._
 import io.jobial.scase.aws.util.identitymap.identityTrieMap
@@ -19,14 +20,14 @@ import scala.util.{Failure, Success}
 /**
  * Queue implementation using AWS SQS.
  */
-case class SqsQueue[M](
+case class SqsQueue[F[_], M](
   name: String,
   messageRetentionPeriod: Option[Duration] = Some(1.hour),
   visibilityTimeout: Option[Duration] = Some(10.minutes),
   cleanup: Boolean = false
 )(
   implicit val awsContext: AwsContext
-) extends Queue[M]
+) extends Queue[F, M]
   with SqsClient
   with S3Client
   with Logging {
@@ -49,31 +50,32 @@ case class SqsQueue[M](
   messageRetentionPeriod.map(setMessageRetentionPeriod(queueUrl, _))
   visibilityTimeout.map(setVisibilityTimeout(queueUrl, _))
 
-  def subscribe[T](callback: MessageReceiveResult[M] => IO[T])(implicit u: Unmarshaller[M]): IO[MessageSubscription[M]] = {
+  def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]): F[MessageSubscription[F, M]] = {
     logger.debug(s"subscribed with callback $callback to queue $queueUrl")
 
-    val cancelledRef = Ref.of[IO, Boolean](false)
-    val outstandingMessagesRef = Ref.of[IO, collection.Map[M, String]](identityTrieMap[M, String])
+    val cancelledRef = Ref.of[F, Boolean](false)
+    val outstandingMessagesRef = Ref.of[F, collection.Map[M, String]](identityTrieMap[M, String])
 
     for {
       cancelled <- cancelledRef
       outstandingMessages <- outstandingMessagesRef
-      subscription = new MessageSubscription[M] {
-        def receiveMessages: IO[_] =
+      subscription = new MessageSubscription[F, M] {
+        def receiveMessages: F[_] =
           for {
             c <- cancelled.get
             _ <-
               if (!c) {
+                //Concurrent[F].unit
                 (for {
                   // TODO: set visibility timeout to 0 here to allow other clients receiving uncorrelated messages
-                  messages <- IO {
+                  messages <- Concurrent[F].delay {
                     logger.debug(s"waiting for messages on $queueUrl")
                     receiveMessage(queueUrl, 10, 1).getMessages
                   }
                   _ <- {
                     logger.debug(s"received messages $messages on queue $queueUrl")
 
-                    messages.asScala.toList.map { sqsMessage =>
+                    Traverse[List].sequence(messages.asScala.toList.map { sqsMessage =>
                       //                        try {
                       val unmarshalledMessage = u.unmarshalFromText(sqsMessage.getBody)
                       for {
@@ -89,9 +91,9 @@ case class SqsQueue[M](
                                 o <- outstandingMessages.get
                                 r <- o.get(unmarshalledMessage) match {
                                   case Some(receiptHandle) =>
-                                    IO(deleteMessage(queueUrl, receiptHandle))
+                                    Concurrent[F].delay(deleteMessage(queueUrl, receiptHandle))
                                   case _ =>
-                                    IO.raiseError(CouldNotFindMessageToCommit(unmarshalledMessage))
+                                    Concurrent[F].raiseError(CouldNotFindMessageToCommit(unmarshalledMessage))
                                 }
                                 _ <- outstandingMessages.update(_ - unmarshalledMessage)
                               } yield println("committed")
@@ -114,16 +116,15 @@ case class SqsQueue[M](
                         //                            logger.error(s"could not process received message $sqsMessage", t)
                         //                        }
                       } yield r
-                    }.sequence
+                    })
                   }
-                  r <- receiveMessages
-
-                } yield r) handleErrorWith { t =>
+                  _ <- receiveMessages
+                } yield ()) handleErrorWith { t =>
                   logger.error(s"failed to receive messages", t)
-                  IO.raiseError(t)
+                  Concurrent[F].raiseError(t)
                 }
               }
-              else IO()
+              else Concurrent[F].unit
           } yield ()
 
         val join = receiveMessages
@@ -135,23 +136,23 @@ case class SqsQueue[M](
           cancelled.get
       }
       // TODO: make this an implicit
-      f <- subscription.receiveMessages.start(IO.contextShift(ExecutionContext.fromExecutor(Executors.newCachedThreadPool())))
+      f <- subscription.receiveMessages //.start(IO.contextShift(ExecutionContext.fromExecutor(Executors.newCachedThreadPool())))
       _ = println(f)
     } yield subscription
   }
 
 
-  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M]) = {
+  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M], c: Concurrent[F]) = {
     logger.debug(s"sending to queue $queueUrl ${message.toString.take(200)}")
-    val r: IO[MessageSendResult[M]] = IO {
+    val r: F[MessageSendResult[M]] = Concurrent[F].delay {
       sendMessage(queueUrl, Marshaller[M].marshalToText(message), attributes)
     }.flatMap {
       case Success(r) =>
         logger.debug(s"successfully sent to queue $queueUrl ${message.toString.take(200)}")
-        IO(MessageSendResult[M]())
+        Monad[F].pure(MessageSendResult[M]())
       case Failure(t) =>
         logger.error(s"failure sending to queue $queueUrl ${message.toString.take(200)}", t)
-        IO.raiseError[MessageSendResult[M]](t)
+        Concurrent[F].raiseError[MessageSendResult[M]](t)
     }
 
     r handleErrorWith { t =>

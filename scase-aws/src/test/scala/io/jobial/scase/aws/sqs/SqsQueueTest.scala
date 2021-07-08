@@ -24,13 +24,13 @@ class SqsQueueTest extends AsyncFlatSpec with ScaseTestHelper {
 
   implicit val awsContext = AwsContext("eu-west-1", sqsExtendedS3BucketName = Some("cloudtemp-sqs"))
 
-  val testQueue = SqsQueue[TestRequest[_ <: TestResponse]](s"test-queue-${uuid(5)}")
+  val testQueue = SqsQueue[IO, TestRequest[_ <: TestResponse]](s"test-queue-${uuid(5)}")
 
   val message1 = TestRequest1("hello")
 
   val message2 = TestRequest2("bello")
 
-  val testQueueLarge = SqsQueue[Array[Byte]](s"test-queue-${uuid(5)}")
+  val testQueueLarge = SqsQueue[IO, Array[Byte]](s"test-queue-${uuid(5)}")
 
   //  "sending to queue" should "succeed" in {
   //    for {

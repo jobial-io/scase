@@ -15,7 +15,7 @@ class InMemoryQueueTest extends AsyncFlatSpec with ScaseTestHelper {
     implicit val cs = IO.contextShift(ExecutionContextWithShutdown(Executors.newCachedThreadPool))
 
     for {
-      queue <- InMemoryQueue[TestRequest1]
+      queue <- InMemoryQueue[IO, TestRequest1]
       d <- Deferred[IO, TestRequest1]
       _ <- queue.subscribe({ m =>
         println(m)

@@ -1,20 +1,22 @@
 package io.jobial.scase.aws.lambda
 
-import java.util.concurrent.Executors
+import cats.Monad
 
-import cats.effect.{ContextShift, IO}
+import java.util.concurrent.Executors
+import cats.effect.{Concurrent, ContextShift, IO}
+import cats.implicits._
 import io.jobial.scase.aws.util.AwsContext
 import io.jobial.scase.core.{MessageReceiveResult, RequestResponseClient, RequestResponseMapping, RequestResult, SendRequestContext}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 import scala.concurrent.ExecutionContext
 
-case class LambdaRequestResponseClient[REQ: Marshaller, RESP: Unmarshaller](
+case class LambdaRequestResponseClient[F[_], REQ: Marshaller, RESP: Unmarshaller](
   functionName: String
 )(
   implicit val awsContext: AwsContext,
-  val cs: ContextShift[IO]
-) extends RequestResponseClient[REQ, RESP] with LambdaClient {
+  val concurrent: Concurrent[F]
+) extends RequestResponseClient[F, REQ, RESP] with LambdaClient {
 
   implicit val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool)
 
@@ -23,29 +25,31 @@ case class LambdaRequestResponseClient[REQ: Marshaller, RESP: Unmarshaller](
   )(
     implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE],
     sendRequestContext: SendRequestContext
-  ): RequestResult[RESPONSE] = LambdaRequestResult(
-    IO.fromFuture(
-      IO(
-        for {
-          result <- invoke(functionName, Marshaller[REQ].marshalToText(request))
-        } yield
-          Unmarshaller[RESP].unmarshalFromText(new String(result.getPayload.array, "utf-8")).asInstanceOf[RESPONSE]
-      )
-    )
+  ): RequestResult[F, RESPONSE] = LambdaRequestResult(
+    Concurrent[F].async { ready =>
+      (for {
+        result <- invoke(functionName, Marshaller[REQ].marshalToText(request))
+      } yield
+        ready(Right(Unmarshaller[RESP].unmarshalFromText(new String(result.getPayload.array, "utf-8")).asInstanceOf[RESPONSE]))) recover {
+        case t =>
+          ready(Left(t))
+      }
+        
+    }
   )
 }
 
-case class LambdaRequestResult[RESPONSE](resp: IO[RESPONSE]) extends RequestResult[RESPONSE] {
+case class LambdaRequestResult[F[_], RESPONSE](resp: F[RESPONSE])(implicit m: Monad[F]) extends RequestResult[F, RESPONSE] {
 
   def response =
     for {
       resp <- resp
-    } yield MessageReceiveResult[RESPONSE](
+    } yield MessageReceiveResult[F, RESPONSE](
       resp,
       Map(), // TODO: propagate attributes here
-      commit = () => IO(),
-      rollback = () => IO()
+      commit = () => Monad[F].unit,
+      rollback = () => Monad[F].unit
     )
 
-  def commit = IO()
+  def commit = Monad[F].unit
 }

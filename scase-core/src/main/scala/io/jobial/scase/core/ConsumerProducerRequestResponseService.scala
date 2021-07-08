@@ -38,7 +38,7 @@ case class ConsumerProducerRequestResponseService[F[_], REQ: Unmarshaller, RESP:
   autoCommitFailedRequest: Boolean = true
 )(
   implicit m: Monad[F],
-  d: Deferred[F, Either[Throwable, RESP]],
+  //d: Deferred[F, Either[Throwable, RESP]],
   c: Concurrent[F],
   me: MonadError[F, Throwable],
   responseMarshallable: Marshaller[Either[Throwable, RESP]]

@@ -1,8 +1,10 @@
 package io.jobial.scase.aws.lambda
 
-import java.io.{InputStream, OutputStream}
+import cats.MonadError
 
-import cats.effect.{ContextShift, IO}
+import java.io.{InputStream, OutputStream}
+import cats.implicits._
+import cats.effect.{Concurrent, ContextShift}
 import cats.effect.concurrent.Deferred
 import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
 import io.jobial.scase.core.{RequestContext, RequestProcessor, RequestResponseMapping, SendResponseResult}
@@ -14,14 +16,14 @@ import org.joda.time.DateTime
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.DurationInt
 
-trait LambdaRequestHandler[REQ, RESP] extends RequestStreamHandler with Logging {
-  this: RequestProcessor[REQ, RESP] =>
+trait LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandler with Logging {
+  this: RequestProcessor[F, REQ, RESP] =>
 
   def requestUnmarshaller: Unmarshaller[REQ]
 
   def responseMarshaller: Marshaller[RESP]
-  
-  implicit def cs: ContextShift[IO]
+
+  implicit def concurrent: Concurrent[F]
 
   def disableRetry = true
 
@@ -39,24 +41,26 @@ trait LambdaRequestHandler[REQ, RESP] extends RequestStreamHandler with Logging 
 
       val result =
         for {
-          responseDeferred <- Deferred[IO, Either[Throwable, RESP]]
+          responseDeferred <- Deferred[F, Either[Throwable, RESP]]
           r <- responseDeferred.get
-          processorResult: IO[SendResponseResult[RESP]] =
-          processRequestOrFail(new RequestContext {
+          processorResult: F[SendResponseResult[RESP]] =
+            processRequestOrFail(new RequestContext[F] {
 
-            // TODO: revisit this
-            val requestTimeout = 15.minutes
+              // TODO: revisit this
+              val requestTimeout = 15.minutes
 
-            override def reply[REQUEST, RESPONSE](request: REQUEST, response: RESPONSE)
-              (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): IO[SendResponseResult[RESPONSE]] =
-              for {
-                _ <- responseDeferred.complete(Right(r.asInstanceOf[RESP]))
-              } yield new SendResponseResult[RESPONSE] {}
+              override def reply[REQUEST, RESPONSE](request: REQUEST, response: RESPONSE)
+                (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): F[SendResponseResult[RESPONSE]] =
+                for {
+                  _ <- responseDeferred.complete(Right(r.asInstanceOf[RESP]))
+                } yield new SendResponseResult[RESPONSE] {}
 
-          })(request)
-          _ <- processorResult.handleErrorWith { t =>
+            }, concurrent)(request)
+          // TODO: use redeem when Cats is upgraded, 2.0.0 simply doesn't support mapping errors to an F[B]...
+          _ <- processorResult.handleError { t =>
             logger.error(s"request processing failed: $request", t)
             responseDeferred.complete(Left(t))
+            new SendResponseResult[RESP] {}
           }
         } yield
           // send response when ready
@@ -72,13 +76,18 @@ trait LambdaRequestHandler[REQ, RESP] extends RequestStreamHandler with Logging 
           }
 
 
-      result.unsafeRunTimed(15.minutes)
+      runResult(result)
     }
   }
+
+  def runResult(result: F[_]): Unit =
+  // TODO: result.unsafeRunTimed(15.minutes) for IO, for example
+    ???
+
 }
 
-trait LambdaScheduledRequestHandler[REQ, RESP] extends LambdaRequestHandler[REQ, RESP] {
-  this: RequestProcessor[REQ, RESP] =>
+trait LambdaScheduledRequestHandler[F[_], REQ, RESP] extends LambdaRequestHandler[F, REQ, RESP] {
+  this: RequestProcessor[F, REQ, RESP] =>
 
   def mapScheduledEvent(event: CloudWatchEvent): REQ
 }

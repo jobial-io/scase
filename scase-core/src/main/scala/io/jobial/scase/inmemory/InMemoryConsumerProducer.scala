@@ -24,7 +24,7 @@ trait InMemoryConsumerProducer[F[_], M] extends MessageConsumer[F, M] with Messa
    *
    * Warning: Marshaller (and the Unmarshaller in subscribe) is not used here, the message is delivered directly to the consumer.
    */
-  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M], mf: Monad[F]): F[MessageSendResult[M]] = {
+  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M], concurrent: Concurrent[F]): F[MessageSendResult[M]] = {
 
     val messageReceiveResult = MessageReceiveResult(message, attributes, { () => Monad[F].pure() }, { () => Monad[F].pure() })
 

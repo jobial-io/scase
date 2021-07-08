@@ -1,5 +1,6 @@
 package io.jobial.scase.cloudformation
 
+import cats.effect.IO
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler
 import com.monsanto.arch.cloudformation.model.{ConditionRef, Parameter, Template, Token, `Fn::GetAtt`}
 import com.monsanto.arch.cloudformation.model.resource.{Code, DeletionPolicy, Java8, Resource, `AWS::Lambda::Function`}
@@ -12,10 +13,10 @@ import scala.reflect.ClassTag
 trait LambdaSupport {
   this: DefaultJsonProtocol =>
 
-  def lambda[REQ, RESP](serviceDefinition: LambdaRequestResponseServiceConfiguration[REQ, RESP]) = {
+  def lambda[REQ, RESP](serviceDefinition: LambdaRequestResponseServiceConfiguration[IO, REQ, RESP]) = {
 
     object LambdaBuilder {
-      def apply[T <: LambdaRequestHandler[REQ, RESP] : ClassTag](
+      def apply[T <: LambdaRequestHandler[IO, REQ, RESP] : ClassTag](
         // using a higher default timeout because the scala library can be slow to load...
         s3Bucket: String,
         s3Key: String,

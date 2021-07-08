@@ -1,5 +1,6 @@
 package io.jobial.scase.cloudformation
 
+import cats.effect.IO
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler
 import com.monsanto.arch.cloudformation.model._
 import com.monsanto.arch.cloudformation.model.resource._
@@ -1391,10 +1392,10 @@ trait CloudformationSupport {
       parts.reverse.dropWhile(!_.endsWith(".jar!")).drop(2).head
   }
 
-  def lambda[REQ, RESP](serviceDefinition: LambdaRequestResponseServiceConfiguration[REQ, RESP]) = {
+  def lambda[REQ, RESP](serviceDefinition: LambdaRequestResponseServiceConfiguration[IO, REQ, RESP]) = {
 
     object LambdaBuilder {
-      def apply[T <: LambdaRequestHandler[REQ, RESP] : ClassTag](
+      def apply[T <: LambdaRequestHandler[IO, REQ, RESP] : ClassTag](
         // using a higher default timeout because the scala library can be slow to load...
         timeout: Option[Duration] = Some(10 seconds),
         moduleVersion: String = "master",
@@ -1409,7 +1410,7 @@ trait CloudformationSupport {
         policies
       )
 
-      def schedule[T <: LambdaScheduledRequestHandler[REQ, RESP] : ClassTag](
+      def schedule[T <: LambdaScheduledRequestHandler[IO, REQ, RESP] : ClassTag](
         schedule: String,
         scheduleEnabled: Boolean = true,
         // using a higher default timeout because the scala library can be slow to load...
