@@ -42,9 +42,6 @@ case class ConsumerProducerRequestResponseService[F[_], REQ: Unmarshaller, RESP:
   //sourceContext: SourceContext
 ) extends RequestResponseService[F, REQ, RESP] with Logging {
 
-  //logger.error(s"created ConsumerProducerRequestResponseService", new RuntimeException)
-  implicit val executionContext = serviceExecutionContext
-
   private def handleRequest(request: MessageReceiveResult[F, REQ]) = {
     logger.info(s"received request in service: ${request.toString.take(500)}")
     val r: F[SendResponseResult[RESP]] =

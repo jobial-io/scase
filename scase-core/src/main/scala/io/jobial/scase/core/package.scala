@@ -1,17 +1,10 @@
 package io.jobial.scase
 
 import cats.Monad
-import cats.effect.IO
 import io.jobial.scase.logging.Logging
-
-import java.util.concurrent._
-import scala.concurrent.{ExecutionContext, Future}
-import scala.reflect.ClassTag
 
 
 package object core extends Logging {
-  implicit lazy val executionContext = ExecutionContextWithShutdown(Executors.newCachedThreadPool)
-
   implicit def requestResultToResult[F[_], RESPONSE](requestResult: RequestResult[F, RESPONSE])(implicit m: Monad[F]) =
     Monad[F].map(requestResult.response)(_.message)
 
@@ -25,12 +18,6 @@ package object core extends Logging {
   val ResponseConsumerIdKey = "ResponseConsumerId"
 
   val RequestTimeoutKey = "RequestTimeout"
-
-  val clientExecutionContext = executionContext
-
-  val serviceExecutionContext = executionContext
-
-  val forwarderExecutionContext = executionContext
 
   implicit class RequestExtension[F[_], REQUEST](request: REQUEST) {
 
