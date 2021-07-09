@@ -72,7 +72,7 @@ class SqsQueueTest extends AsyncFlatSpec with ScaseTestHelper {
       },
       messages.take)
     } yield
-      assert(m.right.map(_.deep == largeMessage.deep).getOrElse(fail))
+      assert(m.right.map(_ sameElements largeMessage).getOrElse(fail))
   }
 
 

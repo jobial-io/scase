@@ -84,7 +84,7 @@ case class SqsQueue[F[_], M](
                           MessageReceiveResult(
                             message = unmarshalledMessage,
                             // TODO: add standard attributes returned by getAttributes...
-                            attributes = sqsMessage.getMessageAttributes.asScala.toMap.filter(e => Option(e._2.getStringValue).isDefined).mapValues(_.getStringValue),
+                            attributes = sqsMessage.getMessageAttributes.asScala.toMap.filter(e => Option(e._2.getStringValue).isDefined).mapValues(_.getStringValue).toMap,
                             commit = { () =>
                               // TODO: this is ugly
                               for {

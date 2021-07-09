@@ -10,7 +10,7 @@ import io.jobial.scase.logging.Logging
 
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.util.{Failure, Try}
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 trait SqsClient extends AwsClient with Logging {
   this: S3Client =>
@@ -58,9 +58,9 @@ trait SqsClient extends AwsClient with Logging {
           // we need to explicitly convert to a mutable java map here because the extended client needs to add further attributes...
           .withMessageAttributes(new util.Hashtable(attributes.mapValues { value =>
             new MessageAttributeValue().withDataType("String").withStringValue(value)
-          })
+          }.toMap.asJava)
           )
-        logger.debug(s"message attributes: ${request.getMessageAttributes.toMap}")
+        logger.debug(s"message attributes: ${request.getMessageAttributes.asScala}")
         logger.debug(s"calling sendMessage on queue $queueUrl with ${request.toString.take(200)}")
         sqsExtended.getOrElse(sqs).sendMessage(request)
       } catch {

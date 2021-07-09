@@ -81,7 +81,7 @@ trait LambdaSupport {
     // using a higher default timeout because the scala library can be slow to load...
     s3Bucket: String,
     s3Key: String,
-    timeout: Option[Duration] = Some(10 seconds),
+    timeout: Option[Duration] = Some(10.seconds),
     memorySize: Option[Int] = None,
     policies: Seq[JsObject] = Seq(),
     schedule: Option[String] = None,

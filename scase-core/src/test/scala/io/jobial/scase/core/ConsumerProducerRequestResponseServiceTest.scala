@@ -18,7 +18,7 @@ class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec with Scas
 
   val response1 = TestResponse1(request1, "1")
 
-  case object TestException extends Exception
+  case object TestException extends Exception("test exception")
 
   def testRequestResponse[REQ, RESP](testRequestProcessor: RequestProcessor[IO, REQ, RESP], request: REQ, response: Either[Throwable, RESP]) =
     for {

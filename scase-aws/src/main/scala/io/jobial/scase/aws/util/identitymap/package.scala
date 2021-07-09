@@ -1,8 +1,6 @@
 package io.jobial.scase.aws.util
 
 import scala.collection.concurrent.TrieMap
-import scala.collection.parallel.immutable
-import scala.collection.parallel.immutable.ParHashMap
 import scala.util.hashing.Hashing
 
 package object identitymap {

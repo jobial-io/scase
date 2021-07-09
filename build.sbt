@@ -14,8 +14,9 @@
 name := "scase"
 
 ThisBuild / organization := "io.jobial"
-ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.12", "2.13.4")
-ThisBuild / version := "0.9.0"
+ThisBuild / scalaVersion := "2.13.6"
+ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.13", "2.13.6")
+ThisBuild / version := "0.1.0"
 
 import sbt.Keys.{description, publishConfiguration}
 import xerial.sbt.Sonatype._
@@ -37,7 +38,7 @@ lazy val AwsVersion = "1.11.557"
 lazy val AwsLambdaJavaCoreVersion = "1.2.1"
 lazy val CommonsIoVersion = "2.8.0"
 lazy val CommonsLangVersion = "3.12.0"
-lazy val CloudformationTemplateGeneratorVersion = "3.10.0"
+lazy val CloudformationTemplateGeneratorVersion = "3.10.5-SNAPSHOT"
 lazy val SclapVersion = "1.0.0"
 
 lazy val root: Project = project
@@ -86,7 +87,7 @@ lazy val `scase-cloudformation` = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "com.monsanto.arch" % "cloud-formation-template-generator_2.11" % CloudformationTemplateGeneratorVersion,
+      "com.bayer" %% "cloud-formation-template-generator" % CloudformationTemplateGeneratorVersion,
       "io.jobial" %% "sclap" % SclapVersion
     )
   )

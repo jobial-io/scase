@@ -1397,7 +1397,7 @@ trait CloudformationSupport {
     object LambdaBuilder {
       def apply[T <: LambdaRequestHandler[IO, REQ, RESP] : ClassTag](
         // using a higher default timeout because the scala library can be slow to load...
-        timeout: Option[Duration] = Some(10 seconds),
+        timeout: Option[Duration] = Some(10.seconds),
         moduleVersion: String = "master",
         lambdaCodeS3Path: String = defaultLambdaCodeS3Path,
         memorySize: Option[Int] = None,
@@ -1414,7 +1414,7 @@ trait CloudformationSupport {
         schedule: String,
         scheduleEnabled: Boolean = true,
         // using a higher default timeout because the scala library can be slow to load...
-        timeout: Option[Duration] = Some(10 seconds),
+        timeout: Option[Duration] = Some(10.seconds),
         moduleVersion: String = "master",
         lambdaCodeS3Path: String = defaultLambdaCodeS3Path,
         memorySize: Option[Int] = None,
@@ -1435,7 +1435,7 @@ trait CloudformationSupport {
 
   def lambda[T <: RequestStreamHandler : ClassTag](
     // using a higher default timeout because the scala library can be slow to load...
-    timeout: Option[Duration] = Some(10 seconds),
+    timeout: Option[Duration] = Some(10.seconds),
     moduleVersion: String = "master",
     lambdaCodeS3Path: String = defaultLambdaCodeS3Path,
     memorySize: Option[Int] = None,

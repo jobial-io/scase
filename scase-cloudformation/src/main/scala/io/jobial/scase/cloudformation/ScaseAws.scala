@@ -10,6 +10,7 @@ import spray.json._
 
 import scala.util.{Failure, Success, Try}
 import collection.JavaConverters._
+import scala.io.StdIn.readLine
 
 object ScaseAws extends CommandLineApp
   with DefaultJsonProtocol
