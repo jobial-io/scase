@@ -6,7 +6,8 @@ import shapeless._
 import cats.implicits._
 
 package object core extends Logging {
-  implicit def requestResultToResult[F[_] : Monad, RESPONSE](requestResult: RequestResult[F, RESPONSE]) =
+  
+  implicit def requestResultToResponse[F[_] : Monad, RESPONSE](requestResult: RequestResult[F, RESPONSE]) =
     requestResult.response.map(_.message)
 
   implicit def sendRequest[F[_], REQUEST, RESPONSE](request: REQUEST)(

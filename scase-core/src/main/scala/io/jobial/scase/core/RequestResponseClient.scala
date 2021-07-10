@@ -1,10 +1,7 @@
 package io.jobial.scase.core
 
-import cats.Monad
-
 import scala.annotation.implicitNotFound
 import scala.concurrent.duration.Duration
-import scala.reflect.ClassTag
 
 
 trait RequestResult[F[_], RESPONSE] {

@@ -5,7 +5,6 @@ import cats.effect.concurrent.Deferred
 import cats.implicits._
 import io.jobial.scase.inmemory.InMemoryQueue
 import io.jobial.scase.marshalling.serialization._
-import org.scalatest.flatspec.AsyncFlatSpec
 
 import scala.concurrent.duration.DurationInt
 
