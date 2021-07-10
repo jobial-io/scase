@@ -1346,10 +1346,10 @@ trait CloudformationSupport {
       )
     )
 
-//  def java[T <: {def main(args: Array[String]): Unit} : ClassTag](main: T, classPath: String = "../lib/*", heapSize: Int)(args: String*) =
-//    Seq("/usr/bin/java", "-cp", classPath) ++ javaHeapOpts(heapSize) ++ javaGcOpts ++
-//      (mainClassName[T] +: args.toSeq)
-//
+  //  def java[T <: {def main(args: Array[String]): Unit} : ClassTag](main: T, classPath: String = "../lib/*", heapSize: Int)(args: String*) =
+  //    Seq("/usr/bin/java", "-cp", classPath) ++ javaHeapOpts(heapSize) ++ javaGcOpts ++
+  //      (mainClassName[T] +: args.toSeq)
+  //
   def nice(level: Int = 20) =
     Seq("/usr/bin/nice", "-n", "20")
 
@@ -1392,7 +1392,7 @@ trait CloudformationSupport {
       parts.reverse.dropWhile(!_.endsWith(".jar!")).drop(2).head
   }
 
-  def lambda[REQ, RESP](serviceDefinition: LambdaRequestResponseServiceConfiguration[IO, REQ, RESP]) = {
+  def lambda[REQ, RESP](serviceDefinition: LambdaRequestResponseServiceConfiguration[REQ, RESP]) = {
 
     object LambdaBuilder {
       def apply[T <: LambdaRequestHandler[IO, REQ, RESP] : ClassTag](

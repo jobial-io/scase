@@ -13,7 +13,7 @@ import scala.reflect.ClassTag
 trait LambdaSupport {
   this: DefaultJsonProtocol =>
 
-  def lambda[REQ, RESP](serviceDefinition: LambdaRequestResponseServiceConfiguration[IO, REQ, RESP]) = {
+  def lambda[REQ, RESP](config: LambdaRequestResponseServiceConfiguration[REQ, RESP]) = {
 
     object LambdaBuilder {
       def apply[T <: LambdaRequestHandler[IO, REQ, RESP] : ClassTag](

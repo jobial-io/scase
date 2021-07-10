@@ -17,7 +17,7 @@ case class CorrelationInfo[F[_], REQ, RESP](
   request: Option[REQ]
 )
 
-case class ConsumerProducerRequestResponseClient[F[_], REQ: Marshaller, RESP](
+case class ConsumerProducerRequestResponseClient[F[_]: Concurrent, REQ: Marshaller, RESP](
   correlationsRef: Ref[F, Map[String, CorrelationInfo[F, REQ, RESP]]],
   messageSubscription: MessageSubscription[F, Either[Throwable, RESP]],
   messageConsumer: MessageConsumer[F, Either[Throwable, RESP]],
@@ -26,8 +26,7 @@ case class ConsumerProducerRequestResponseClient[F[_], REQ: Marshaller, RESP](
   autoCommitResponse: Boolean,
   name: String
 )(
-  implicit c: Concurrent[F],
-  responseMarshallable: Unmarshaller[Either[Throwable, RESP]],
+  implicit   responseMarshallable: Unmarshaller[Either[Throwable, RESP]],
   monitoringPublisher: MonitoringPublisher
 ) extends RequestResponseClient[F, REQ, RESP] with Logging {
 
@@ -107,15 +106,14 @@ case class ConsumerProducerRequestResponseClient[F[_], REQ: Marshaller, RESP](
 
 object ConsumerProducerRequestResponseClient extends Logging {
 
-  def apply[F[_], REQ: Marshaller, RESP](
+  def apply[F[_]: Concurrent, REQ: Marshaller, RESP](
     messageConsumer: MessageConsumer[F, Either[Throwable, RESP]],
     messageProducer: () => MessageProducer[F, REQ],
     responseConsumerId: String,
     autoCommitResponse: Boolean = true,
     name: String = randomUUID.toString
   )(
-    implicit c: Concurrent[F],
-    responseMarshallable: Unmarshaller[Either[Throwable, RESP]],
+    implicit responseMarshallable: Unmarshaller[Either[Throwable, RESP]],
     monitoringPublisher: MonitoringPublisher = dummyPublisher
   ): F[ConsumerProducerRequestResponseClient[F, REQ, RESP]] =
     for {

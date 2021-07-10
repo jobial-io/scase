@@ -1,6 +1,7 @@
 package io.jobial.scase.core
 
 import cats.MonadError
+import cats.effect.Concurrent
 
 import scala.concurrent.duration._
 import scala.util.Try
@@ -109,11 +110,11 @@ trait RequestResponseServiceConfiguration[REQ, RESP] {
   def serviceName: String
 }
 
-trait RemoteRequestResponseServiceConfiguration[F[_], REQ, RESP] extends RequestResponseServiceConfiguration[REQ, RESP] {
+trait RemoteRequestResponseServiceConfiguration[REQ, RESP] extends RequestResponseServiceConfiguration[REQ, RESP] {
 
-  def service(requestProcessor: RequestProcessor[F, REQ, RESP]): F[RequestResponseService[F, REQ, RESP]]
+  def service[F[_] : Concurrent](requestProcessor: RequestProcessor[F, REQ, RESP]): F[RequestResponseService[F, REQ, RESP]]
 
-  def client: F[RequestResponseClient[F, REQ, RESP]]
+  def client[F[_] : Concurrent]: F[RequestResponseClient[F, REQ, RESP]]
 }
 
 trait RequestResponseService[F[_], REQ, RESP] {

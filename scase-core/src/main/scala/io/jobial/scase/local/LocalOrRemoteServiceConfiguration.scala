@@ -9,12 +9,12 @@ import scala.concurrent.duration._
 /**
  * This is now just a thin wrapper around the local and remote configs. Not sure if it's worth anymore, needs to be revisited.
  */
-case class LocalOrRemoteServiceConfiguration[F[_], REQ, RESP](
-  remoteServiceDefinition: RemoteRequestResponseServiceConfiguration[F, REQ, RESP]
+case class LocalOrRemoteServiceConfiguration[REQ, RESP](
+  remoteServiceDefinition: RemoteRequestResponseServiceConfiguration[REQ, RESP]
 )(
-  implicit c: Concurrent[F]
+
   //implicit monitoringPublisher: MonitoringPublisher
-) extends RemoteRequestResponseServiceConfiguration[F, REQ, RESP] with Logging {
+) extends RemoteRequestResponseServiceConfiguration[REQ, RESP] with Logging {
 
   def serviceName = remoteServiceDefinition.serviceName
 
@@ -22,10 +22,10 @@ case class LocalOrRemoteServiceConfiguration[F[_], REQ, RESP](
     serviceName
   )
 
-  def service(requestProcessor: RequestProcessor[F, REQ, RESP]) =
-      remoteServiceDefinition.service(requestProcessor)
+  def service[F[_] : Concurrent](requestProcessor: RequestProcessor[F, REQ, RESP]) =
+    remoteServiceDefinition.service(requestProcessor)
 
-  def serviceAndClient(requestProcessor: RequestProcessor[F, REQ, RESP]) = 
+  def serviceAndClient[F[_] : Concurrent](requestProcessor: RequestProcessor[F, REQ, RESP]) =
     for {
       t <- localRequestResponseServiceDefinition.serviceAndClient(requestProcessor)
       (localService, localClient) = t
@@ -33,5 +33,5 @@ case class LocalOrRemoteServiceConfiguration[F[_], REQ, RESP](
       remoteService <- remoteServiceDefinition.service(requestProcessor)
     } yield localClient
 
-  def client = remoteServiceDefinition.client
+  def client[F[_] : Concurrent] = remoteServiceDefinition.client
 }

@@ -29,7 +29,7 @@ case class ConsumerProducerRequestResponseServiceState[F[_], REQ, RESP](
     }
 }
 
-case class ConsumerProducerRequestResponseService[F[_], REQ: Unmarshaller, RESP: Marshaller](
+case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
   messageConsumer: MessageConsumer[F, REQ],
   messageProducer: String => F[MessageProducer[F, Either[Throwable, RESP]]], // TODO: add support for fixed producer case
   requestProcessor: RequestProcessor[F, REQ, RESP],
@@ -37,8 +37,7 @@ case class ConsumerProducerRequestResponseService[F[_], REQ: Unmarshaller, RESP:
   autoCommitRequest: Boolean = true,
   autoCommitFailedRequest: Boolean = true
 )(
-  implicit concurrent: Concurrent[F],
-  responseMarshallable: Marshaller[Either[Throwable, RESP]]
+  implicit responseMarshallable: Marshaller[Either[Throwable, RESP]]
   //sourceContext: SourceContext
 ) extends RequestResponseService[F, REQ, RESP] with Logging {
 
@@ -71,7 +70,7 @@ case class ConsumerProducerRequestResponseService[F[_], REQ: Unmarshaller, RESP:
 
                   val requestTimeout = request.requestTimeout.getOrElse(Duration.Inf)
 
-                }, concurrent)(request.message)
+                }, Concurrent[F])(request.message)
 
               val processResultWithErrorHandling = processorResult.map(Right[Throwable, SendResponseResult[RESP]](_): Either[Throwable, SendResponseResult[RESP]]).handleErrorWith { case t =>
                 logger.error(s"request processing failed: ${request.toString.take(500)}", t)
