@@ -12,10 +12,10 @@ import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
-case class ConsumerProducerRequestResponseServiceState[F[_], REQ, RESP](
+case class ConsumerProducerRequestResponseServiceState[F[_] : Monad, REQ, RESP](
   subscription: MessageSubscription[F, REQ],
   service: ConsumerProducerRequestResponseService[F, REQ, RESP]
-)(implicit m: Monad[F]) extends RequestResponseServiceState[F, REQ]
+) extends RequestResponseServiceState[F, REQ]
   with Logging {
 
   def stopService: F[RequestResponseServiceState[F, REQ]] =

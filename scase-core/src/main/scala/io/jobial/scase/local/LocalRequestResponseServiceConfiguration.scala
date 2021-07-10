@@ -16,14 +16,14 @@ case class LocalRequestResponseServiceConfiguration[REQ, RESP](
   serviceName: String
 )(
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher
-  
+
 ) extends RequestResponseServiceConfiguration[REQ, RESP] {
 
   //  lazy val requestQueue = InMemoryQueue[F, REQ]()
   //
   //  lazy val responseQueue = InMemoryQueue[F, Either[Throwable, RESP]]()
 
-  def serviceAndClient[F[_]](requestProcessor: RequestProcessor[F, REQ, RESP])(implicit s: Concurrent[F]) =
+  def serviceAndClient[F[_] : Concurrent](requestProcessor: RequestProcessor[F, REQ, RESP]) =
     for {
       requestQueue <- InMemoryQueue[F, REQ]
       responseQueue <- InMemoryQueue[F, Either[Throwable, RESP]]

@@ -3,14 +3,15 @@ package io.jobial.scase
 import cats.Monad
 import io.jobial.scase.logging.Logging
 import shapeless._
+import cats.implicits._
 
 package object core extends Logging {
-  implicit def requestResultToResult[F[_], RESPONSE](requestResult: RequestResult[F, RESPONSE])(implicit m: Monad[F]) =
-    Monad[F].map(requestResult.response)(_.message)
+  implicit def requestResultToResult[F[_] : Monad, RESPONSE](requestResult: RequestResult[F, RESPONSE]) =
+    requestResult.response.map(_.message)
 
   implicit def sendRequest[F[_], REQUEST, RESPONSE](request: REQUEST)(
     implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE],
-    client: RequestResponseClient[F, _ >: REQUEST, _ >: RESPONSE], sendRequestContext: SendRequestContext, m: Monad[F]): F[RESPONSE] =
+    client: RequestResponseClient[F, _ >: REQUEST, _ >: RESPONSE], sendRequestContext: SendRequestContext, M: Monad[F]): F[RESPONSE] =
     client.?(request)
 
   val CorrelationIdKey = "CorrelationId"
