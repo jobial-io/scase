@@ -26,8 +26,4 @@ trait RequestResponseClient[F[_], REQ, RESP] {
   
   def sendRequestWithResponseMapping[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST, requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE])
     (implicit sendRequestContext: SendRequestContext): RequestResult[F, RESPONSE]
-
-//  def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST with Request[RESPONSE])
-//    (implicit sendRequestContext: SendRequestContext): RequestResult[F, RESPONSE] =
-//    sendRequest(request)(new RequestResponseMapping[REQUEST with Request[RESPONSE], RESPONSE] {}, sendRequestContext)
 }

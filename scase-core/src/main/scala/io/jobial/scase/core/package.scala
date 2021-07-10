@@ -1,10 +1,7 @@
 package io.jobial.scase
 
 import cats.Monad
-import io.jobial.scase.core.RequestResult
 import io.jobial.scase.logging.Logging
-
-import scala.reflect.ClassTag
 import shapeless._
 
 package object core extends Logging {
