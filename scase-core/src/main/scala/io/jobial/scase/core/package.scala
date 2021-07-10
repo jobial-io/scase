@@ -40,7 +40,7 @@ package object core extends Logging {
   implicit class requestResponseClientExtension[F[_], REQ, RESP](client: RequestResponseClient[F, REQ, RESP])(implicit x: <:<[REQ, Request[_ <: RESP]]) {
 
     def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST with Request[RESPONSE])(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext): RequestResult[F, RESPONSE] =
-      client.sendRequest(request, requestResponseMapping)
+      client.sendRequestWithResponseMapping(request, requestResponseMapping)
 
     def ?[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST with Request[RESPONSE])
       (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext, m: Monad[F]) =
@@ -50,7 +50,7 @@ package object core extends Logging {
   implicit class requestTagBasedRequestResponseClientExtension[F[_], REQ, RESP](client: RequestResponseClient[F, REQ, RESP])(implicit x: <:!<[REQ, Request[_ <: RESP]]) {
 
     def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST)(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext): RequestResult[F, RESPONSE] =
-      client.sendRequest(request, requestResponseMapping)
+      client.sendRequestWithResponseMapping(request, requestResponseMapping)
 
     def ?[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST)
       (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext, m: Monad[F]) =

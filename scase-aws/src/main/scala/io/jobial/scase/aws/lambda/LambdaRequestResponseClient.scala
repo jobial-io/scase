@@ -20,7 +20,7 @@ case class LambdaRequestResponseClient[F[_], REQ: Marshaller, RESP: Unmarshaller
 
   implicit val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool)
 
-  override def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](
+  override def sendRequestWithResponseMapping[REQUEST <: REQ, RESPONSE <: RESP](
     request: REQUEST,
     requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]
   )(
