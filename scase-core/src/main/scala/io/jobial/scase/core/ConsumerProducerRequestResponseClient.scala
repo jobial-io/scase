@@ -54,8 +54,8 @@ case class ConsumerProducerRequestResponseClient[F[_], REQ: Marshaller, RESP](
     def commit = Monad[F].flatMap[MessageReceiveResult[F, RESPONSE], Unit](response)(x => x.commit())
   }
 
-  def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST)
-    (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext) =
+  def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST, requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE])
+    (implicit sendRequestContext: SendRequestContext) =
     ConsumerProducerRequestResult {
 
       val producer = messageProducer()
