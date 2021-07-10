@@ -11,7 +11,7 @@ case class LambdaRequestResponseServiceConfiguration[F[_], REQ: Marshaller, RESP
 )(
   implicit awsContext: AwsContext,
   val concurrent: Concurrent[F]
-) extends RequestResponseServiceConfiguration[F, REQ, RESP] {
+) extends RequestResponseServiceConfiguration[REQ, RESP] {
 
   val serviceName = functionName
 

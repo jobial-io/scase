@@ -18,7 +18,7 @@ case class LocalOrRemoteServiceConfiguration[F[_], REQ, RESP](
 
   def serviceName = remoteServiceDefinition.serviceName
 
-  val localRequestResponseServiceDefinition = LocalRequestResponseServiceConfiguration[F, REQ, RESP](
+  val localRequestResponseServiceDefinition = LocalRequestResponseServiceConfiguration[REQ, RESP](
     serviceName
   )
 

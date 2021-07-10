@@ -12,18 +12,18 @@ import io.jobial.scase.marshalling.serialization._
  * Request-response client and service impl that internally wraps an existing request processor in a consumer-producer service
  * and uses in-memory queues to send requests and responses.
  */
-case class LocalRequestResponseServiceConfiguration[F[_], REQ, RESP](
+case class LocalRequestResponseServiceConfiguration[REQ, RESP](
   serviceName: String
 )(
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher
-  implicit s: Concurrent[F]
-) extends RequestResponseServiceConfiguration[F, REQ, RESP] {
+  
+) extends RequestResponseServiceConfiguration[REQ, RESP] {
 
   //  lazy val requestQueue = InMemoryQueue[F, REQ]()
   //
   //  lazy val responseQueue = InMemoryQueue[F, Either[Throwable, RESP]]()
 
-  def serviceAndClient(requestProcessor: RequestProcessor[F, REQ, RESP]) =
+  def serviceAndClient[F[_]](requestProcessor: RequestProcessor[F, REQ, RESP])(implicit s: Concurrent[F]) =
     for {
       requestQueue <- InMemoryQueue[F, REQ]
       responseQueue <- InMemoryQueue[F, Either[Throwable, RESP]]

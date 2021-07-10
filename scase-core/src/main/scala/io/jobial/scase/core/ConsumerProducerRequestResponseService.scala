@@ -138,7 +138,7 @@ case class ConsumerProducerRequestResponseService[F[_], REQ: Unmarshaller, RESP:
   def startService = {
     logger.info(s"starting service for processor $requestProcessor")
 
-    val requestQueue = new LinkedBlockingQueue[() => Future[SendResponseResult[RESP]]]
+    //val requestQueue = new LinkedBlockingQueue[() => Future[SendResponseResult[RESP]]]
 
     //    val state: ConsumerProducerRequestResponseServiceState[REQ, RESP] = 
     for {

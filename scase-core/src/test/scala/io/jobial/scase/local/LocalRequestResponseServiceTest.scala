@@ -7,13 +7,14 @@ import scala.concurrent.duration.DurationInt
 class LocalRequestResponseServiceTest
   extends RequestResponseTestSupport {
 
-  //val config = LocalRequestResponseServiceConfiguration[IO, TestRequest[_ <: TestResponse], TestResponse]("hello")
-
   val requestProcessor = new RequestProcessor[IO, TestRequest[_ <: TestResponse], TestResponse] {
     override def processRequest(implicit context: RequestContext[IO]): Processor = {
       case r: TestRequest1 =>
         println("replying...")
         r.reply(response1)
+      case r: TestRequest2 =>
+        println("replying...")
+        r.reply(response2)
     }
   }
 
@@ -36,20 +37,25 @@ class LocalRequestResponseServiceTest
         r.reply(Resp1())
     }
   }
-  
+
   "request-response service" should "reply successfully" in {
     for {
-      t <- LocalRequestResponseServiceConfiguration[IO, TestRequest[_ <: TestResponse], TestResponse]("hello").serviceAndClient(requestProcessor)
+      t <- LocalRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello").serviceAndClient(requestProcessor)
       (service, client) = t
       _ <- service.startService
-      r <- client.sendRequest(request1)
-      r1 <- client ? request1
-    } yield assert(response1 == r)
+      r1 <- client.sendRequest(request1)
+      r11 <- client ? request1
+      r2 <- client.sendRequest(request2)
+      r21 <- client ? request2
+    } yield assert(
+      response1 === r1 && response1 === r11 &&
+        response2 === r2 && response2 === r21
+    )
   }
 
   "another request-response service" should "reply successfully" in {
     for {
-      t <- LocalRequestResponseServiceConfiguration[IO, Req, Resp]("hello").serviceAndClient(anotherRequestProcessor)
+      t <- LocalRequestResponseServiceConfiguration[Req, Resp]("hello").serviceAndClient(anotherRequestProcessor)
       (service, client) = t
       _ <- service.startService
       r <- client.sendRequest(Req1())
