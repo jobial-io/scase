@@ -64,7 +64,8 @@ lazy val `scase-core` = project
       "org.scalatest" %% "scalatest" % ScalatestVersion % "test",
       "commons-io" % "commons-io" % CommonsIoVersion,
       "org.apache.commons" % "commons-lang3" % CommonsLangVersion,
-      "ch.qos.logback" % "logback-classic" % "1.2.3" % "test"
+      "ch.qos.logback" % "logback-classic" % "1.2.3" % "test",
+      "com.chuusai" %% "shapeless" % "2.3.3"
     )
   )
 
