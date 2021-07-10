@@ -20,7 +20,7 @@ case class InMemoryQueue[F[_], M](
 
 object InMemoryQueue {
 
-  def apply[F[_], M](implicit cs: ContextShift[IO], m: Sync[F]): F[InMemoryQueue[F, M]] = for {
+  def apply[F[_], M](implicit m: Sync[F]): F[InMemoryQueue[F, M]] = for {
     subscriptions <- Ref.of[F, List[MessageReceiveResult[F, M] => F[_]]](List())
   } yield InMemoryQueue[F, M](subscriptions)
 }

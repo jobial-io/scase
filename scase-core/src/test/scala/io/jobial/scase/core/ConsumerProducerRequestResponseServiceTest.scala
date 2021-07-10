@@ -10,15 +10,8 @@ import org.scalatest.flatspec.AsyncFlatSpec
 import scala.concurrent.duration.DurationInt
 
 
-class ConsumerProducerRequestResponseServiceTest extends AsyncFlatSpec with ScaseTestHelper {
-
-  val request1 = TestRequest1("1")
-
-  val request2 = TestRequest2("2")
-
-  val response1 = TestResponse1(request1, "1")
-
-  case object TestException extends Exception("test exception")
+class ConsumerProducerRequestResponseServiceTest
+  extends RequestResponseTestSupport {
 
   def testRequestResponse[REQ, RESP](testRequestProcessor: RequestProcessor[IO, REQ, RESP], request: REQ, response: Either[Throwable, RESP]) =
     for {

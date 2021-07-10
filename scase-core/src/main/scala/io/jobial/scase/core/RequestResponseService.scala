@@ -107,10 +107,10 @@ trait RequestProcessor[F[_], REQ, RESP] {
 trait RequestResponseServiceConfiguration[F[_], REQ, RESP] {
 
   def serviceName: String
-
-  def service: RequestResponseService[F, REQ, RESP]
-
-  def client: RequestResponseClient[F, REQ, RESP]
+//
+//  def service: RequestResponseService[F, REQ, RESP]
+//
+//  def client: RequestResponseClient[F, REQ, RESP]
 }
 
 trait RequestResponseService[F[_], REQ, RESP] {

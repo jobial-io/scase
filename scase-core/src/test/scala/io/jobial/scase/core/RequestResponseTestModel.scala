@@ -12,3 +12,16 @@ sealed trait TestResponse
 case class TestResponse1(request: TestRequest1, greeting: String) extends TestResponse
 
 case class TestResponse2(request: TestRequest2, greeting: String) extends TestResponse
+
+case object TestException extends Exception("test exception")
+
+trait RequestResponseTestModel {
+
+  val request1 = TestRequest1("1")
+
+  val request2 = TestRequest2("2")
+
+  val response1 = TestResponse1(request1, "1")
+
+  val response2 = TestResponse2(request2, "2")
+}
