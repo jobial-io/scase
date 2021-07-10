@@ -30,4 +30,8 @@ trait RequestResponseClient[F[_], REQ, RESP] {
   def ?[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST)
     (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext, m: Monad[F]) =
       Monad[F].map(sendRequest(request).response)(_.message)
+
+//  def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST with Request[RESPONSE])
+//    (implicit sendRequestContext: SendRequestContext): RequestResult[F, RESPONSE] =
+//    sendRequest(request)(new RequestResponseMapping[REQUEST with Request[RESPONSE], RESPONSE] {}, sendRequestContext)
 }

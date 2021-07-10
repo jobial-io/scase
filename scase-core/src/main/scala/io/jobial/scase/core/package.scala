@@ -1,6 +1,7 @@
 package io.jobial.scase
 
 import cats.Monad
+import io.jobial.scase.core.RequestResult
 import io.jobial.scase.logging.Logging
 
 
@@ -30,4 +31,10 @@ package object core extends Logging {
 
   implicit def requestTagBasedRequestResponseMapping[REQUEST <: Request[RESPONSE], RESPONSE] =
     new RequestResponseMapping[REQUEST, RESPONSE] {}
+
+  implicit class reqRespClientExtension[F[_], REQ, RESP](client: RequestResponseClient[F, REQ, RESP]) {
+
+    def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST with Request[RESPONSE])(implicit requestResponseMapping: RequestResponseMapping[REQUEST with Request[RESPONSE], RESPONSE], sendRequestContext: SendRequestContext): RequestResult[F, RESPONSE] =
+      client.sendRequest(request)(requestResponseMapping, sendRequestContext)
+  }
 }

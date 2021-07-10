@@ -5,6 +5,12 @@ sealed trait TestRequest[RESP] extends Request[RESP]
 
 case class TestRequest1(id: String) extends TestRequest[TestResponse1]
 
+//trait Mapping[REQUEST, RESPONSE] {
+//  
+//}
+
+//object TestRequest1 extends Mapping[TestResponse1]
+
 case class TestRequest2(id: String) extends TestRequest[TestResponse2]
 
 sealed trait TestResponse
