@@ -90,6 +90,30 @@ lazy val `scase-cloudformation` = project
     libraryDependencies ++= Seq(
       "com.bayer" %% "cloud-formation-template-generator" % CloudformationTemplateGeneratorVersion,
       "io.jobial" %% "sclap" % SclapVersion
+    ),
+    assembly / assemblyJarName := "utils.jar",
+    assemblyShadeRules := Seq(
+      ShadeRule.keep("io.jobial.scase.aws.lambda.example.HelloExample").inAll
     )
   )
   .dependsOn(`scase-aws` % "compile->compile;test->test")
+
+lazy val `scase-spray-json` = project
+  .in(file("scase-spray-json"))
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.spray" %% "spray-json" % "1.3.6"
+    )
+  )
+  .dependsOn(`scase-core` % "compile->compile;test->test")
+
+lazy val `scase-examples` = project
+  .in(file("scase-examples"))
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+    )
+  )
+  .dependsOn(`scase-aws` % "compile->compile;test->test")
+  .dependsOn(`scase-spray-json` % "compile->compile;test->test")

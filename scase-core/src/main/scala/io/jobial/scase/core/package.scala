@@ -33,9 +33,6 @@ package object core extends Logging {
   implicit def requestTagBasedRequestResponseMapping[REQUEST <: Request[RESPONSE], RESPONSE] =
     new RequestResponseMapping[REQUEST, RESPONSE] {}
 
-  //  implicit def requestTagBasedRequestResponseMapping[REQUEST] =
-  //    new RequestResponseMapping[REQUEST, RESPONSE] {}
-
   implicit class requestResponseClientExtension[F[_], REQ, RESP](client: RequestResponseClient[F, REQ, RESP])(implicit x: <:<[REQ, Request[_ <: RESP]]) {
 
     def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST with Request[RESPONSE])(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext): RequestResult[F, RESPONSE] =
