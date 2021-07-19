@@ -6,13 +6,13 @@ import shapeless._
 import cats.implicits._
 
 package object core extends Logging {
-  
+
   implicit def requestResultToResponse[F[_] : Monad, RESPONSE](requestResult: RequestResult[F, RESPONSE]) =
     requestResult.response.map(_.message)
 
   implicit def sendRequest[F[_], REQUEST, RESPONSE](request: REQUEST)(
     implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE],
-    client: RequestResponseClient[F, _ >: REQUEST, _ >: RESPONSE], sendRequestContext: SendRequestContext, M: Monad[F]): F[RESPONSE] =
+    client: RequestResponseClient[F, _ >: REQUEST, _ >: RESPONSE], sendRequestContext: SendRequestContext = SendRequestContext(), M: Monad[F]): F[RESPONSE] =
     client.?(request)
 
   val CorrelationIdKey = "CorrelationId"
@@ -35,21 +35,21 @@ package object core extends Logging {
 
   implicit class requestResponseClientExtension[F[_], REQ, RESP](client: RequestResponseClient[F, REQ, RESP])(implicit x: <:<[REQ, Request[_ <: RESP]]) {
 
-    def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST with Request[RESPONSE])(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext): RequestResult[F, RESPONSE] =
+    def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST with Request[RESPONSE])(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext = SendRequestContext()): RequestResult[F, RESPONSE] =
       client.sendRequestWithResponseMapping(request, requestResponseMapping)
 
     def ?[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST with Request[RESPONSE])
-      (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext, m: Monad[F]) =
+      (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext = SendRequestContext(), m: Monad[F]) =
       Monad[F].map(sendRequest(request).response)(_.message)
   }
 
   implicit class requestTagBasedRequestResponseClientExtension[F[_], REQ, RESP](client: RequestResponseClient[F, REQ, RESP])(implicit x: <:!<[REQ, Request[_ <: RESP]]) {
 
-    def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST)(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext): RequestResult[F, RESPONSE] =
+    def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST)(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext = SendRequestContext()): RequestResult[F, RESPONSE] =
       client.sendRequestWithResponseMapping(request, requestResponseMapping)
 
     def ?[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST)
-      (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext, m: Monad[F]) =
+      (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext = SendRequestContext(), m: Monad[F]) =
       Monad[F].map(sendRequest(request).response)(_.message)
   }
 

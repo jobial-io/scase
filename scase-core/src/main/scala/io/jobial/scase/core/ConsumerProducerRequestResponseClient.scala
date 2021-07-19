@@ -87,8 +87,7 @@ case class ConsumerProducerRequestResponseClient[F[_]: Concurrent, REQ: Marshall
           Map(
             CorrelationIdKey -> correlationId,
             ResponseConsumerIdKey -> responseConsumerId,
-            RequestTimeoutKey -> sendRequestContext.requestTimeout.toMillis.toString
-          )
+          ) ++ sendRequestContext.requestTimeout.map(t => RequestTimeoutKey -> t.toMillis.toString)
         )
         _ = println("waiting for result...")
         receiveResult <- receiveResultDeferred.get

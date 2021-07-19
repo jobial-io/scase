@@ -31,7 +31,7 @@ class ConsumerProducerRequestResponseServiceTest
       r <- d.get
     } yield assert(r == response)
 
-  implicit val sendRequestContext = SendRequestContext(10.seconds)
+  implicit val sendRequestContext = SendRequestContext(Some(10.seconds))
 
   def testRequestResponseClient[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP](testRequestProcessor: RequestProcessor[IO, REQ, RESP], request: REQUEST, response: Either[Throwable, RESPONSE])(
     implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]

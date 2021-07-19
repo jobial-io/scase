@@ -18,8 +18,6 @@ class LocalRequestResponseServiceTest
     }
   }
 
-  implicit val sendRequestContext = SendRequestContext(10.seconds)
-
   trait Req
 
   trait Resp

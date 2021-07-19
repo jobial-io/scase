@@ -8,8 +8,6 @@ import io.jobial.scase.core._
 import io.jobial.scase.marshalling.circe._
 import io.jobial.sclap.CommandLineApp
 
-import scala.concurrent.duration._
-
 sealed trait HelloExampleRequest[RESPONSE] extends Request[RESPONSE]
 
 sealed trait HelloExampleResponse
@@ -44,8 +42,6 @@ object HelloExampleStack extends CloudformationStack {
 object HelloClient extends CommandLineApp {
 
   val helloServiceConfig = LambdaRequestResponseServiceConfiguration[HelloExampleRequest[_ <: HelloExampleResponse], HelloExampleResponse]("hello")
-
-  implicit val sendRequestContext = SendRequestContext(10.seconds)
 
   def run =
     for {

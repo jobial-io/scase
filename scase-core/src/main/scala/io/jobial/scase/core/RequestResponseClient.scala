@@ -12,7 +12,7 @@ trait RequestResult[F[_], RESPONSE] {
 }
 
 case class SendRequestContext(
-  requestTimeout: Duration,
+  requestTimeout: Option[Duration] = None,
   attributes: Map[String, String] = Map()
 )
 
