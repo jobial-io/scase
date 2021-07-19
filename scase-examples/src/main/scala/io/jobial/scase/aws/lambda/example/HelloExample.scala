@@ -1,10 +1,12 @@
 package io.jobial.scase.aws.lambda.example
 
 import cats.effect.IO
+import io.circe.generic.auto._
 import io.jobial.scase.aws.lambda.IOLambdaRequestHandler
+import io.jobial.scase.aws.util.AwsContext
+import io.jobial.scase.cloudformation.{CloudformationStack, StackContext}
 import io.jobial.scase.core.{Request, RequestContext, RequestProcessor}
-import io.jobial.scase.marshalling.sprayjson._
-import spray.json.{DefaultJsonProtocol, JsValue, JsonReader, JsonWriter}
+import io.jobial.scase.marshalling.circe._
 
 sealed trait HelloExampleRequest[RESPONSE] extends Request[RESPONSE]
 
@@ -24,30 +26,23 @@ trait HelloExample extends RequestProcessor[IO, HelloExampleRequest[_], HelloExa
 
 object HelloExampleLambdaRequestHandler
   extends HelloExample
-    with IOLambdaRequestHandler[HelloExampleRequest[_], HelloExampleResponse]
-    with DefaultJsonProtocol {
+    with IOLambdaRequestHandler[HelloExampleRequest[_], HelloExampleResponse] {
 
-  val helloFormat = jsonFormat1(Hello)
+  val requestUnmarshaller = circeUnmarshaller[HelloExampleRequest[_]]
 
-  val helloResponseFormat = jsonFormat1(HelloResponse)
-
-  implicit val r = new JsonReader[HelloExampleRequest[_]] {
-    def read(json: JsValue) =
-      helloFormat.read(json)
-  }
-
-  implicit val w = new JsonWriter[HelloExampleResponse] {
-    def write(obj: HelloExampleResponse) = obj match {
-      case r: HelloResponse =>
-        helloResponseFormat.write(r)
-    }
-  }
-
-  val requestUnmarshaller = sprayJsonUnmarshaller[HelloExampleRequest[_]]
-
-  val responseMarshaller = sprayJsonMarshaller[HelloExampleResponse]
+  val responseMarshaller = circeMarshaller[HelloExampleResponse]
 }
 
-object HelloExampleCloudformationTemplate {
+object HelloExampleStack extends CloudformationStack {
   
+  def template(implicit context: StackContext) =
+    lambda(HelloExampleLambdaRequestHandler)
+
+  override def defaultAccountId: String = ???
+
+  override def defaultContainerImageRootUrl: String = ???
+
+  override def defaultLambdaCodeS3Path: String = ???
+
+  override def awsContext: AwsContext = ???
 }

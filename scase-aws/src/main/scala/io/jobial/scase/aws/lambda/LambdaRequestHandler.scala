@@ -35,12 +35,13 @@ trait LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandler with Lo
       logger.warn(s"Already invoked with request Id $awsRequestId, not retrying.")
     } else {
       val requestString = IOUtils.toString(inputStream, "utf-8")
-      val request = requestUnmarshaller.unmarshalFromText(requestString)
+      
 
       logger.info(s"received request: ${requestString.take(500)}")
 
       val result =
         for {
+          request <- requestUnmarshaller.unmarshalFromText(requestString).to[F]
           responseDeferred <- Deferred[F, Either[Throwable, RESP]]
           r <- responseDeferred.get
           processorResult: F[SendResponseResult[RESP]] =

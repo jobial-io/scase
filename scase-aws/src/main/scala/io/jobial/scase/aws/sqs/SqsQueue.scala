@@ -77,8 +77,8 @@ case class SqsQueue[F[_], M](
 
                     Traverse[List].sequence(messages.asScala.toList.map { sqsMessage =>
                       //                        try {
-                      val unmarshalledMessage = u.unmarshalFromText(sqsMessage.getBody)
                       for {
+                        unmarshalledMessage <- u.unmarshalFromText(sqsMessage.getBody).to[F]
                         _ <- outstandingMessages.update(_ + ((unmarshalledMessage, sqsMessage.getReceiptHandle)))
                         r <- callback(
                           MessageReceiveResult(

@@ -2,6 +2,7 @@ package io.jobial.scase.cloudformation
 
 import cats.effect.IO
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler
+import com.amazonaws.services.s3.model.Region
 import com.monsanto.arch.cloudformation.model._
 import com.monsanto.arch.cloudformation.model.resource._
 import com.monsanto.arch.cloudformation.model.resource.`AWS::EC2::Volume`._
@@ -12,11 +13,13 @@ import org.apache.commons.io.IOUtils
 import org.apache.commons.lang3.StringUtils
 import spray.json._
 
+import java.util.UUID.randomUUID
 import scala.concurrent.duration.{Duration, _}
 import scala.reflect.ClassTag
+import scala.util.Try
+import io.jobial.scase.logging.Logging
 
-trait CloudformationSupport {
-  this: DefaultJsonProtocol with S3Client =>
+trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Logging {
 
   def awsContext: AwsContext
 
@@ -1392,52 +1395,53 @@ trait CloudformationSupport {
       parts.reverse.dropWhile(!_.endsWith(".jar!")).drop(2).head
   }
 
-  def lambda[REQ, RESP](serviceDefinition: LambdaRequestResponseServiceConfiguration[REQ, RESP]) = {
-
-    object LambdaBuilder {
-      def apply[T <: LambdaRequestHandler[IO, REQ, RESP] : ClassTag](
-        // using a higher default timeout because the scala library can be slow to load...
-        timeout: Option[Duration] = Some(10.seconds),
-        moduleVersion: String = "master",
-        lambdaCodeS3Path: String = defaultLambdaCodeS3Path,
-        memorySize: Option[Int] = None,
-        policies: Seq[JsObject] = Seq()
-      ) = lambda[T](
-        timeout,
-        moduleVersion,
-        lambdaCodeS3Path,
-        memorySize,
-        policies
-      )
-
-      def schedule[T <: LambdaScheduledRequestHandler[IO, REQ, RESP] : ClassTag](
-        schedule: String,
-        scheduleEnabled: Boolean = true,
-        // using a higher default timeout because the scala library can be slow to load...
-        timeout: Option[Duration] = Some(10.seconds),
-        moduleVersion: String = "master",
-        lambdaCodeS3Path: String = defaultLambdaCodeS3Path,
-        memorySize: Option[Int] = None,
-        policies: Seq[JsObject] = Seq()
-      ) = lambda[T](
-        timeout,
-        moduleVersion,
-        lambdaCodeS3Path,
-        memorySize,
-        policies,
-        schedule,
-        scheduleEnabled
-      )
-    }
-
-    LambdaBuilder
-  }
-
+  //  def lambda[REQ, RESP](config: LambdaRequestResponseServiceConfiguration[REQ, RESP]) = {
+  //
+  //    object LambdaBuilder {
+  //      def apply[T <: LambdaRequestHandler[IO, REQ, RESP] : ClassTag](
+  //        // using a higher default timeout because the scala library can be slow to load...
+  //        timeout: Option[Duration] = Some(10.seconds),
+  //        moduleVersion: String = "master",
+  //        lambdaCodeS3Path: String = defaultLambdaCodeS3Path,
+  //        memorySize: Option[Int] = None,
+  //        policies: Seq[JsObject] = Seq()
+  //      ) = lambda[T](
+  //        timeout,
+  //        moduleVersion,
+  //        lambdaCodeS3Path,
+  //        memorySize,
+  //        policies
+  //      )
+  //
+  //      def schedule[T <: LambdaScheduledRequestHandler[IO, REQ, RESP] : ClassTag](
+  //        schedule: String,
+  //        scheduleEnabled: Boolean = true,
+  //        // using a higher default timeout because the scala library can be slow to load...
+  //        timeout: Option[Duration] = Some(10.seconds),
+  //        moduleVersion: String = "master",
+  //        lambdaCodeS3Path: String = defaultLambdaCodeS3Path,
+  //        memorySize: Option[Int] = None,
+  //        policies: Seq[JsObject] = Seq()
+  //      ) = lambda[T](
+  //        timeout,
+  //        moduleVersion,
+  //        lambdaCodeS3Path,
+  //        memorySize,
+  //        policies,
+  //        schedule,
+  //        scheduleEnabled
+  //      )
+  //    }
+  //
+  //    LambdaBuilder
+  //  }
+  //  
   def lambda[T <: RequestStreamHandler : ClassTag](
+    requestStreamHandler: T,
     // using a higher default timeout because the scala library can be slow to load...
     timeout: Option[Duration] = Some(10.seconds),
-    moduleVersion: String = "master",
-    lambdaCodeS3Path: String = defaultLambdaCodeS3Path,
+    s3Bucket: Option[String] = None,
+    s3Key: Option[String] = None,
     memorySize: Option[Int] = None,
     policies: Seq[JsObject] = Seq(),
     schedule: Option[String] = None,
@@ -1450,21 +1454,21 @@ trait CloudformationSupport {
     println(s"$name: $moduleName")
     val roleName = s"lambdaRole${name.capitalize}"
 
-    println(s"$lambdaCodeS3Path/$moduleName/$moduleVersion-SNAPSHOT/")
-    val l = s3ListAllObjects(s"$lambdaCodeS3Path/$moduleName/$moduleVersion-SNAPSHOT/")
-    println(l.map(_.getKey).filter(_.contains(".jar")).toList)
-    val jarObject = l
-      .filterNot(_.getKey.contains("-test.jar")).filterNot(_.getKey.contains("-sources.jar")).filter(_.getKey.endsWith(".jar"))
-      .sortBy(_.getKey).reverse.headOption
-    println(jarObject)
+    val codeS3Bucket = s3Bucket.getOrElse("lambda-code")
+    val codeS3Key = s3Key.getOrElse(name)
 
-    (for {
-      schedule <- schedule
+    for {
+      _ <- s3CreateBucket(codeS3Bucket, Region.fromValue(awsContext.region)) handleErrorWith { _ =>
+        IO(logger.info("bucket $codeS3Bucket already exists"))
+      }
     } yield
-      (GenericResource(
-        "AWS::Events::Rule",
-        s"${name}ScheduleRule",
-        s"""{
+      (for {
+        schedule <- schedule
+      } yield
+        (GenericResource(
+          "AWS::Events::Rule",
+          s"${name}ScheduleRule",
+          s"""{
             "Description": "${scheduleDescription.getOrElse("")}",
             "Name": {
               "Fn::Sub": "$${stackLogicalName}-${name}ScheduleRule"
@@ -1485,10 +1489,10 @@ trait CloudformationSupport {
               }
             ]
         }""") ++
-        GenericResource(
-          "AWS::Lambda::Permission",
-          s"${name}LambdaPermission",
-          s"""{
+          GenericResource(
+            "AWS::Lambda::Permission",
+            s"${name}LambdaPermission",
+            s"""{
             "FunctionName": {
                 "Fn::GetAtt": [
                   "${name}",
@@ -1504,19 +1508,19 @@ trait CloudformationSupport {
               ]
             }
         }"""))) ++
-      lambdaRole(roleName, policies) ++
-      `AWS::Lambda::Function`(
-        name = name,
-        Code = Code(
-          S3Bucket = jarObject.map(_.getBucketName),
-          S3Key = jarObject.map(_.getKey)
-        ),
-        Handler = c.getName,
-        Role = `Fn::GetAtt`(Seq(roleName, "Arn")),
-        Runtime = Java8,
-        Timeout = timeout.map(_.toSeconds.toInt),
-        MemorySize = memorySize.map(i => i: Token[Int])
-      )
+        lambdaRole(roleName, policies) ++
+        `AWS::Lambda::Function`(
+          name = name,
+          Code = Code(
+            S3Bucket = Some(codeS3Bucket),
+            S3Key = Some(codeS3Key)
+          ),
+          Handler = c.getName,
+          Role = `Fn::GetAtt`(Seq(roleName, "Arn")),
+          Runtime = Java8,
+          Timeout = timeout.map(_.toSeconds.toInt),
+          MemorySize = memorySize.map(i => i: Token[Int])
+        )
   }
 
   def lambdaRole(name: String, policies: Seq[JsObject]) = GenericResource(
@@ -1574,5 +1578,7 @@ trait CloudformationSupport {
         s"arn:aws:dynamodb:${awsContext.region}:$defaultAccountId:table/$table"
       )
     )
+
+  //def s3Bucket(name: Option[String] = None) = `AWS::S3::Bucket`(s"s3Bucket${name.getOrElse(randomUUID.toString)}", name)
 }
   

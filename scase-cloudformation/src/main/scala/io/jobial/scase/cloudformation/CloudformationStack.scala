@@ -1,19 +1,19 @@
 package io.jobial.scase.cloudformation
 
+import cats.effect.IO
 import com.monsanto.arch.cloudformation.model.Template
 import io.jobial.scase.aws.util.S3Client
 import spray.json.DefaultJsonProtocol
 
-import scala.util.Try
-
 
 trait CloudformationStack
-  extends CloudformationSupport
-    with S3Client
-    with DefaultJsonProtocol {
+  extends CloudformationSupport {
 
-  def createStackTemplate(implicit context: ScaseAwsContext): Template
+  def template(implicit context: StackContext): IO[Template]
 
-  def cleanupStack(stackName: String, levelAndLabel: Option[String]): Try[_]
+  def onCreate(implicit context: StackContext): IO[StackContext] = IO(context)
+
+  def onDelete(implicit context: StackContext): IO[StackContext] = IO(context)
+
+  def onUpdate(implicit context: StackContext): IO[StackContext] = IO(context)
 }
-

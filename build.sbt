@@ -18,7 +18,13 @@ ThisBuild / scalaVersion := "2.13.6"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.13", "2.13.6")
 ThisBuild / version := "0.1.0"
 
+ThisBuild / assemblyMergeStrategy in assembly := {
+  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+  case x => MergeStrategy.first
+}
+
 import sbt.Keys.{description, publishConfiguration}
+import sbtassembly.AssemblyPlugin.autoImport.assemblyPackageScala
 import xerial.sbt.Sonatype._
 
 lazy val commonSettings = Seq(
@@ -40,16 +46,20 @@ lazy val CommonsIoVersion = "2.8.0"
 lazy val CommonsLangVersion = "3.12.0"
 lazy val CloudformationTemplateGeneratorVersion = "3.10.5-SNAPSHOT"
 lazy val SclapVersion = "1.0.0"
+lazy val CirceVersion = "0.14.1"
+
 
 lazy val root: Project = project
   .in(file("."))
   .settings(commonSettings)
   .settings(
     publishArtifact := false,
-    publishArtifact in makePom := true
+    publishArtifact in makePom := true,
+    assemblyPackageScala / assembleArtifact := false,
+    assemblyPackageDependency / assembleArtifact := false
   )
-  .aggregate(`scase-core`, `scase-aws`, `scase-cloudformation`)
-  .dependsOn(`scase-core`, `scase-aws`, `scase-cloudformation`)
+  .aggregate(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-examples`)
+  .dependsOn(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-examples`)
 
 lazy val `scase-core` = project
   .in(file("scase-core"))
@@ -74,12 +84,14 @@ lazy val `scase-aws` = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "com.amazonaws" % "aws-java-sdk-sqs" % AwsVersion,
-      "com.amazonaws" % "amazon-sqs-java-extended-client-lib" % "master-SNAPSHOT",
-      "com.amazonaws" % "aws-java-sdk-lambda" % AwsVersion,
-      "com.amazonaws" % "aws-java-sdk-cloudformation" % AwsVersion,
-      "com.amazonaws" % "aws-lambda-java-core" % AwsLambdaJavaCoreVersion
-    )
+      "com.amazonaws" % "aws-java-sdk-sqs" % AwsVersion excludeAll ("commons-logging"),
+      "com.amazonaws" % "amazon-sqs-java-extended-client-lib" % "master-SNAPSHOT" excludeAll ("commons-logging"),
+      "com.amazonaws" % "aws-java-sdk-lambda" % AwsVersion excludeAll ("commons-logging"),
+      "com.amazonaws" % "aws-java-sdk-cloudformation" % AwsVersion excludeAll ("commons-logging"),
+      "com.amazonaws" % "aws-lambda-java-core" % AwsLambdaJavaCoreVersion excludeAll ("commons-logging")
+    ),
+    assemblyPackageScala / assembleArtifact := false,
+    assemblyPackageDependency / assembleArtifact := false
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
 
@@ -91,10 +103,8 @@ lazy val `scase-cloudformation` = project
       "com.bayer" %% "cloud-formation-template-generator" % CloudformationTemplateGeneratorVersion,
       "io.jobial" %% "sclap" % SclapVersion
     ),
-    assembly / assemblyJarName := "utils.jar",
-    assemblyShadeRules := Seq(
-      ShadeRule.keep("io.jobial.scase.aws.lambda.example.HelloExample").inAll
-    )
+    assemblyPackageScala / assembleArtifact := false,
+    assemblyPackageDependency / assembleArtifact := false
   )
   .dependsOn(`scase-aws` % "compile->compile;test->test")
 
@@ -108,12 +118,28 @@ lazy val `scase-spray-json` = project
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
 
+lazy val `scase-circe` = project
+  .in(file("scase-circe"))
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-core",
+      "io.circe" %% "circe-generic",
+      "io.circe" %% "circe-parser"
+    ).map(_ % CirceVersion))
+  .dependsOn(`scase-core` % "compile->compile;test->test")
+
 lazy val `scase-examples` = project
   .in(file("scase-examples"))
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
+    ),
+    //assembly / assemblyJarName := "utils.jar",
+    assemblyShadeRules := Seq(
+      ShadeRule.keep("io.jobial.scase.aws.lambda.example.HelloExample").inAll
     )
   )
   .dependsOn(`scase-aws` % "compile->compile;test->test")
-  .dependsOn(`scase-spray-json` % "compile->compile;test->test")
+  .dependsOn(`scase-circe` % "compile->compile;test->test")
+  .dependsOn(`scase-cloudformation` % "compile->compile;test->test")

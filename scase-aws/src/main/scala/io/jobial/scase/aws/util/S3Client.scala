@@ -1,8 +1,9 @@
 package io.jobial.scase.aws.util
 
+import cats.effect.IO
+
 import java.io.ByteArrayInputStream
 import java.lang.Thread.sleep
-
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.services.s3.model._
@@ -12,7 +13,6 @@ import com.amazonaws.util.IOUtils
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 import collection.JavaConverters._
-
 
 
 trait S3Client extends AwsClient {
@@ -90,4 +90,8 @@ trait S3Client extends AwsClient {
 
   def httpsUrl(bucketName: String, key: String) =
     s"https://s3-${awsContext.region}.amazonaws.com/$bucketName/$key"
+
+  def s3CreateBucket(bucketName: String, region: Region) = IO(
+    s3.createBucket(new CreateBucketRequest(bucketName, region))
+  )
 }

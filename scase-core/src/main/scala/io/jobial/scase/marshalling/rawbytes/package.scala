@@ -23,7 +23,7 @@ package object rawbytes {
 
   implicit val rawBytesUnmarshaller = new Unmarshaller[Array[Byte]] {
 
-    def unmarshal(bytes: Array[Byte]) = bytes
+    def unmarshal(bytes: Array[Byte]) = IO(bytes)
 
     def unmarshal(in: InputStream) =
       IO(IOUtils.toByteArray(in))

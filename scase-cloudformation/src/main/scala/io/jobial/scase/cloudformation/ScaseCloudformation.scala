@@ -12,7 +12,7 @@ import scala.util.{Failure, Success, Try}
 import collection.JavaConverters._
 import scala.io.StdIn.readLine
 
-object ScaseAws extends CommandLineApp
+object ScaseCloudformation extends CommandLineApp
   with DefaultJsonProtocol
   with S3Client
   with CloudformationClient {
@@ -35,7 +35,7 @@ object ScaseAws extends CommandLineApp
           printOnly <- opt[Boolean]("--print-only").defaultValue(false)
             .description("Print the generated template and operations, do not make any changes")
           stackClassName <- param[String].paramLabel("<stack_class_name>").required
-          context = ScaseAwsContext(
+          context = StackContext(
             stackName,
             label,
             dockerImageTags.map {
@@ -87,13 +87,13 @@ object ScaseAws extends CommandLineApp
     httpsUrl(templateBucket, templatePath)
   }
 
-  def nameStack[T](implicit context: ScaseAwsContext) = {
+  def nameStack[T](implicit context: StackContext) = {
     val stackName = s"${context.stackName}${context.label.map("-" + _).getOrElse("")}"
 
     (stackName, context.label)
   }
 
-  def nameAndUploadTemplate[T](template: Template)(f: (String, String) => Try[T])(implicit context: ScaseAwsContext) = {
+  def nameAndUploadTemplate[T](template: Template)(f: (String, String) => Try[T])(implicit context: StackContext) = {
     val templateSource = template.toJson.prettyPrint
     val (stackName, _) = nameStack
 
@@ -101,17 +101,18 @@ object ScaseAws extends CommandLineApp
     f(stackName, uploadTemplateToS3(stackName, templateSource))
   }
 
-  def createStackSubcommand(stack: CloudformationStack)(implicit context: ScaseAwsContext) =
+  def createStackSubcommand(stack: CloudformationStack)(implicit context: StackContext) =
     subcommand("create-stack")
       .header("Create a new stack.")
       .description("This command creates a new stack based on the specified stack name, level and optional label.") {
-        val template = stack.createStackTemplate
+        val template = stack.template
         for {
+          t <- template
           stack <-
             if (context.printOnly)
               Try(println(template))
             else
-              nameAndUploadTemplate(template) { (stackName, templateUrl) =>
+              nameAndUploadTemplate(t) { (stackName, templateUrl) =>
                 println(s"creating stack $stackName from $templateUrl")
                 Try(createStack(stackName, templateUrl))
               }
@@ -120,12 +121,12 @@ object ScaseAws extends CommandLineApp
 
   case class NotUpdatingStack(stackName: String) extends RuntimeException(s"updates to stack $stackName will not be applied")
 
-  def updateStackSubcommand(stack: CloudformationStack)(implicit context: ScaseAwsContext) =
+  def updateStackSubcommand(stack: CloudformationStack)(implicit context: StackContext) =
     subcommand("update-stack")
       .header("Update an existing stack.")
       .description("This command updates an existing stack based on the specified stack name, level and optional label.") {
-        val template = stack.createStackTemplate
         for {
+          template <- stack.template
           stack <-
             if (context.printOnly)
               Try(println(template))
@@ -171,7 +172,7 @@ object ScaseAws extends CommandLineApp
 
   case object CannotDeleteProdStack extends IllegalStateException(s"cannot delete prod stack")
 
-  def deleteStackSubcommand(stack: CloudformationStack)(implicit context: ScaseAwsContext) =
+  def deleteStackSubcommand(stack: CloudformationStack)(implicit context: StackContext) =
     subcommand("delete-stack")
       .header("Delete an existing stack.")
       .description("This command deletes an existing stack based on the specified stack name, level and optional label.") {

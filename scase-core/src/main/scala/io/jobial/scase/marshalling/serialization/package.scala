@@ -35,9 +35,9 @@ package object serialization {
       unmarshalFromInputStream(new ByteArrayInputStream(bytes))
 
     def unmarshal(in: InputStream) =
-      IO(unmarshalFromInputStream(in))
+      unmarshalFromInputStream(in)
 
-    private def unmarshalFromInputStream(in: InputStream) = {
+    private def unmarshalFromInputStream(in: InputStream) = IO {
       val ois = new ObjectInputStream(new GZIPInputStream(in))
       ois.readObject.asInstanceOf[T]
     }

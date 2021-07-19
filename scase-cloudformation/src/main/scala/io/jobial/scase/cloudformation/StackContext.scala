@@ -1,13 +1,13 @@
 package io.jobial.scase.cloudformation
 
 
-case class ScaseAwsContext(
+case class StackContext(
   stackName: String,
   label: Option[String],
   dockerImageTags: Option[Map[String, String]],
   printOnly: Boolean,
   update: Boolean = false
-) {
+) { 
 
   def tagForImage(image: String) =
     for {

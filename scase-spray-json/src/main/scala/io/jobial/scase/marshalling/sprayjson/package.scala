@@ -36,13 +36,13 @@ package object sprayjson {
       unmarshalFromInputStream(new ByteArrayInputStream(bytes))
 
     def unmarshal(in: InputStream) =
-      IO(unmarshalFromInputStream(in))
+      unmarshalFromInputStream(in)
 
     private def unmarshalFromInputStream(in: InputStream) =
       unmarshalFromText(IOUtils.toString(in, "utf-8"))
 
     def unmarshalFromText(text: String) =
-      text.parseJson.convertTo[T]
+      IO(text.parseJson.convertTo[T])
   }
 
 }
