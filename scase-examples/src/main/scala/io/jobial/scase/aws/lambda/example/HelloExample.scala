@@ -2,10 +2,13 @@ package io.jobial.scase.aws.lambda.example
 
 import cats.effect.IO
 import io.circe.generic.auto._
-import io.jobial.scase.aws.lambda.IOLambdaRequestHandler
+import io.jobial.scase.aws.lambda.{IOLambdaRequestHandler, LambdaRequestResponseServiceConfiguration}
 import io.jobial.scase.cloudformation.{CloudformationStack, StackContext}
-import io.jobial.scase.core.{Request, RequestContext, RequestProcessor}
+import io.jobial.scase.core._
 import io.jobial.scase.marshalling.circe._
+import io.jobial.sclap.CommandLineApp
+
+import scala.concurrent.duration._
 
 sealed trait HelloExampleRequest[RESPONSE] extends Request[RESPONSE]
 
@@ -33,7 +36,21 @@ object HelloExampleLambdaRequestHandler
 }
 
 object HelloExampleStack extends CloudformationStack {
-  
+
   def template(implicit context: StackContext) =
     lambda(HelloExampleLambdaRequestHandler)
+}
+
+object HelloClient extends CommandLineApp {
+
+  val helloServiceConfig = LambdaRequestResponseServiceConfiguration[HelloExampleRequest[_ <: HelloExampleResponse], HelloExampleResponse]("hello")
+
+  implicit val sendRequestContext = SendRequestContext(10.seconds)
+
+  def run =
+    for {
+      client <- helloServiceConfig.client[IO]
+      response <- client ? Hello("world")
+    } yield println(response)
+    
 }

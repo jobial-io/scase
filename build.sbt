@@ -24,7 +24,7 @@ ThisBuild / assemblyMergeStrategy in assembly := {
 }
 
 import sbt.Keys.{description, publishConfiguration}
-import sbtassembly.AssemblyPlugin.autoImport.assemblyPackageScala
+import sbtassembly.AssemblyPlugin.autoImport.{ShadeRule, assemblyPackageScala}
 import xerial.sbt.Sonatype._
 
 lazy val commonSettings = Seq(
@@ -133,11 +133,9 @@ lazy val `scase-examples` = project
   .in(file("scase-examples"))
   .settings(commonSettings)
   .settings(
-    libraryDependencies ++= Seq(
-    ),
     //assembly / assemblyJarName := "utils.jar",
     assemblyShadeRules := Seq(
-      ShadeRule.keep("io.jobial.scase.aws.lambda.example.HelloExample").inAll
+      ShadeRule.keep("io.jobial.scase.aws.lambda.example.HelloExample").inAll,
     )
   )
   .dependsOn(`scase-aws` % "compile->compile;test->test")
