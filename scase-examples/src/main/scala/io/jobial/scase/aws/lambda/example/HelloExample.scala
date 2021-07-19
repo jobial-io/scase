@@ -3,7 +3,6 @@ package io.jobial.scase.aws.lambda.example
 import cats.effect.IO
 import io.circe.generic.auto._
 import io.jobial.scase.aws.lambda.IOLambdaRequestHandler
-import io.jobial.scase.aws.util.AwsContext
 import io.jobial.scase.cloudformation.{CloudformationStack, StackContext}
 import io.jobial.scase.core.{Request, RequestContext, RequestProcessor}
 import io.jobial.scase.marshalling.circe._
@@ -37,12 +36,4 @@ object HelloExampleStack extends CloudformationStack {
   
   def template(implicit context: StackContext) =
     lambda(HelloExampleLambdaRequestHandler)
-
-  override def defaultAccountId: String = ???
-
-  override def defaultContainerImageRootUrl: String = ???
-
-  override def defaultLambdaCodeS3Path: String = ???
-
-  override def awsContext: AwsContext = ???
 }

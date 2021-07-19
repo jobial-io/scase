@@ -12,17 +12,23 @@ import scala.concurrent.{ExecutionContext, Future}
 trait AwsClient {
 
   def awsContext: AwsContext
+  
 
   /**
    * Clients are supposed to be thread safe: https://forums.aws.amazon.com/message.jspa?messageID=191621
    */
   def buildAwsClient[BuilderClass <: AwsSyncClientBuilder[BuilderClass, BuiltClass], BuiltClass](awsClientBuilder: AwsSyncClientBuilder[BuilderClass, BuiltClass]) = {
-    val b1 = awsClientBuilder.withRegion(awsContext.region)
+    val b1 = awsContext.region match {
+      case Some(region) =>
+        awsClientBuilder.withRegion(region)
+      case None =>
+        awsClientBuilder
+    }
 
     val b2 = awsContext.credentials match {
       case Some(credentials) =>
         b1.withCredentials(new AWSStaticCredentialsProvider(credentials))
-      case _ =>
+      case None =>
         b1
     }
 
@@ -32,7 +38,12 @@ trait AwsClient {
   }
 
   def buildAwsAsyncClient[BuilderClass <: AwsAsyncClientBuilder[BuilderClass, BuiltClass], BuiltClass](awsClientBuilder: AwsAsyncClientBuilder[BuilderClass, BuiltClass]) = {
-    val b1 = awsClientBuilder.withRegion(awsContext.region)
+    val b1 = awsContext.region match {
+      case Some(region) =>
+        awsClientBuilder.withRegion(region)
+      case None =>
+        awsClientBuilder
+    }
 
     val b2 = awsContext.credentials match {
       case Some(credentials) =>

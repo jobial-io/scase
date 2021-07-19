@@ -21,9 +21,7 @@ import io.jobial.scase.logging.Logging
 
 trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Logging {
 
-  def awsContext: AwsContext
-
-  def defaultAccountId: String
+  def awsContext = AwsContext()
 
   case class CloudformationExpression(value: JsValue) {
     override def toString = value.prettyPrint
@@ -138,11 +136,17 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
   val ecsInstanceUserData =
     IOUtils.toString(getClass.getResourceAsStream("/cloudtemp/aws/ecs-instance-user-data.sh"), "utf-8")
 
-  def instanceRole(name: String) = GenericResource(
-    name = name,
-    `Type` = "AWS::IAM::Role",
-    Properties =
-      s"""{
+  def accountId: IO[String] = ???
+
+  def instanceRole(name: String) =
+    for {
+      accountId <- accountId
+    } yield
+      GenericResource(
+        name = name,
+        `Type` = "AWS::IAM::Role",
+        Properties =
+          s"""{
         "AssumeRolePolicyDocument": {
           "Statement": [
             {
@@ -294,7 +298,7 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
                   ],
                   "Effect": "Allow",
                   "Resource": [
-                    "arn:aws:ssm:${awsContext.region}:$defaultAccountId:parameter/config.password"
+                    "arn:aws:ssm:${awsContext.region}:$accountId:parameter/config.password"
                   ]
                 }
               ],
@@ -340,17 +344,19 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
           }
         ]
     }"""
-  )
+      )
 
-  def instanceProfile(name: String) = {
-    val role = instanceRole(s"instanceRole${name.capitalize}")
 
-    role ++
-      GenericResource(
-        name = name,
-        `Type` = "AWS::IAM::InstanceProfile",
-        Properties =
-          s"""{
+  def instanceProfile(name: String) =
+    for {
+      role <- instanceRole(s"instanceRole${name.capitalize}")
+    } yield
+      role ++
+        GenericResource(
+          name = name,
+          `Type` = "AWS::IAM::InstanceProfile",
+          Properties =
+            s"""{
             "Path": "/",
             "Roles": [
                 {
@@ -358,8 +364,8 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
                 }
             ]
       }"""
-      )
-  }
+        )
+
 
   def spotFleetRole(name: String) = GenericResource(
     name = name,
@@ -407,7 +413,7 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
     subnet: `AWS::EC2::Subnet`,
     keyName: CloudformationExpression,
     userData: String,
-    amiId: CloudformationExpression = ecsOptimisedAmiForRegion(awsContext.region),
+    amiId: CloudformationExpression = ecsOptimisedAmiForRegion(awsContext.region.getOrElse(???)),
     tags: Map[String, String] = Map(),
     dependsOn: Seq[String] = Seq()
   ) = {
@@ -416,16 +422,18 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
       else "diversified" // this was somehow more stable, but it only works for one instance type obviously
 
     val instanceProfileName = s"spotFleetInstanceProfile${name.capitalize}"
-    val profile = instanceProfile(instanceProfileName)
     val fleetRole = spotFleetRole(s"spotFleetRole${name.capitalize}")
 
-    profile ++ fleetRole ++
-      GenericResource(
-        "AWS::EC2::SpotFleet",
-        name,
-        DependsOn = dependsOn,
-        Properties =
-          s"""{
+    for {
+      profile <- instanceProfile(instanceProfileName)
+    } yield
+      profile ++ fleetRole ++
+        GenericResource(
+          "AWS::EC2::SpotFleet",
+          name,
+          DependsOn = dependsOn,
+          Properties =
+            s"""{
               "SpotFleetRequestConfigData": {
                   "AllocationStrategy": "$allocationStrategy",
                   "IamFleetRole": {
@@ -436,8 +444,8 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
                   },
                   "LaunchSpecifications": [
                   ${
-            instanceTypes.map { instanceType =>
-              s"""
+              instanceTypes.map { instanceType =>
+                s"""
                       {
                           "IamInstanceProfile": {
                               "Arn": {
@@ -473,8 +481,8 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
                               }
                           }
                           ${
-                tags.headOption.map { _ =>
-                  s""",
+                  tags.headOption.map { _ =>
+                    s""",
               "TagSpecifications": [
               {
                 "ResourceType": "instance",
@@ -484,12 +492,12 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
               }
               ]
               """
-                }.getOrElse("")
-              }
+                  }.getOrElse("")
+                }
                   }
                   """
-            }.mkString(",")
-          }
+              }.mkString(",")
+            }
                   ],
                   "TargetCapacity": 1,
                   "ReplaceUnhealthyInstances": true,
@@ -498,7 +506,7 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
                   "SpotPrice": 5.0
               }
         }"""
-      )
+        )
   }
 
   def ec2Instance(
@@ -508,20 +516,21 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
     subnet: `AWS::EC2::Subnet`,
     keyName: CloudformationExpression,
     userData: String,
-    amiId: CloudformationExpression = ecsOptimisedAmiForRegion(awsContext.region),
+    amiId: CloudformationExpression = ecsOptimisedAmiForRegion(awsContext.region.getOrElse(???)),
     tags: Map[String, String] = Map(),
     dependsOn: Seq[String] = Seq()
   ) = {
     val instanceProfileName = s"instanceProfile${name.capitalize}"
-    val profile = instanceProfile(instanceProfileName)
-
-    profile ++
-      GenericResource(
-        "AWS::EC2::Instance",
-        name,
-        DependsOn = dependsOn,
-        Properties =
-          s"""{
+    for {
+      profile <- instanceProfile(instanceProfileName)
+    } yield
+      profile ++
+        GenericResource(
+          "AWS::EC2::Instance",
+          name,
+          DependsOn = dependsOn,
+          Properties =
+            s"""{
             "IamInstanceProfile": {
                 "Ref": "$instanceProfileName"
              },
@@ -549,16 +558,16 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
                 }
             }
                           ${
-            tags.headOption.map { _ =>
-              s""",
+              tags.headOption.map { _ =>
+                s""",
             "Tags": [
             ${printTags(tags)}
             ]
             """
-            }.getOrElse("")
-          }
+              }.getOrElse("")
+            }
         }"""
-      )
+        )
   }
 
   def spotFleetOrInstance(
@@ -568,7 +577,7 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
     subnet: `AWS::EC2::Subnet`,
     keyName: CloudformationExpression,
     userData: String,
-    amiId: CloudformationExpression = ecsOptimisedAmiForRegion(awsContext.region),
+    amiId: CloudformationExpression = ecsOptimisedAmiForRegion(awsContext.region.getOrElse(???)),
     tags: Map[String, String] = Map(),
     dependsOn: Seq[String] = Seq(),
     useOnDemandInstances: Boolean
@@ -600,11 +609,15 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
 
   val defaultTaskTargetRoleName = "taskTargetRole"
 
-  def taskTargetRole = GenericResource(
-    name = defaultTaskTargetRoleName,
-    `Type` = "AWS::IAM::Role",
-    Properties =
-      s"""{
+  def taskTargetRole = {
+    for {
+      accountId <- accountId
+    } yield
+      GenericResource(
+        name = defaultTaskTargetRoleName,
+        `Type` = "AWS::IAM::Role",
+        Properties =
+          s"""{
         "RoleName": {
           "Fn::Sub": "taskTargetRole$${AWS::StackName}"
         },
@@ -636,7 +649,7 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
                   "Action": [
                     "iam:PassRole"
                   ],
-                  "Resource": "arn:aws:iam::$defaultAccountId:role/ecsTaskExecutionRole",
+                  "Resource": "arn:aws:iam::$accountId:role/ecsTaskExecutionRole",
                   "Condition": {
                     "StringLike": {
                       "iam:PassedToService": "ecs-tasks.amazonaws.com"
@@ -648,7 +661,8 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
           }
         ]
       }"""
-  )
+      )
+  }
 
   def serviceRole = GenericResource(
     "AWS::IAM::Role",
@@ -771,15 +785,12 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
           }
 """
 
-  def defaultContainerImageRootUrl: String
-
-  def defaultLambdaCodeS3Path: String
-
   def ecsTaskDefinition(
     name: String,
     containerName: String,
     logGroupName: String,
     logStreamPrefix: String,
+    containerImageRootUrl: String,
     memorySoftLimit: Option[Int],
     memoryHardLimit: Option[Int],
     image: Option[String] = None,
@@ -796,7 +807,7 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
   ) = {
     val actualImageName = imageName.getOrElse(containerName)
 
-    val actualImage = image.getOrElse(s"$defaultContainerImageRootUrl/$actualImageName${imageTag.map(t => s":$t").getOrElse("")}")
+    val actualImage = image.getOrElse(s"$containerImageRootUrl/$actualImageName${imageTag.map(t => s":$t").getOrElse("")}")
 
     val taskRoleName = s"${name}TaskRole"
 
@@ -884,6 +895,7 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
     name: String,
     memorySoftLimit: Option[Int],
     memoryHardLimit: Option[Int],
+    containerImageRootUrl: String,
     serviceName: Option[String] = None,
     image: Option[String] = None,
     imageName: Option[String] = None,
@@ -909,6 +921,7 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
       containerName,
       defaultLogGroupName,
       logStreamPrefix = s"ecs/$actualServiceName-service/$${$clusterName}",
+      containerImageRootUrl,
       memorySoftLimit,
       memoryHardLimit,
       image,
@@ -981,6 +994,7 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
     name: String,
     description: String,
     scheduleExpression: String,
+    containerImageRootUrl: String,
     ruleName: Option[String] = None,
     memorySoftLimit: Option[Int],
     memoryHardLimit: Option[Int],
@@ -1011,6 +1025,7 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
       containerName,
       defaultLogGroupName,
       logStreamPrefix = s"ecs/$streamPrefixName-scheduled-task/$${$clusterName}",
+      containerImageRootUrl,
       memorySoftLimit,
       memoryHardLimit,
       image,
@@ -1079,15 +1094,18 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
   def defaultEcsClusterName = "ecsCluster"
 
   def ecsResources(namespaceName: String, vpc: `AWS::EC2::VPC`, serviceDiscoveryNamespaceName: String = "serviceDiscoveryNamespace") =
-    ecsCluster(defaultEcsClusterName) ++
-      serviceRole ++
-      taskTargetRole ++
-      serviceDiscoveryNamespaces(
-        name = serviceDiscoveryNamespaceName,
-        description = "Service discovery namespace for services that require service discovery based on SRV records",
-        vpc = vpc,
-        namespaceName = namespaceName
-      )
+    for {
+      taskTargetRole <- taskTargetRole
+    } yield
+      ecsCluster(defaultEcsClusterName) ++
+        serviceRole ++
+        taskTargetRole ++
+        serviceDiscoveryNamespaces(
+          name = serviceDiscoveryNamespaceName,
+          description = "Service discovery namespace for services that require service discovery based on SRV records",
+          vpc = vpc,
+          namespaceName = namespaceName
+        )
 
   def securityGroupIngress(cidrIp: String, fromPort: Int, toPort: Int, ipProtocol: String): JsObject =
     s"""
@@ -1458,7 +1476,7 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
     val codeS3Key = s3Key.getOrElse(name)
 
     for {
-      _ <- s3CreateBucket(codeS3Bucket, Region.fromValue(awsContext.region)) handleErrorWith { _ =>
+      _ <- s3CreateBucket(codeS3Bucket) handleErrorWith { _ =>
         IO(logger.info("bucket $codeS3Bucket already exists"))
       }
     } yield
@@ -1569,15 +1587,18 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
     )
 
   def allowQueryDynamoDbTable(table: String) =
-    policy(
-      name = s"AllowQueryDynamoDbTable${table.capitalize}",
-      actions = Seq(
-        "dynamodb:Query"
-      ),
-      resource = Seq(
-        s"arn:aws:dynamodb:${awsContext.region}:$defaultAccountId:table/$table"
+    for {
+      accountId <- accountId
+    } yield
+      policy(
+        name = s"AllowQueryDynamoDbTable${table.capitalize}",
+        actions = Seq(
+          "dynamodb:Query"
+        ),
+        resource = Seq(
+          s"arn:aws:dynamodb:${awsContext.region}:$accountId:table/$table"
+        )
       )
-    )
 
   //def s3Bucket(name: Option[String] = None) = `AWS::S3::Bucket`(s"s3Bucket${name.getOrElse(randomUUID.toString)}", name)
 }

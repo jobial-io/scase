@@ -9,13 +9,14 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, Output
 import java.util.Base64
 import io.circe.parser.decode
 
+import java.nio.charset.StandardCharsets.UTF_8
+
 
 package object circe {
 
-
   implicit def circeMarshaller[T: Encoder] = new Marshaller[T] {
     def marshal(o: T): Array[Byte] = {
-      val b = new ByteArrayOutputStream(8192)
+      val b = new ByteArrayOutputStream(256)
       marshalToOutputStream(o, b)
       b.close
       b.toByteArray
@@ -25,7 +26,7 @@ package object circe {
       IO(marshalToOutputStream(o, out))
 
     private def marshalToOutputStream(o: T, out: OutputStream) = {
-      val ps = new PrintStream(out, false, "utf-8")
+      val ps = new PrintStream(out, false, UTF_8.name)
       ps.print(o.asJson.toString)
       ps.close
       ps
@@ -43,7 +44,7 @@ package object circe {
       unmarshalFromInputStream(in)
 
     private def unmarshalFromInputStream(in: InputStream) =
-      unmarshalFromText(IOUtils.toString(in, "utf-8"))
+      unmarshalFromText(IOUtils.toString(in, UTF_8))
 
     def unmarshalFromText(text: String) =
       IO.fromEither(decode[T](text))

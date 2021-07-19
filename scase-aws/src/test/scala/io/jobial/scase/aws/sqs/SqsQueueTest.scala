@@ -11,7 +11,7 @@ import org.scalatest.flatspec.AsyncFlatSpec
 
 class SqsQueueTest extends AsyncFlatSpec with ScaseTestHelper {
 
-  implicit val awsContext = AwsContext("eu-west-1", sqsExtendedS3BucketName = Some("cloudtemp-sqs"))
+  implicit val awsContext = AwsContext(region = Some("eu-west-1"), sqsExtendedS3BucketName = Some("cloudtemp-sqs"))
 
   val testQueue = SqsQueue[IO, TestRequest[_ <: TestResponse]](s"test-queue-${uuid(5)}")
 

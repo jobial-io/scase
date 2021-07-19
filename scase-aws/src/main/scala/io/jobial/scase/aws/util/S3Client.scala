@@ -91,7 +91,9 @@ trait S3Client extends AwsClient {
   def httpsUrl(bucketName: String, key: String) =
     s"https://s3-${awsContext.region}.amazonaws.com/$bucketName/$key"
 
-  def s3CreateBucket(bucketName: String, region: Region) = IO(
-    s3.createBucket(new CreateBucketRequest(bucketName, region))
-  )
+  def s3CreateBucket(bucketName: String) = IO {
+    val request = new CreateBucketRequest(bucketName)
+    awsContext.region.map(request.setRegion)
+    s3.createBucket(request)
+  }
 }
