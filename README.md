@@ -20,7 +20,7 @@ myClient ? MyRequest("hello") // : F[MyResponse]
 ```
 
 We want this to be as type safe as possible, with no possibility of replying with the "wrong"
-type or forgetting to send a reply entirely, and an implementation without any unnecessary boilerplate.
+type or forgetting to send a reply entirely, and we want an implementation without any boilerplate.
 
 We usually don't care if the service is eventually deployed as a Lambda, an Apache Pulsar function, or a
 standalone app in a container, or maybe run in an Akka Cluster, or as a test locally.
@@ -32,14 +32,14 @@ In addition, we would like to:
 
 * Be able to access the service from anywhere in a type safe way
 
-* Decouple the business logic from frameworks like Akka
+* Decouple the business logic from frameworks like Akka or AWS Lambda
 
-* Be able to write an immutable, idiomatic Scala model for the service API, completely decoupled from the underlying
+* Be able to write immutable, idiomatic Scala code for the service logic, completely decoupled from the underlying
   implementation
 
 * Use concurrency seamlessly and safely
 
-* Still be able to access some common features of messaging and serverless runtimes if needed (e.g. message attributes).
+* Still be able to access common features of messaging and serverless runtimes if needed (e.g. message attributes).
 
 **Scase** gives you exactly that, with the additional benefit of:
 
@@ -68,26 +68,30 @@ are pluggable and easy to customize.
 
 A few things to highlight in the example:
 
-* The service must handle every message, it is a compile time error to not reply a request
-* The request must be replied using the right type, again it is checked at compile time
-* The response message on the client side is type safe, for Hello it receives a HelloResponse and for Hi the response is
-  HiResponse.
+* The service must handle every message, it is a compile time error if a request is not replied appropriately
+* The request must be replied using the right type, again, it is checked at compile time
+* The response message on the client side is type safe, e.g. for Hello the client code receives a HelloResponse and for Hi the response 
+  type is HiResponse.
   
 ## Integrations
 
-# AWS Lambda
+### AWS Lambda
 
-# AWS SQS
+### AWS SQS
 
-# AWS SNS
+### AWS SNS
 
-# AWS CloudFormation
+### AWS CloudFormation
 
-# Apache Pulsar
+### Apache Pulsar
 
-# Akka
+### Kafka
 
-# Local
+### Akka
+
+### JMS
+
+### Local
 
 ## Messaging patterns
 
@@ -96,6 +100,19 @@ A few things to highlight in the example:
 ### Stream processing
 
 ### Sink service
+
+## Marshalling
+
+Marshalling / unmarshalling is done using the Marshaller and Unmarshaller type classes. Scase provides implementation
+of these type classes for many popular serialization formats and libraries:
+
+* Circe (JSON)
+* Spray JSON
+* Java serialization
+* Raw bytes
+
+The marshalling API is designed to be able to deal with both text and binary protocols (e.g. AWS Lambda encodes and passes
+messages as text, not bytes).
 
 ## Comparison with an Akka actor
 
@@ -110,3 +127,11 @@ there are some similarities in the API which makes a comparison worthwhile:
 **Request-response type mapping** | Responses are mapped based on a special field in the request message in Akka Typed. In untyped actors there is no relationship between requests and responses at the type level. | The mapping is represented as a type class, which means any request-to-response mapping convention can be implemented easily (including Akka's). Scase provides default mappings for common patterns.
 **Concurrency** | Akka actors are by design single-threaded | A Scase service is agnostic to the actual runtime that executes the message handler. Also, the effect type is pluggable, which allows easy and complete control over concurrency in the service.
 **Runtime** | Akka actors run on the runtime provided by the library | Scase is just a thin layer on the runtime provided by the underlying messaging infrastructure: the same service can run locally or on a serverless cloud runtime. The main purpose of Scase is to provide a portable API and decouple business logic from the underlying details.
+
+You can easily expose an existing actor as a Scase service or run a Scase service as an Actor:
+...
+
+## Java support
+
+A Scase client can be seamlessly used in Java using the Java-friendly client extension.
+Here is how you can create a Java client for an existing service configuration:
