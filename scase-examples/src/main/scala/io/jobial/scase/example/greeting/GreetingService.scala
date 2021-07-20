@@ -19,9 +19,9 @@ trait GreetingService extends RequestProcessor[IO, GreetingRequest[_], GreetingR
 
   override def processRequest(implicit context: RequestContext[IO]) = {
     case m: Hello =>
-      m.reply(HelloResponse(s"Hello, ${m.person}!"))
+      m ! HelloResponse(s"Hello, ${m.person}!")
     case m: Hi =>
-      m.reply(HiResponse(s"Hi ${m.person}!"))
+      m ! HiResponse(s"Hi ${m.person}!")
   }
 }
 
