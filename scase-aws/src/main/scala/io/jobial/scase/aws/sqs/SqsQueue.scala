@@ -1,11 +1,9 @@
 package io.jobial.scase.aws.sqs
 
-import cats.{Monad, Traverse}
-import cats.effect.{Concurrent, Sync}
-
-import java.util.concurrent.Executors
 import cats.effect.concurrent.Ref
+import cats.effect.{Concurrent, LiftIO}
 import cats.implicits._
+import cats.{Monad, Traverse}
 import io.jobial.scase.aws.util.identitymap.identityTrieMap
 import io.jobial.scase.aws.util.{AwsContext, S3Client, SqsClient}
 import io.jobial.scase.core._
@@ -13,26 +11,22 @@ import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
 
 /**
- * Queue implementation using AWS SQS.
+ * Queue implementation for AWS SQS.
  */
 case class SqsQueue[F[_], M](
+  queueUrl: String,
   name: String,
   messageRetentionPeriod: Option[Duration] = Some(1.hour),
   visibilityTimeout: Option[Duration] = Some(10.minutes),
   cleanup: Boolean = false
 )(
-  implicit val awsContext: AwsContext
+  implicit override val awsContext: AwsContext
 ) extends Queue[F, M]
   with SqsClient
-  with S3Client
   with Logging {
-
-  val queueUrl = createQueueIfNotExists(name).get // TODO: get rid of this by wrapping it in a proper constructor
 
   if (cleanup)
     sys.addShutdownHook {
@@ -144,22 +138,40 @@ case class SqsQueue[F[_], M](
 
   def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M], c: Concurrent[F]) = {
     logger.debug(s"sending to queue $queueUrl ${message.toString.take(200)}")
-    val r: F[MessageSendResult[M]] = Concurrent[F].delay {
-      sendMessage(queueUrl, Marshaller[M].marshalToText(message), attributes)
-    }.flatMap {
-      case Success(r) =>
-        logger.debug(s"successfully sent to queue $queueUrl ${message.toString.take(200)}")
-        Monad[F].pure(MessageSendResult[M]())
-      case Failure(t) =>
-        logger.error(s"failure sending to queue $queueUrl ${message.toString.take(200)}", t)
-        Concurrent[F].raiseError[MessageSendResult[M]](t)
+    val r: F[MessageSendResult[M]] = for {
+      r <- sendMessage(queueUrl, Marshaller[M].marshalToText(message), attributes).to[F]
+    } yield {
+      logger.debug(s"successfully sent to queue $queueUrl ${message.toString.take(200)}")
+      MessageSendResult[M]()
     }
 
     r handleErrorWith { t =>
       logger.error(s"failed sending to queue $queueUrl $message", t)
+      logger.error(s"failure sending to queue $queueUrl ${message.toString.take(200)}", t)
       r
     }
   }
 
 
+}
+
+object SqsQueue extends SqsClient {
+
+  def create[F[_] : LiftIO : Monad, M](
+    name: String,
+    messageRetentionPeriod: Option[Duration] = Some(1.hour),
+    visibilityTimeout: Option[Duration] = Some(10.minutes),
+    cleanup: Boolean = false
+  )(
+    implicit awsContext: AwsContext
+  ) =
+    for {
+      queueUrl <- createQueueIfNotExists(name).to[F]
+    } yield SqsQueue[F, M](
+      queueUrl,
+      name,
+      messageRetentionPeriod,
+      visibilityTimeout,
+      cleanup
+    )
 }

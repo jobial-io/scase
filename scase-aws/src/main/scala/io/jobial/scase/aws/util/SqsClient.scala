@@ -1,19 +1,17 @@
 package io.jobial.scase.aws.util
 
-import java.util
-
+import cats.effect.IO
 import com.amazon.sqs.javamessaging.{AmazonSQSExtendedClient, ExtendedClientConfiguration}
 import com.amazonaws.services.sqs.buffered.AmazonSQSBufferedAsyncClient
 import com.amazonaws.services.sqs.model._
 import com.amazonaws.services.sqs.{AmazonSQSAsync, AmazonSQSAsyncClientBuilder}
 import io.jobial.scase.logging.Logging
 
-import scala.concurrent.duration.{Duration, DurationInt}
-import scala.util.{Failure, Try}
+import java.util
 import scala.collection.JavaConverters._
+import scala.concurrent.duration.{Duration, DurationInt}
 
-trait SqsClient extends AwsClient with Logging {
-  this: S3Client =>
+trait SqsClient extends S3Client with Logging {
 
   // TODO: find way to share sqs client and/or inject config; by default, each client creates hundreds of threads
   //  - see https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/services/sqs/AmazonSQSAsyncClient.html 
@@ -27,30 +25,30 @@ trait SqsClient extends AwsClient with Logging {
 
   val defaultMaxReceiveMessageWaitTime = 20
 
-  def createQueue(queueName: String): Try[CreateQueueResult] = {
+  def createQueue(queueName: String) = IO {
     logger.info(s"creating SQS queue $queueName")
     val request = new CreateQueueRequest(queueName)
       .addAttributesEntry("ReceiveMessageWaitTimeSeconds", defaultMaxReceiveMessageWaitTime.toString)
       .addAttributesEntry("MessageRetentionPeriod", "86400")
 
-    Try(sqs.createQueue(request))
+    sqs.createQueue(request)
   }
 
-  def createQueueIfNotExists(queueName: String): Try[String] =
-    createQueue(queueName).map(_.getQueueUrl) recoverWith {
+  def createQueueIfNotExists(queueName: String)(implicit awsContext: AwsContext = AwsContext()) =
+    createQueue(queueName).map(_.getQueueUrl) handleErrorWith {
       case e: AmazonSQSException =>
         if (e.getErrorCode().equals("QueueAlreadyExists"))
-          Try(sqs.getQueueUrl(queueName).getQueueUrl).map { queueUrl =>
+          IO(sqs.getQueueUrl(queueName).getQueueUrl).map { queueUrl =>
             enableLongPolling(queueUrl)
             queueUrl
           }
-        else Failure(e)
+        else IO.raiseError(e)
       case t =>
-        Failure(t)
+        IO.raiseError(t)
     }
 
-  def sendMessage(queueUrl: String, message: String, attributes: Map[String, String] = Map()): Try[SendMessageResult] =
-    Try {
+  def sendMessage(queueUrl: String, message: String, attributes: Map[String, String] = Map())(implicit awsContext: AwsContext = AwsContext()) =
+    IO {
       try {
         val request = new SendMessageRequest()
           .withQueueUrl(queueUrl)
@@ -68,10 +66,10 @@ trait SqsClient extends AwsClient with Logging {
           t.printStackTrace
           throw t
       }
-    } recoverWith {
+    } handleErrorWith {
       case t =>
         logger.error(s"sendMessage failed on queue $queueUrl: ", t)
-        Failure(t)
+        IO.raiseError(t)
     }
 
   //  def sendMessage(queueUrl: String, message: JsValue): Try[SendMessageResult] =
@@ -112,12 +110,12 @@ trait SqsClient extends AwsClient with Logging {
   def changeMessageVisibility(queueUrl: String, receiptHandle: String, visibilityTimeout: Int) =
     sqsExtended.getOrElse(sqs).changeMessageVisibility(queueUrl, receiptHandle, visibilityTimeout)
 
-  def deleteQueue(queueUrl: String) = Try {
+  def deleteQueue(queueUrl: String) = IO {
     sqs.deleteQueue(queueUrl)
-  } recoverWith {
+  } handleErrorWith {
     case t =>
       logger.error(s"deleting queue failed for $queueUrl: ", t)
-      Failure(t)
+      IO.raiseError(t)
   }
 
 }
