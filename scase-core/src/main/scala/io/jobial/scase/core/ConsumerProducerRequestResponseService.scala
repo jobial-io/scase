@@ -62,7 +62,6 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
                     logger.debug(s"context sending response ${r.toString.take(500)}")
                     val re = r.asInstanceOf[RESP]
 
-                    println("setting reply")
                     for {
                       _ <- response.complete(Right(re))
                     } yield new SendResponseResult[RESPONSE] {}
@@ -94,7 +93,7 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
                 x <- response.get
                 y <- x match {
                   case Right(r) =>
-                    println("sending")
+                    //println("sending")
                     logger.debug(s"sending success to client for request: ${request.toString.take(500)} on $producer")
                     val sendResult = producer.send(Right(r), responseAttributes)
                     // commit request after result is written
@@ -104,7 +103,7 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
                     }
                     sendResult
                   case Left(t) =>
-                    println("failure")
+                    //println("failure")
                     logger.error(s"sending failure to client for request: ${request.toString.take(500)}", t)
                     for {
                       _ <- producer.send(Left(t), responseAttributes)
@@ -115,7 +114,7 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
                       }
                 }
               } yield {
-                println("finished sending reply")
+                //println("finished sending reply")
                 r match {
                   case Right(r) =>
                     Monad[F].pure(r)
