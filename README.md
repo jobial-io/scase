@@ -1,6 +1,6 @@
 # Scase
 
-Easily run Scala code as a serverless function or microservice, with zero boilerplate and maximum type safety.
+Easily run Scala code as a portable serverless function or microservice, with zero boilerplate and maximum type safety.
 
 When we think of implementing a microservice or a serverless function, we typically want to do something like:
 
@@ -73,7 +73,7 @@ A few things to highlight in the example:
 * The response message on the client side is type safe, e.g. for Hello the client code receives a HelloResponse and for Hi the response 
   type is HiResponse.
   
-# How to use
+## How to use
 
 TODO: usage in sbt, maven...
  
@@ -148,7 +148,7 @@ You can easily expose an existing actor as a Scase service or run a Scase servic
 ## Performance
 
 Scase, being a thin and lightweight layer, typically adds negligible overhead to the underlying runtime, therefore the performance characteristics
-are usually determined by the deployment platform and the pluggable effect type as well as the application code.
+are usually determined by the deployment platform and the pluggable effect type, as well as the application code.
 
 ## Java support
 
