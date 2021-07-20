@@ -1,6 +1,6 @@
 # Scase
 
-Deploy Scala code as a service or serverless function without boilerplate
+Easily deploy Scala code as a microservice or serverless function with zero boilerplate and maximum type safety.
 
 When we think of implementing a microservice or a serverless function, we typically want to do something like:
 
@@ -78,14 +78,14 @@ A few things to highlight in the example:
 
 # Comparison with an Akka actor
 
-An Akka actor is a low level concurrency construct. In that sense, it serves a very different purpose to a Scase
+An Akka actor is a low level concurrency primitive. In that sense, it serves a very different purpose to a Scase
 service. However, since both Akka actors and Scase services are built around message passing and handling messages,
-there are some similarities in the API, and it is worth comparing them:
+there are some similarities in the API which makes a comparison worthwhile:
 
-.   | Akka Actor | Scase Service
+&nbsp; | Akka Actor | Scase Service
  --- | --- | --- 
-Purpose | Low level concurrency construct | Thin platform independent layer on any messaging middleware, runtime or protocol (including Akka actors)
-Handler | Receive is a partial function, mainly because the actor API was untyped initially, which means it was not possible to decide if a message can be handled without implementing it as a partial function. | Handle is not a partial function: Scase aims to achieve maximum type safety, which means if a service contractually handles a type of message, it should always be able to do that. Conversely, if a service receives a type of message it cannot handle, the Scase library can tell this based on the type alone, before passing it to the service code.
-Request-response type mapping | Responses are mapped based on a dedicated field in Akka Typed | The mapping is represented as a type class, which means any request to response mapping convention can be implemented easily (including Akka's). Scase provides default mappings for common patterns.
-Concurrency | Akka actors are by design single-threaded | A Scase service is agnostic to the actual runtime that executes the message handler. Also, the effect type is pluggable, which allows easy and complete control over concurrency in the service.
-Runtime | Akka actors run on the runtime provided by the library | Scase is just a thin layer on the runtime typically provided by the underlying messaging infrastructure: the same service can run locally or on a serverless cloud runtime. The main purpose of Scase is to provide a portable API and hide these details.
+**Purpose** | Low level concurrency construct | Thin platform independent layer on any messaging middleware, runtime or protocol (including Akka actors)
+**Handler** | Receive is a partial function, mainly because the actor API was untyped initially, which means it was not possible to decide if a message can be handled without implementing it as a partial function. | Handle is not a partial function: Scase aims to achieve maximum type safety, which means if a service contractually handles a type of message, it should always be able to do that. Conversely, if a service receives a type of message it cannot handle, the Scase library can tell this based on the type alone, before passing it to the service code. This design makes code generally much safer by reducing the possibility of accidentally unhandled requests / responses.
+**Request-response type mapping** | Responses are mapped based on a special field in the request message in Akka Typed. In untyped actors there is no relationship between requests and responses at the type level. | The mapping is represented as a type class, which means any request to response mapping convention can be implemented easily (including Akka's). Scase provides default mappings for common patterns.
+**Concurrency** | Akka actors are by design single-threaded | A Scase service is agnostic to the actual runtime that executes the message handler. Also, the effect type is pluggable, which allows easy and complete control over concurrency in the service.
+**Runtime** | Akka actors run on the runtime provided by the library | Scase is just a thin layer on the runtime typically provided by the underlying messaging infrastructure: the same service can run locally or on a serverless cloud runtime. The main purpose of Scase is to provide a portable API and hide the unnecessary details.
