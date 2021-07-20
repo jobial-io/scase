@@ -11,10 +11,10 @@ class LocalRequestResponseServiceTest
     override def processRequest(implicit context: RequestContext[IO]) = {
       case r: TestRequest1 =>
         println("replying...")
-        r.reply(response1)
+        r ! response1
       case r: TestRequest2 =>
         println("replying...")
-        r.reply(response2)
+        r ! response2
     }
   }
 
