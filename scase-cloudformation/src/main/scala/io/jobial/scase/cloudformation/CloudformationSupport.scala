@@ -131,7 +131,7 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
     }"""
   )
 
-  val ecsInstanceUserData =
+  lazy val ecsInstanceUserData =
     IOUtils.toString(getClass.getResourceAsStream("/cloudtemp/aws/ecs-instance-user-data.sh"), "utf-8")
 
   def accountId: IO[String] = ???
@@ -1452,7 +1452,9 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
   //    LambdaBuilder
   //  }
   //  
+  // see: https://stackoverflow.com/questions/41452274/how-to-create-a-new-version-of-a-lambda-function-using-cloudformation
   def lambda[T <: RequestStreamHandler : ClassTag](
+    lambdaServiceConfiguration: LambdaRequestResponseServiceConfiguration[_, _],
     requestStreamHandler: T,
     // using a higher default timeout because the scala library can be slow to load...
     timeout: Option[Duration] = Some(10.seconds),

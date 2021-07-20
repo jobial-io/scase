@@ -1,22 +1,18 @@
 package io.jobial.scase.cloudformation
 
+import cats.effect.IO
 import com.amazonaws.services.cloudformation.model.DeleteStackResult
 import com.monsanto.arch.cloudformation.model.Template
-import io.jobial.scase.aws.cloudformation.CloudformationClient
-import io.jobial.scase.aws.util.{AwsContext, S3Client}
+import io.jobial.scase.cloudformation.ScaseCloudformation.{command, createChangeSetAndWaitForComplete, createStack, deleteStack, fromTry, httpsUrl, opt, param, s3PutText, subcommand, subcommands, updateStack}
 import io.jobial.sclap.CommandLineApp
-import io.jobial.sclap.core.ArgumentValueParser
 import spray.json._
-
+import scala.io.StdIn.readLine
 import scala.util.{Failure, Success, Try}
 import collection.JavaConverters._
-import scala.io.StdIn.readLine
 
-object ScaseCloudformation extends CommandLineApp
-  with DefaultJsonProtocol
-  with S3Client
-  with CloudformationClient {
 
+trait CloudformationStackApp extends CommandLineApp with CloudformationStack {
+  
   def run =
     command
       .header("Scase AWS Tool")
@@ -24,7 +20,6 @@ object ScaseCloudformation extends CommandLineApp
         for {
           stackName <- opt[String]("--stack")
             .description("The name of the stack")
-            .required
           label <- opt[String]("--label")
             .description("An additional discriminator label for the stack where applicable")
           dockerImageTags <- opt[String]("--docker-image-tags")
@@ -32,9 +27,8 @@ object ScaseCloudformation extends CommandLineApp
               "By default, the stack will use the latest tag for images. This option allows to override this.")
           printOnly <- opt[Boolean]("--print-only").defaultValue(false)
             .description("Print the generated template and operations, do not make any changes")
-          stackClassName <- param[String].paramLabel("<stack_class_name>").required
           context = StackContext(
-            stackName,
+            stackName.getOrElse(getClass.getName),
             label,
             dockerImageTags.map {
               _.split(",").map { p =>
@@ -44,7 +38,7 @@ object ScaseCloudformation extends CommandLineApp
             },
             printOnly
           )
-          stack = Class.forName(stackClassName).newInstance().asInstanceOf[CloudformationStack]
+          stack = this
           subcommandResult <- subcommands(
             createStackSubcommand(stack)(context),
             updateStackSubcommand(stack)(context),
@@ -105,12 +99,12 @@ object ScaseCloudformation extends CommandLineApp
       .description("This command creates a new stack based on the specified stack name, level and optional label.") {
         val template = stack.template
         for {
-          t <- template
+          template <- template
           stack <-
             if (context.printOnly)
-              Try(println(template))
+              Try(println(template.toJson.prettyPrint))
             else
-              nameAndUploadTemplate(t) { (stackName, templateUrl) =>
+              nameAndUploadTemplate(template) { (stackName, templateUrl) =>
                 println(s"creating stack $stackName from $templateUrl")
                 Try(createStack(stackName, templateUrl))
               }
