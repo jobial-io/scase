@@ -13,8 +13,6 @@ import scala.concurrent.ExecutionContext
 
 case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP: Unmarshaller](
   functionName: String
-)(
-  implicit val awsContext: AwsContext
 ) extends RequestResponseClient[F, REQ, RESP] with LambdaClient {
 
   implicit val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool)

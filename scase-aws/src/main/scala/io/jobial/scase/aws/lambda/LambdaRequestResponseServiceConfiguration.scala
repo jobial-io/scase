@@ -7,8 +7,6 @@ import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 case class LambdaRequestResponseServiceConfiguration[REQ: Marshaller, RESP: Unmarshaller](
   functionName: String
-)(
-  implicit awsContext: AwsContext = AwsContext()
 ) extends RequestResponseServiceConfiguration[REQ, RESP] {
 
   val serviceName = functionName

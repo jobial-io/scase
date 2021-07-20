@@ -21,8 +21,6 @@ import io.jobial.scase.logging.Logging
 
 trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Logging {
 
-  def awsContext = AwsContext()
-
   case class CloudformationExpression(value: JsValue) {
     override def toString = value.prettyPrint
   }
