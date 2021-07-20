@@ -1,4 +1,4 @@
-package io.jobial.scase.aws.lambda.example
+package io.jobial.scase.example.greeting
 
 import cats.effect.IO
 import io.jobial.sclap.CommandLineApp

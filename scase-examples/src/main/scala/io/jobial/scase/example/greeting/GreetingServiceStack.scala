@@ -1,4 +1,4 @@
-package io.jobial.scase.aws.lambda.example
+package io.jobial.scase.example.greeting
 
 import io.jobial.scase.aws.lambda.{IOLambdaRequestHandler, LambdaRequestResponseServiceConfiguration}
 import io.jobial.scase.cloudformation.{CloudformationStackApp, StackContext}
