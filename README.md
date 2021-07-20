@@ -72,6 +72,22 @@ A few things to highlight in the example:
 * The request must be replied using the right type, again it is checked at compile time
 * The response message on the client side is type safe, for Hello it receives a HelloResponse and for Hi the response is
   HiResponse.
+  
+## Integrations
+
+# AWS Lambda
+
+# AWS SQS
+
+# AWS SNS
+
+# AWS CloudFormation
+
+# Apache Pulsar
+
+# Akka
+
+# Local
 
 ## Messaging patterns
 
