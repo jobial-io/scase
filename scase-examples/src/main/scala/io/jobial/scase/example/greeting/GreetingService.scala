@@ -9,11 +9,11 @@ sealed trait GreetingResponse
 
 case class Hello(person: String) extends GreetingRequest[HelloResponse]
 
-case class HelloResponse(message: String) extends GreetingResponse
+case class HelloResponse(sayingHello: String) extends GreetingResponse
 
 case class Hi(person: String) extends GreetingRequest[HiResponse]
 
-case class HiResponse(message: String) extends GreetingResponse
+case class HiResponse(sayingHi: String) extends GreetingResponse
 
 trait GreetingService extends RequestProcessor[IO, GreetingRequest[_], GreetingResponse] {
 

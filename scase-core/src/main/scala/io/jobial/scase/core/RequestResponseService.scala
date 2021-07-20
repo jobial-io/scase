@@ -77,11 +77,11 @@ trait RequestProcessor[F[_], REQ, RESP] {
    * Return type is SendResponseResult to make sure a reply has been sent by processRequest. 
    */
   def processRequestOrFail(implicit context: RequestContext[F], me: MonadError[F, Throwable]): Function[REQ, F[SendResponseResult[RESP]]] =
-    processRequest 
-//  orElse {
-//      case request =>
-//        MonadError[F, Throwable].raiseError(UnknownRequest(request))
-//    }
+    processRequest
+  //  orElse {
+  //      case request =>
+  //        MonadError[F, Throwable].raiseError(UnknownRequest(request))
+  //    }
 
   def processRequest(implicit context: RequestContext[F]): Processor
 
