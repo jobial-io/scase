@@ -137,10 +137,10 @@ there are some similarities in the API which makes a comparison worthwhile:
 
 &nbsp; | Akka Actor | Scase Service
  --- | --- | --- 
-**Purpose** | Low level concurrency construct | Thin platform independent layer on any messaging middleware, runtime or protocol (including Akka actors)
-**Handler** | Receive is a partial function in an Akka actor. This is mainly because the actor API was originally untyped, which means it was not possible to decide if a message is handled by the actor without implementing it as a partial function. | Handle is **not** a partial function: Scase aims to achieve maximum type safety, which means if a service contractually handles a type of message, it is checked at compile time if it is able to do that. Conversely, if a service receives a type of message it cannot handle, the Scase library can tell this based on the type alone, before passing it to the service code. This design makes code generally much safer by reducing the possibility of accidentally unhandled requests or responses.
-**Request-response type mapping** | Responses are mapped based on a special field in the request message in Akka Typed. In untyped actors there is no relationship between requests and responses at the type level. | The mapping is represented as a type class, which means any request-to-response mapping convention can be implemented easily (including Akka's). Scase provides default mappings for common patterns.
-**Concurrency** | Akka actors are by design single-threaded | A Scase service is agnostic to the actual runtime that executes the message handler. Also, the effect type is pluggable, which allows easy and complete control over concurrency in the service.
+**Purpose** | Low level concurrency construct | A platform independent serverless function that can run on any messaging middleware, runtime or protocol (including Akka actors). It does not prescribe anything about concurrency or the runtime.
+**Handler** | Receive is a partial function in an Akka actor. This is mainly because the actor API was originally untyped, which meant it was not possible to decide if a message was handled by the actor without implementing it as a partial function. | Handle is **not** a partial function: Scase aims to achieve maximum type safety, which means if a service contractually handles a type of message, it is checked at compile time if it is able to do that. Conversely, if a service receives a type of message it cannot handle, the Scase library can tell this based on the type alone, before passing it to the service code. This design makes code generally much safer by reducing the possibility of accidentally unhandled requests or responses.
+**Request-response type mapping** | Responses are mapped based on a special field in the request message in typed actors. In untyped actors there is no relationship (or compile time check) between requests and responses at the type level. | The mapping is represented as a type class, which means any request-to-response mapping convention can be implemented easily (including Akka's). Scase provides default mappings for common patterns.
+**Concurrency** | Akka actors are by design single-threaded, mutable constructs that automatically synchronize over the actor instance to allow safe mutations. | A Scase service is a pure Scala function that is agnostic to the actual runtime or the concurrency model used in the message handler. Also, the effect type in the service is pluggable, which allows easy and complete control over concurrency in the service.
 **Runtime** | Akka actors run on the runtime provided by the library | Scase is just a thin layer on the runtime provided by the underlying messaging infrastructure: the same service can run locally or on a serverless cloud runtime, for example. The main purpose of Scase is to provide a portable API and decouple business logic from the underlying details.
 
 You can easily expose an existing actor as a Scase service or run a Scase service as an Actor:
@@ -148,7 +148,7 @@ You can easily expose an existing actor as a Scase service or run a Scase servic
 
 ## Performance
 
-Scase, being a thin and lightweight layer, typically adds negligible overhead to the underlying runtime, therefore the performance characteristics
+Scase, being a thin and lightweight layer, typically adds negligible overhead to the underlying runtime. The performance characteristics
 are usually determined by the deployment platform and the pluggable effect type, as well as the application code.
 
 ## Java support
