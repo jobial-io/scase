@@ -1,20 +1,21 @@
 package io.jobial.scase.aws.lambda
 
 import cats.Monad
-
-import java.util.concurrent.Executors
-import cats.effect.{Concurrent, ContextShift, IO}
+import cats.effect.Concurrent
 import cats.implicits._
-import io.jobial.scase.aws.client.AwsContext
 import io.jobial.scase.core.{MessageReceiveResult, RequestResponseClient, RequestResponseMapping, RequestResult, SendRequestContext}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
+import java.nio.charset.StandardCharsets
+import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
+
 
 case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP: Unmarshaller](
   functionName: String
 ) extends RequestResponseClient[F, REQ, RESP] with LambdaClient {
 
+  // TODO: move this out
   implicit val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool)
 
   override def sendRequestWithResponseMapping[REQUEST <: REQ, RESPONSE <: RESP](
@@ -27,7 +28,7 @@ case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP:
       (for {
         result <- invoke(functionName, Marshaller[REQ].marshalToText(request))
       } yield
-        ready(Right(Unmarshaller[RESP].unmarshalFromText(new String(result.getPayload.array, "utf-8")).asInstanceOf[RESPONSE]))) recover {
+        ready(Right(Unmarshaller[RESP].unmarshalFromText(new String(result.getPayload.array, StandardCharsets.UTF_8)).asInstanceOf[RESPONSE]))) recover {
         case t =>
           ready(Left(t))
       }

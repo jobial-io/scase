@@ -71,7 +71,8 @@ A few things to highlight in the example:
 * The service must handle every message, it is a compile time error if a request is not replied appropriately
 * The request must be replied using the right type, again, it is checked at compile time
 * The response message on the client side is type safe, e.g. for Hello the client code receives a HelloResponse and for Hi the response 
-  type is HiResponse.
+  type is HiResponse
+* Not possible to send a request that does not conform to the client, it is checked at compile time.  
   
 ## How to use
 

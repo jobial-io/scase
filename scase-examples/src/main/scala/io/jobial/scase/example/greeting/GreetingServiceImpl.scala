@@ -12,6 +12,3 @@ trait GreetingService extends RequestProcessor[IO, GreetingRequest[_ <: Greeting
       m ! HiResponse(s"Hi ${m.person}!")
   }
 }
-
-
-
