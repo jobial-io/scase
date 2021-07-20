@@ -3,7 +3,7 @@ package io.jobial.scase.example.greeting
 import cats.effect.IO
 import io.jobial.scase.core._
 
-trait GreetingService extends RequestProcessor[IO, GreetingRequest[_], GreetingResponse] {
+trait GreetingService extends RequestProcessor[IO, GreetingRequest[_ <: GreetingResponse], GreetingResponse] {
 
   def processRequest(implicit context: RequestContext[IO]) = {
     case m: Hello =>

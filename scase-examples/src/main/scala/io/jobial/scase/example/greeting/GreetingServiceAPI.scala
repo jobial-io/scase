@@ -2,6 +2,9 @@ package io.jobial.scase.example.greeting
 
 import io.jobial.scase.aws.lambda.LambdaRequestResponseServiceConfiguration
 import io.jobial.scase.core._
+import io.circe.generic.auto._
+import io.jobial.scase.marshalling.circe._
+
 
 sealed trait GreetingRequest[RESPONSE] extends Request[RESPONSE]
 

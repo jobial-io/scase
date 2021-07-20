@@ -3,7 +3,7 @@ package io.jobial.scase.aws.client
 import com.amazonaws.services.cloudformation.model._
 import com.amazonaws.services.cloudformation.{AmazonCloudFormation, AmazonCloudFormationClientBuilder}
 import io.jobial.scase.aws.client.Hash.uuid
-
+import cats.implicits._
 import scala.util.{Success, Try}
 
 trait CloudformationClient extends AwsClient {

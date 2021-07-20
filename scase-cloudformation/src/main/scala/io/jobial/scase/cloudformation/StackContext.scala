@@ -6,8 +6,9 @@ case class StackContext(
   label: Option[String],
   dockerImageTags: Option[Map[String, String]],
   printOnly: Boolean,
-  update: Boolean = false
-) { 
+  update: Boolean = false,
+  attributes: Map[String, String] = Map()
+) {
 
   def tagForImage(image: String) =
     for {

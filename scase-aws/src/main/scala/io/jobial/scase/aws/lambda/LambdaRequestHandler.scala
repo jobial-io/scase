@@ -1,27 +1,20 @@
 package io.jobial.scase.aws.lambda
 
-import cats.MonadError
-
-import java.io.{InputStream, OutputStream}
-import cats.implicits._
-import cats.effect.{Concurrent, ContextShift}
+import cats.effect.Concurrent
 import cats.effect.concurrent.Deferred
+import cats.implicits._
 import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
 import io.jobial.scase.core.{RequestContext, RequestProcessor, RequestResponseMapping, SendResponseResult}
 import io.jobial.scase.logging.Logging
-import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 import org.apache.commons.io.IOUtils
 import org.joda.time.DateTime
 
+import java.io.{InputStream, OutputStream}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.DurationInt
 
-trait LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandler with Logging {
+abstract class LambdaRequestHandler[F[_], REQ, RESP](val serviceConfiguration: LambdaRequestResponseServiceConfiguration[REQ, RESP]) extends RequestStreamHandler with Logging {
   this: RequestProcessor[F, REQ, RESP] =>
-
-  def requestUnmarshaller: Unmarshaller[REQ]
-
-  def responseMarshaller: Marshaller[RESP]
 
   implicit def concurrent: Concurrent[F]
 
@@ -41,7 +34,7 @@ trait LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandler with Lo
 
       val result =
         for {
-          request <- requestUnmarshaller.unmarshalFromText(requestString).to[F]
+          request <- serviceConfiguration.requestUnmarshaller.unmarshalFromText(requestString).to[F]
           responseDeferred <- Deferred[F, Either[Throwable, RESP]]
           r <- responseDeferred.get
           processorResult: F[SendResponseResult[RESP]] =
@@ -69,7 +62,7 @@ trait LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandler with Lo
             case Right(r) =>
               logger.debug(s"sending success to client for request: $request")
               //          val sendResult = consumer.send(, request.message.correlationId))
-              outputStream.write(responseMarshaller.marshalToText(r).getBytes("utf-8"))
+              outputStream.write(serviceConfiguration.responseMarshaller.marshalToText(r).getBytes("utf-8"))
             case Left(t) =>
               logger.error(s"sending failure to client for request: $request", t)
               //outputStream.write(implicitly[JsonWriter[Try[RESP]]].write(Failure(t)).compactPrint.getBytes("utf-8"))

@@ -1453,8 +1453,8 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
   //  }
   //  
   // see: https://stackoverflow.com/questions/41452274/how-to-create-a-new-version-of-a-lambda-function-using-cloudformation
-  def lambda[T <: RequestStreamHandler : ClassTag](
-    lambdaServiceConfiguration: LambdaRequestResponseServiceConfiguration[_, _],
+  // TODO: make this generic for any F[_]
+  def lambda[T <: LambdaRequestHandler[IO, _, _] : ClassTag](
     requestStreamHandler: T,
     // using a higher default timeout because the scala library can be slow to load...
     timeout: Option[Duration] = Some(10.seconds),

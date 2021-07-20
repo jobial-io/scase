@@ -5,7 +5,8 @@ import io.jobial.scase.core.RequestProcessor
 
 import scala.concurrent.ExecutionContext
 
-trait IOLambdaRequestHandler[REQ, RESP] extends LambdaRequestHandler[IO, REQ, RESP] {
+abstract class IOLambdaRequestHandler[REQ, RESP](serviceConfiguration: LambdaRequestResponseServiceConfiguration[REQ, RESP])
+  extends LambdaRequestHandler[IO, REQ, RESP](serviceConfiguration) {
   this: RequestProcessor[IO, REQ, RESP] =>
 
   implicit val cs = IO.contextShift(ExecutionContext.global)
