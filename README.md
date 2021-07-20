@@ -20,12 +20,12 @@ myClient ? MyRequest("hello") // : F[MyResponse]
 ```
 
 We want this to be as type safe as possible, with no possibility of replying with the "wrong"
-type or forgetting to send a reply entirely, and we want an implementation without any boilerplate.
+type or forgetting to send a reply entirely, and we want an implementation with no boilerplate.
 
 We usually don't care if the service is eventually deployed as a Lambda, an Apache Pulsar function, or a
-standalone app in a container, or maybe run in an Akka Cluster, or as a test locally.
+standalone app in a container, or maybe run in an Akka Cluster, or in a test locally.
 
- We want to focus on the business logic and implement it on top of an elegant
+ We want to focus on the business logic and implement it on top of a safe
 and concise API, and be able to run it in different environments without having to make changes.
 
 In addition, we would like to:
@@ -72,6 +72,10 @@ A few things to highlight in the example:
 * The request must be replied using the right type, again, it is checked at compile time
 * The response message on the client side is type safe, e.g. for Hello the client code receives a HelloResponse and for Hi the response 
   type is HiResponse.
+  
+# How to use
+
+TODO: usage in sbt, maven...
   
 ## Integrations
 
@@ -123,10 +127,10 @@ there are some similarities in the API which makes a comparison worthwhile:
 &nbsp; | Akka Actor | Scase Service
  --- | --- | --- 
 **Purpose** | Low level concurrency construct | Thin platform independent layer on any messaging middleware, runtime or protocol (including Akka actors)
-**Handler** | Receive is a partial function, mainly because the actor API was untyped initially, which means it was not possible to decide if a message can be handled without implementing it as a partial function. | Handle is not a partial function: Scase aims to achieve maximum type safety, which means if a service contractually handles a type of message, it should always be able to do that. Conversely, if a service receives a type of message it cannot handle, the Scase library can tell this based on the type alone, before passing it to the service code. This design makes code generally much safer by reducing the possibility of accidentally unhandled requests / responses.
+**Handler** | Receive is a partial function in an Akka actor. This is mainly because the actor API was originally untyped, which means it was not possible to decide if a message is handled by the actor without implementing it as a partial function. | Handle is **not** a partial function: Scase aims to achieve maximum type safety, which means if a service contractually handles a type of message, it is checked at compile time if it is able to do that. Conversely, if a service receives a type of message it cannot handle, the Scase library can tell this based on the type alone, before passing it to the service code. This design makes code generally much safer by reducing the possibility of accidentally unhandled requests or responses.
 **Request-response type mapping** | Responses are mapped based on a special field in the request message in Akka Typed. In untyped actors there is no relationship between requests and responses at the type level. | The mapping is represented as a type class, which means any request-to-response mapping convention can be implemented easily (including Akka's). Scase provides default mappings for common patterns.
 **Concurrency** | Akka actors are by design single-threaded | A Scase service is agnostic to the actual runtime that executes the message handler. Also, the effect type is pluggable, which allows easy and complete control over concurrency in the service.
-**Runtime** | Akka actors run on the runtime provided by the library | Scase is just a thin layer on the runtime provided by the underlying messaging infrastructure: the same service can run locally or on a serverless cloud runtime. The main purpose of Scase is to provide a portable API and decouple business logic from the underlying details.
+**Runtime** | Akka actors run on the runtime provided by the library | Scase is just a thin layer on the runtime provided by the underlying messaging infrastructure: the same service can run locally or on a serverless cloud runtime, for example. The main purpose of Scase is to provide a portable API and decouple business logic from the underlying details.
 
 You can easily expose an existing actor as a Scase service or run a Scase service as an Actor:
 ...
@@ -135,3 +139,6 @@ You can easily expose an existing actor as a Scase service or run a Scase servic
 
 A Scase client can be seamlessly used in Java using the Java-friendly client extension.
 Here is how you can create a Java client for an existing service configuration:
+
+Of course, any other independent client can talk to a Scase service, there is nothing special about services implemented
+and deployed through Scase.
