@@ -76,7 +76,7 @@ A few things to highlight in the example:
 # How to use
 
 TODO: usage in sbt, maven...
-  
+ 
 ## Integrations
 
 ### AWS Lambda
@@ -104,6 +104,16 @@ TODO: usage in sbt, maven...
 ### Stream processing
 
 ### Sink service
+
+### What about HTTP?
+
+But wait, aren't microservices just HTTP / REST services? In many enterprise environments this is not the case or 
+the preferred solution. HTTP is very constrained in comparison to general asynchronous message passing.
+A good reading on this is:
+
+
+Of course, nothing prevents anyone from deploying a Scase service as an HTTP endpoint. Also, many messaging
+solutions implement the underlying message passing over HTTP (e.g. AWS Lambda).
 
 ## Marshalling
 
@@ -134,6 +144,11 @@ there are some similarities in the API which makes a comparison worthwhile:
 
 You can easily expose an existing actor as a Scase service or run a Scase service as an Actor:
 ...
+
+## Performance
+
+Scase, being a thin and lightweight layer, typically adds negligible overhead to the underlying runtime, therefore the performance characteristics
+are usually determined by the deployment platform and the pluggable effect type as well as the application code.
 
 ## Java support
 
