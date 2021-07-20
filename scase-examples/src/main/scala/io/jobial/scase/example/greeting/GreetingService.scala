@@ -17,7 +17,7 @@ case class HiResponse(message: String) extends GreetingResponse
 
 trait GreetingService extends RequestProcessor[IO, GreetingRequest[_], GreetingResponse] {
 
-  override def processRequest(implicit context: RequestContext[IO]): Processor = {
+  override def processRequest(implicit context: RequestContext[IO]) = {
     case m: Hello =>
       m.reply(HelloResponse(s"Hello, ${m.person}!"))
     case m: Hi =>

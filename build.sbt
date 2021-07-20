@@ -46,7 +46,7 @@ lazy val CommonsIoVersion = "2.8.0"
 lazy val CommonsLangVersion = "3.12.0"
 lazy val CloudformationTemplateGeneratorVersion = "3.10.5-SNAPSHOT"
 lazy val SclapVersion = "1.0.0"
-lazy val CirceVersion = "0.14.1"
+lazy val CirceVersion = "0.12.0-M3"
 
 
 lazy val root: Project = project

@@ -8,7 +8,7 @@ class LocalRequestResponseServiceTest
   extends RequestResponseTestSupport {
 
   val requestProcessor = new RequestProcessor[IO, TestRequest[_ <: TestResponse], TestResponse] {
-    override def processRequest(implicit context: RequestContext[IO]): Processor = {
+    override def processRequest(implicit context: RequestContext[IO]) = {
       case r: TestRequest1 =>
         println("replying...")
         r.reply(response1)
