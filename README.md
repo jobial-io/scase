@@ -73,15 +73,15 @@ A few things to highlight in the example:
 * The response message on the client side is type safe, for Hello it receives a HelloResponse and for Hi the response is
   HiResponse.
 
-# Messaging patterns
+## Messaging patterns
 
-## Request-response
+### Request-response
 
-## Stream processing
+### Stream processing
 
-## Sink service
+### Sink service
 
-# Comparison with an Akka actor
+## Comparison with an Akka actor
 
 An Akka actor is a low level concurrency primitive. In that sense, it serves a very different purpose to a Scase
 service. However, since both Akka actors and Scase services are built around the concept of message passing and handling messages,
