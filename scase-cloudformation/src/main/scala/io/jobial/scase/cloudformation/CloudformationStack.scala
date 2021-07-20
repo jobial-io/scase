@@ -2,7 +2,7 @@ package io.jobial.scase.cloudformation
 
 import cats.effect.IO
 import com.monsanto.arch.cloudformation.model.Template
-import io.jobial.scase.aws.util.S3Client
+import io.jobial.scase.aws.client.S3Client
 import spray.json.DefaultJsonProtocol
 
 

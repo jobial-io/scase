@@ -5,7 +5,7 @@ import cats.Monad
 import java.util.concurrent.Executors
 import cats.effect.{Concurrent, ContextShift, IO}
 import cats.implicits._
-import io.jobial.scase.aws.util.AwsContext
+import io.jobial.scase.aws.client.AwsContext
 import io.jobial.scase.core.{MessageReceiveResult, RequestResponseClient, RequestResponseMapping, RequestResult, SendRequestContext}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 

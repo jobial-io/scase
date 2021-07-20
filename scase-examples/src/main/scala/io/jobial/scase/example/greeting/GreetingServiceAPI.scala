@@ -1,6 +1,6 @@
 package io.jobial.scase.example.greeting
 
-import cats.effect.IO
+import io.jobial.scase.aws.lambda.LambdaRequestResponseServiceConfiguration
 import io.jobial.scase.core._
 
 sealed trait GreetingRequest[RESPONSE] extends Request[RESPONSE]
@@ -15,14 +15,9 @@ case class Hi(person: String) extends GreetingRequest[HiResponse]
 
 case class HiResponse(sayingHi: String) extends GreetingResponse
 
-trait GreetingService extends RequestProcessor[IO, GreetingRequest[_], GreetingResponse] {
+trait GreetingServiceConfig {
 
-  override def processRequest(implicit context: RequestContext[IO]) = {
-    case m: Hello =>
-      m ! HelloResponse(s"Hello, ${m.person}!")
-    case m: Hi =>
-      m ! HiResponse(s"Hi ${m.person}!")
-  }
+  val greetingServiceConfig = LambdaRequestResponseServiceConfiguration[GreetingRequest[_ <: GreetingResponse], GreetingResponse]("greeting")
 }
 
 

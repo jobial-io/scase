@@ -1,4 +1,4 @@
-package io.jobial.scase.aws.util
+package io.jobial.scase.aws.client
 
 import scala.collection.concurrent.TrieMap
 import scala.util.hashing.Hashing

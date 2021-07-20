@@ -2,7 +2,7 @@ package io.jobial.scase.aws.lambda
 
 import com.amazonaws.services.lambda.model.{InvokeRequest, InvokeResult}
 import com.amazonaws.services.lambda.{AWSLambdaAsync, AWSLambdaAsyncClientBuilder}
-import io.jobial.scase.aws.util.AwsClient
+import io.jobial.scase.aws.client.AwsClient
 
 import scala.concurrent.{ExecutionContext, Future}
 

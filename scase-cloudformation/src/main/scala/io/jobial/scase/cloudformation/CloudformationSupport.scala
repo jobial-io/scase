@@ -8,7 +8,7 @@ import com.monsanto.arch.cloudformation.model.resource._
 import com.monsanto.arch.cloudformation.model.resource.`AWS::EC2::Volume`._
 import com.monsanto.arch.cloudformation.model.simple.Builders._
 import io.jobial.scase.aws.lambda.{LambdaRequestHandler, LambdaRequestResponseServiceConfiguration, LambdaScheduledRequestHandler}
-import io.jobial.scase.aws.util.{AwsContext, S3Client}
+import io.jobial.scase.aws.client.{AwsContext, S3Client}
 import org.apache.commons.io.IOUtils
 import org.apache.commons.lang3.StringUtils
 import spray.json._

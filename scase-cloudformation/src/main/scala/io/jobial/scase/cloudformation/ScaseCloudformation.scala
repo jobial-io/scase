@@ -2,8 +2,7 @@ package io.jobial.scase.cloudformation
 
 import com.amazonaws.services.cloudformation.model.DeleteStackResult
 import com.monsanto.arch.cloudformation.model.Template
-import io.jobial.scase.aws.cloudformation.CloudformationClient
-import io.jobial.scase.aws.util.{AwsContext, S3Client}
+import io.jobial.scase.aws.client.{AwsContext, CloudformationClient, S3Client}
 import io.jobial.sclap.CommandLineApp
 import io.jobial.sclap.core.ArgumentValueParser
 import spray.json._

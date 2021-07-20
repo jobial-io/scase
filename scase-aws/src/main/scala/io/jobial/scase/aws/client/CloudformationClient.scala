@@ -1,12 +1,9 @@
-package io.jobial.scase.aws.cloudformation
+package io.jobial.scase.aws.client
 
-import com.amazonaws.services.cloudformation.model.{CreateChangeSetRequest, CreateStackRequest, CreateStackResult, DeleteStackRequest, DescribeChangeSetRequest, DescribeChangeSetResult, DescribeStackResourcesRequest, UpdateStackRequest}
-import io.jobial.scase.aws.util.AwsClient
+import com.amazonaws.services.cloudformation.model._
 import com.amazonaws.services.cloudformation.{AmazonCloudFormation, AmazonCloudFormationClientBuilder}
-import io.jobial.scase.aws.util.Hash.uuid
-import cats.implicits._
-import java.lang.Thread.sleep
-import scala.concurrent.duration._
+import io.jobial.scase.aws.client.Hash.uuid
+
 import scala.util.{Success, Try}
 
 trait CloudformationClient extends AwsClient {

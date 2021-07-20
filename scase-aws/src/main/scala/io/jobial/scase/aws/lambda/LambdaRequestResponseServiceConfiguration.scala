@@ -1,7 +1,7 @@
 package io.jobial.scase.aws.lambda
 
 import cats.effect.{Concurrent, Sync}
-import io.jobial.scase.aws.util.AwsContext
+import io.jobial.scase.aws.client.AwsContext
 import io.jobial.scase.core.{RequestResponseService, RequestResponseServiceConfiguration, RequestResponseServiceState}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 

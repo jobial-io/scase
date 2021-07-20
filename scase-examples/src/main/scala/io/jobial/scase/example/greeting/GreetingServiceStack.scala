@@ -15,11 +15,6 @@ object GreetingServiceLambdaRequestHandler
   val responseMarshaller = circeMarshaller[GreetingResponse]
 }
 
-trait GreetingServiceConfig {
-
-  val greetingServiceConfig = LambdaRequestResponseServiceConfiguration[GreetingRequest[_ <: GreetingResponse], GreetingResponse]("greeting")
-}
-
 object GreetingServiceStack extends CloudformationStackApp with GreetingServiceConfig {
 
   def template(implicit context: StackContext) =
