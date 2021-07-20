@@ -6,32 +6,29 @@ When we think of implementing a microservice or a serverless function, we typica
 
 ```scala
 
-// My service logic
+// Service logic
 case m: MyRequest =>
-  m.reply
-(MyResponse(.
-..) )
-...
+  ...
+  m.reply(MyResponse(...)) // computed in some effect F
 ```
 
-and then
+and then on the client side:
 
 ```scala
-// My client code...
-myClient.sendRequest(MyRequest("hello")) // : F[MyResponse]
+// Client code...
+myClient ? MyRequest("hello") // : F[MyResponse]
 ```
 
 We want this to be as type safe as possible, with no possibility of replying with the "wrong"
-type or forgetting to send a reply entirely, and without any unnecessary boilerplate.
+type or forgetting to send a reply entirely, and an implementation without any unnecessary boilerplate.
 
-We definitely don't want to care if the service is eventually deployed as a Lambda, an Apache Pulsar function, or a
-standalone app in a container, maybe run in an Akka Cluster, or perhaps run as a test locally.
+We usually don't care if the service is eventually deployed as a Lambda, an Apache Pulsar function, or a
+standalone app in a container, or maybe run in an Akka Cluster, or as a test locally.
 
-We just want to be able to run it somewhere 'out there' in the cloud, or maybe run the same code locally in a test,
-without having to make changes. Basically, we want to focus on the business logic and implement it on top of an elegant
-and concise API, with no boilerplate.
+ We want to focus on the business logic and implement it on top of an elegant
+and concise API, and be able to run it in different environments without having to make changes.
 
-In addition to that, we would like to
+In addition, we would like to
 
 * be able to access the service from anywhere in a type safe way
 
@@ -75,6 +72,14 @@ A few things to highlight in the example:
 * The request must be replied using the right type, again it is checked at compile time
 * The response message on the client side is type safe, for Hello it receives a HelloResponse and for Hi the response is
   HiResponse.
+
+# Messaging patterns
+
+## Request-response
+
+## Stream processing
+
+## Sink service
 
 # Comparison with an Akka actor
 
