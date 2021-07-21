@@ -32,7 +32,7 @@ In addition, we would like to:
 
 * Be able to access the service from anywhere in a type safe way
 
-* Decouple the business logic from frameworks like Akka or AWS Lambda
+* Decouple the business logic from frameworks like **Akka** or **AWS Lambda**
 
 * Be able to write immutable, idiomatic Scala code for the service logic, completely decoupled from the underlying
   implementation
@@ -45,13 +45,13 @@ In addition, we would like to:
 
 * Maximum type safety, with zero boilerplate
 * Portable code between deployment and runtime environments, no rewriting needed
-* Out-of-the-box support for deployment on a range of runtime environments, like AWS Lambda, SQS, SNS, Akka Cluster,
-  Apache Pulsar or standalone app
+* Out-of-the-box support for deployment on a range of runtime environments, like **AWS Lambda**, **SQS**, **SNS**, **Akka**,
+  **Apache Pulsar**, **Kafka** or standalone app
 * Simple, future proof, platform independent code for your application logic
 * Out-of-the-box integration with Cloudformation
 * Easily extendable support for serialization and network protocols, with built-in support for Circe, Spray Json, Java
   serialization and others
-* Integrated with Scala Future, Cats Effect, ZIO, Monix
+* Integrated with Scala / Java Future, **Cats Effect**, **ZIO**, **Monix**
 * Lightweight, modular, extendable design that provides a simple layer between runtime and application code - not a "
   framework"
 * Additional Java-friendly client API to allow easy interop with Java and other JVM languages
