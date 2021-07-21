@@ -3,6 +3,7 @@ package io.jobial.scase.aws.lambda
 import cats.Monad
 import cats.effect.Concurrent
 import cats.implicits._
+import io.jobial.scase.aws.client.LambdaClient
 import io.jobial.scase.core.{MessageReceiveResult, RequestResponseClient, RequestResponseMapping, RequestResult, SendRequestContext}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
