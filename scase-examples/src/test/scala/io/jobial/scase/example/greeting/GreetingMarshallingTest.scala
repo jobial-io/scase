@@ -9,13 +9,15 @@ class GreetingMarshallingTest
     with ScaseTestHelper
     with GreetingServiceConfig {
 
+  import greetingServiceConfig._
+
   "Hello marshalling" should "work" in {
     val o = Hello("world")
 
     for {
-      marshalled <- IO(greetingServiceConfig.requestMarshaller.marshal(o))
-      marshalledText <- IO(greetingServiceConfig.requestMarshaller.marshalToText(o))
-      unmarshalled <- greetingServiceConfig.requestUnmarshaller.unmarshal(marshalled)
+      marshalled <- IO(requestMarshaller.marshal(o))
+      marshalledText <- IO(requestMarshaller.marshalToText(o))
+      unmarshalled <- requestUnmarshaller.unmarshal(marshalled)
     } yield {
       assert(marshalledText === """{
   "Hello" : {
@@ -30,9 +32,9 @@ class GreetingMarshallingTest
     val o = HelloResponse("hello world")
 
     for {
-      marshalled <- IO(greetingServiceConfig.responseMarshaller.marshal(o))
-      marshalledText <- IO(greetingServiceConfig.responseMarshaller.marshalToText(o))
-      unmarshalled <- greetingServiceConfig.responseUnmarshaller.unmarshal(marshalled)
+      marshalled <- IO(responseMarshaller.marshal(o))
+      marshalledText <- IO(responseMarshaller.marshalToText(o))
+      unmarshalled <- responseUnmarshaller.unmarshal(marshalled)
     } yield {
       assert(marshalledText === """{
   "HelloResponse" : {
