@@ -14,9 +14,13 @@ case class LambdaRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshal
   def client[F[_] : Concurrent] =
     Concurrent[F].delay(LambdaRequestResponseClient[F, REQ, RESP](functionName))
 
+  val requestMarshaller = Marshaller[REQ]
+  
   val requestUnmarshaller = Unmarshaller[REQ]
 
   val responseMarshaller = Marshaller[RESP]
+
+  val responseUnmarshaller = Unmarshaller[RESP]
 }
 
 
