@@ -6,6 +6,7 @@ import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, ObjectInputStream, ObjectOutputStream, OutputStream}
 import java.util.Base64
 import java.util.zip.{GZIPInputStream, GZIPOutputStream}
+import scala.util.Try
 
 trait SerializationMarshalling {
   
@@ -38,12 +39,12 @@ trait SerializationMarshalling {
       unmarshalFromInputStream(new ByteArrayInputStream(bytes))
 
     def unmarshal(in: InputStream) =
-      unmarshalFromInputStream(in)
+      IO.fromEither(unmarshalFromInputStream(in))
 
-    private def unmarshalFromInputStream(in: InputStream) = IO {
+    private def unmarshalFromInputStream(in: InputStream) = Try {
       val ois = new ObjectInputStream(new GZIPInputStream(in))
       ois.readObject.asInstanceOf[T]
-    }
+    }.toEither
 
     def unmarshalFromText(text: String) =
       unmarshal(Base64.getDecoder.decode(text))

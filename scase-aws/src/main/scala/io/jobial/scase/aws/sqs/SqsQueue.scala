@@ -72,7 +72,7 @@ case class SqsQueue[F[_], M](
                     Traverse[List].sequence(messages.asScala.toList.map { sqsMessage =>
                       //                        try {
                       for {
-                        unmarshalledMessage <- u.unmarshalFromText(sqsMessage.getBody).to[F]
+                        unmarshalledMessage <- Concurrent[F].fromEither(u.unmarshalFromText(sqsMessage.getBody))
                         _ <- outstandingMessages.update(_ + ((unmarshalledMessage, sqsMessage.getReceiptHandle)))
                         r <- callback(
                           MessageReceiveResult(

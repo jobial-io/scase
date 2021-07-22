@@ -41,13 +41,13 @@ trait CirceMarshalling {
       unmarshalFromInputStream(new ByteArrayInputStream(bytes))
 
     def unmarshal(in: InputStream) =
-      unmarshalFromInputStream(in)
+      IO.fromEither(unmarshalFromInputStream(in))
 
     private def unmarshalFromInputStream(in: InputStream) =
       unmarshalFromText(IOUtils.toString(in, UTF_8))
 
     def unmarshalFromText(text: String) =
-      IO.fromEither(decode[T](text))
+      decode[T](text)
   }
 
 }

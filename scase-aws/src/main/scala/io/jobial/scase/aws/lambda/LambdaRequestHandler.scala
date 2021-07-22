@@ -1,5 +1,6 @@
 package io.jobial.scase.aws.lambda
 
+import cats.MonadError
 import cats.effect.Concurrent
 import cats.effect.concurrent.Deferred
 import cats.implicits._
@@ -34,7 +35,7 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP](val serviceConfiguration: L
 
       val result =
         for {
-          request <- serviceConfiguration.requestUnmarshaller.unmarshalFromText(requestString).to[F]
+          request <- Concurrent[F].fromEither(serviceConfiguration.requestUnmarshaller.unmarshalFromText(requestString))
           responseDeferred <- Deferred[F, Either[Throwable, RESP]]
           r <- responseDeferred.get
           processorResult: F[SendResponseResult[RESP]] =

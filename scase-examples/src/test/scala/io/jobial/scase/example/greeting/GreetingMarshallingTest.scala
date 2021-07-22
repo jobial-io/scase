@@ -15,8 +15,8 @@ class GreetingMarshallingTest
     val o = Hello("world")
 
     for {
-      marshalled <- IO(requestMarshaller.marshal(o))
-      marshalledText <- IO(requestMarshaller.marshalToText(o))
+      marshalled <- Right(requestMarshaller.marshal(o))
+      marshalledText <- Right(requestMarshaller.marshalToText(o))
       unmarshalled <- requestUnmarshaller.unmarshal(marshalled)
     } yield {
       assert(marshalledText === """{
@@ -32,8 +32,8 @@ class GreetingMarshallingTest
     val o = HelloResponse("hello world")
 
     for {
-      marshalled <- IO(responseMarshaller.marshal(o))
-      marshalledText <- IO(responseMarshaller.marshalToText(o))
+      marshalled <- Right(responseMarshaller.marshal(o))
+      marshalledText <- Right(responseMarshaller.marshalToText(o))
       unmarshalled <- responseUnmarshaller.unmarshal(marshalled)
     } yield {
       assert(marshalledText === """{

@@ -8,6 +8,7 @@ import spray.json._
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, OutputStream, PrintStream}
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.Base64
+import scala.util.Try
 
 trait SprayJsonMarshalling {
 
@@ -38,12 +39,12 @@ trait SprayJsonMarshalling {
       unmarshalFromInputStream(new ByteArrayInputStream(bytes))
 
     def unmarshal(in: InputStream) =
-      unmarshalFromInputStream(in)
+      IO.fromEither(unmarshalFromInputStream(in))
 
     private def unmarshalFromInputStream(in: InputStream) =
       unmarshalFromText(IOUtils.toString(in, UTF_8))
 
     def unmarshalFromText(text: String) =
-      IO(text.parseJson.convertTo[T])
+      Try(text.parseJson.convertTo[T]).toEither
   }
 }
