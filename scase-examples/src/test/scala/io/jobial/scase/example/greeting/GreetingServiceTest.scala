@@ -1,9 +1,12 @@
 package io.jobial.scase.example.greeting
 
-import cats.effect.IO
 import io.jobial.scase.core._
-import io.jobial.scase.local.{LocalRequestResponseServiceConfiguration, localServiceAndClient}
+import io.jobial.scase.local.localServiceAndClient
 import org.scalatest.flatspec.AsyncFlatSpec
+
+import scala.concurrent.TimeoutException
+import scala.concurrent.duration._
+
 
 class GreetingServiceTest
   extends AsyncFlatSpec
@@ -23,4 +26,15 @@ class GreetingServiceTest
     }
   }
 
+  "request" should "time out if service is not started" in {
+    implicit val context = SendRequestContext(requestTimeout = Some(1.second))
+    
+    recoverToSucceededIf[TimeoutException] {
+      for {
+        t <- localServiceAndClient("greeting", new GreetingService {})
+        (service, client) = t
+        helloResponse <- client ? Hello("everyone")
+      } yield succeed
+    }
+  }
 }

@@ -3,13 +3,16 @@ package io.jobial.scase.core
 import cats.{Monad, MonadError}
 
 import java.util.UUID.randomUUID
-import cats.effect.{Concurrent, IO}
+import cats.effect.{Concurrent, IO, Timer}
 import cats.effect.concurrent.{Deferred, Ref}
+import cats.effect.implicits.catsEffectSyntaxConcurrent
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 import io.jobial.scase.monitoring.{MonitoringPublisher, dummyPublisher}
 import cats.implicits._
+
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
 
 case class CorrelationInfo[F[_], REQ, RESP](
   responseDeferred: Deferred[F, Either[Throwable, MessageReceiveResult[F, RESP]]],
@@ -17,7 +20,7 @@ case class CorrelationInfo[F[_], REQ, RESP](
   request: Option[REQ]
 )
 
-case class ConsumerProducerRequestResponseClient[F[_]: Concurrent, REQ: Marshaller, RESP](
+case class ConsumerProducerRequestResponseClient[F[_]: Concurrent: Timer, REQ: Marshaller, RESP](
   correlationsRef: Ref[F, Map[String, CorrelationInfo[F, REQ, RESP]]],
   messageSubscription: MessageSubscription[F, Either[Throwable, RESP]],
   messageConsumer: MessageConsumer[F, Either[Throwable, RESP]],
@@ -90,7 +93,17 @@ case class ConsumerProducerRequestResponseClient[F[_]: Concurrent, REQ: Marshall
           ) ++ sendRequestContext.requestTimeout.map(t => RequestTimeoutKey -> t.toMillis.toString)
         )
         _ = println("waiting for result...")
-        receiveResult <- receiveResultDeferred.get
+        receiveResult <- sendRequestContext.requestTimeout match {
+          case Some(requestTimeout) =>
+            requestTimeout match {
+              case requestTimeout: FiniteDuration =>
+                receiveResultDeferred.get.timeout(requestTimeout)
+              case _ =>
+                receiveResultDeferred.get
+            }
+          case None =>
+            receiveResultDeferred.get
+        }
         // TODO: revisit this - maybe Marshallable[RESPONSE] should be an implicit
         r <- receiveResult.asInstanceOf[Either[Throwable, MessageReceiveResult[F, RESPONSE]]] match {
           case Right(r) =>
@@ -105,7 +118,7 @@ case class ConsumerProducerRequestResponseClient[F[_]: Concurrent, REQ: Marshall
 
 object ConsumerProducerRequestResponseClient extends Logging {
 
-  def apply[F[_]: Concurrent, REQ: Marshaller, RESP](
+  def apply[F[_]: Concurrent: Timer, REQ: Marshaller, RESP](
     messageConsumer: MessageConsumer[F, Either[Throwable, RESP]],
     messageProducer: () => MessageProducer[F, REQ],
     responseConsumerId: String,

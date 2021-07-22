@@ -1,6 +1,6 @@
 package io.jobial.scase.local
 
-import cats.effect.Concurrent
+import cats.effect.{Concurrent, Timer}
 import cats.implicits._
 import io.jobial.scase.core.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService, RequestProcessor, RequestResponseService, RequestResponseServiceConfiguration}
 import io.jobial.scase.inmemory.InMemoryQueue
@@ -23,7 +23,7 @@ case class LocalRequestResponseServiceConfiguration[REQ, RESP](
   //
   //  lazy val responseQueue = InMemoryQueue[F, Either[Throwable, RESP]]()
 
-  def serviceAndClient[F[_] : Concurrent](requestProcessor: RequestProcessor[F, REQ, RESP]) =
+  def serviceAndClient[F[_] : Concurrent: Timer](requestProcessor: RequestProcessor[F, REQ, RESP]) =
     for {
       requestQueue <- InMemoryQueue[F, REQ]
       responseQueue <- InMemoryQueue[F, Either[Throwable, RESP]]

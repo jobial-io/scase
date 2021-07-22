@@ -1,6 +1,5 @@
 package io.jobial.scase.example.greeting
 
-import cats.effect.IO
 import io.jobial.scase.core._
 import org.scalatest.flatspec.AsyncFlatSpec
 

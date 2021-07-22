@@ -11,6 +11,8 @@ trait ScaseTestHelper {
 
   implicit val cs = IO.contextShift(ExecutionContext.global)
 
+  implicit val timer = IO.timer(ExecutionContext.global)
+
   implicit def runIOResult(r: IO[Assertion]) = r.unsafeToFuture
 
   implicit def fromEitherResult(r: Either[Throwable, Assertion]) = runIOResult(IO.fromEither(r))
