@@ -14,7 +14,7 @@
 name := "scase"
 
 ThisBuild / organization := "io.jobial"
-ThisBuild / scalaVersion := "2.13.6"
+ThisBuild / scalaVersion := "2.12.13"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.13", "2.13.6")
 ThisBuild / version := "0.1.0"
 
@@ -45,7 +45,7 @@ lazy val AwsLambdaJavaCoreVersion = "1.2.1"
 lazy val CommonsIoVersion = "2.8.0"
 lazy val CommonsLangVersion = "3.12.0"
 lazy val CloudformationTemplateGeneratorVersion = "3.10.5-SNAPSHOT"
-lazy val SclapVersion = "1.0.0"
+lazy val SclapVersion = "1.1.4"
 lazy val CirceVersion = "0.12.0-M3"
 
 
@@ -58,8 +58,8 @@ lazy val root: Project = project
     assemblyPackageScala / assembleArtifact := false,
     assemblyPackageDependency / assembleArtifact := false
   )
-  .aggregate(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-examples`)
-  .dependsOn(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-examples`)
+  .aggregate(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-examples`, `sbt-scase-cloudformation`)
+  .dependsOn(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-examples`, `sbt-scase-cloudformation`)
 
 lazy val `scase-core` = project
   .in(file("scase-core"))
@@ -88,7 +88,8 @@ lazy val `scase-aws` = project
       "com.amazonaws" % "amazon-sqs-java-extended-client-lib" % "master-SNAPSHOT" excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-java-sdk-lambda" % AwsVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-java-sdk-cloudformation" % AwsVersion excludeAll ("commons-logging"),
-      "com.amazonaws" % "aws-lambda-java-core" % AwsLambdaJavaCoreVersion excludeAll ("commons-logging")
+      "com.amazonaws" % "aws-lambda-java-core" % AwsLambdaJavaCoreVersion excludeAll ("commons-logging"),
+      "com.amazonaws" % "aws-java-sdk-sts" % AwsVersion excludeAll ("commons-logging")
     ),
     assemblyPackageScala / assembleArtifact := false,
     assemblyPackageDependency / assembleArtifact := false
@@ -141,3 +142,15 @@ lazy val `scase-examples` = project
   .dependsOn(`scase-aws` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "compile->compile;test->test")
   .dependsOn(`scase-cloudformation` % "compile->compile;test->test")
+
+lazy val `sbt-scase-cloudformation` = (project in file("sbt-scase-cloudformation"))
+  .enablePlugins(SbtPlugin)
+  .settings(
+    name := "sbt-scase-cloudformation",
+    pluginCrossBuild / sbtVersion := {
+      scalaBinaryVersion.value match {
+        case "2.12" => "1.2.8" // set minimum sbt version
+        case "2.13" => "1.2.8" // set minimum sbt version
+      }
+    }
+  )

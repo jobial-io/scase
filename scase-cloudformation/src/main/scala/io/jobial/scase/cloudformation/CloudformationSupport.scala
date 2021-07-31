@@ -1,25 +1,21 @@
 package io.jobial.scase.cloudformation
 
 import cats.effect.IO
-import com.amazonaws.services.lambda.runtime.RequestStreamHandler
-import com.amazonaws.services.s3.model.Region
 import com.monsanto.arch.cloudformation.model._
 import com.monsanto.arch.cloudformation.model.resource._
 import com.monsanto.arch.cloudformation.model.resource.`AWS::EC2::Volume`._
 import com.monsanto.arch.cloudformation.model.simple.Builders._
-import io.jobial.scase.aws.lambda.{LambdaRequestHandler, LambdaRequestResponseServiceConfiguration, LambdaScheduledRequestHandler}
-import io.jobial.scase.aws.client.{AwsContext, S3Client}
+import io.jobial.scase.aws.client.{ConfigurationUtils, S3Client}
+import io.jobial.scase.aws.lambda.LambdaRequestHandler
+import io.jobial.scase.logging.Logging
 import org.apache.commons.io.IOUtils
 import org.apache.commons.lang3.StringUtils
 import spray.json._
 
-import java.util.UUID.randomUUID
 import scala.concurrent.duration.{Duration, _}
 import scala.reflect.ClassTag
-import scala.util.Try
-import io.jobial.scase.logging.Logging
 
-trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Logging {
+trait CloudformationSupport extends ConfigurationUtils with DefaultJsonProtocol with S3Client with Logging {
 
   case class CloudformationExpression(value: JsValue) {
     override def toString = value.prettyPrint
@@ -1465,19 +1461,21 @@ trait CloudformationSupport extends DefaultJsonProtocol with S3Client with Loggi
     schedule: Option[String] = None,
     scheduleEnabled: Boolean = true,
     scheduleDescription: Option[String] = None
-  ) = {
+  )(implicit context: StackContext) = {
     val c = implicitly[ClassTag[T]].runtimeClass
-    val name = StringUtils.uncapitalize(c.getSimpleName)
+    val name = StringUtils.uncapitalize(c.getSimpleName.replaceAll("\\$", ""))
     val moduleName = moduleNameForClass(c)
     println(s"$name: $moduleName")
     val roleName = s"lambdaRole${name.capitalize}"
 
-    val codeS3Bucket = s3Bucket.getOrElse("lambda-code")
+    // TODO: clean up fallback
+    val codeS3Bucket = s3Bucket.orElse(context.s3Bucket).getOrElse("lambda-code")
+    // TODO: add prefix here
     val codeS3Key = s3Key.getOrElse(name)
 
     for {
-      _ <- s3CreateBucket(codeS3Bucket) handleErrorWith { _ =>
-        IO(logger.info("bucket $codeS3Bucket already exists"))
+      _ <- s3CreateBucket(codeS3Bucket, context.defaultRegion) handleErrorWith { _ =>
+        IO(logger.info(s"bucket $codeS3Bucket already exists"))
       }
     } yield
       (for {

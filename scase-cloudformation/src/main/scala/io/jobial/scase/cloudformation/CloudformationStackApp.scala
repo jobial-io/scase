@@ -3,7 +3,8 @@ package io.jobial.scase.cloudformation
 import cats.effect.IO
 import com.amazonaws.services.cloudformation.model.DeleteStackResult
 import com.monsanto.arch.cloudformation.model.Template
-import io.jobial.scase.cloudformation.ScaseCloudformation.{command, createChangeSetAndWaitForComplete, createStack, deleteStack, fromTry, httpsUrl, opt, param, s3PutText, subcommand, subcommands, updateStack}
+import io.jobial.scase.aws.client.{CloudformationClient, StsClient}
+//import io.jobial.scase.cloudformation.ScaseCloudformation.{command, createChangeSetAndWaitForComplete, createStack, deleteStack, fromTry, httpsUrl, opt, param, s3PutText, subcommand, subcommands, updateStack}
 import io.jobial.sclap.CommandLineApp
 import spray.json._
 import scala.io.StdIn.readLine
@@ -11,24 +12,37 @@ import scala.util.{Failure, Success, Try}
 import collection.JavaConverters._
 
 
-trait CloudformationStackApp extends CommandLineApp with CloudformationStack {
-  
+trait CloudformationStackApp extends CommandLineApp with CloudformationClient with StsClient with CloudformationStack {
+
   def run =
     command
       .header("Scase AWS Tool")
       .description("Tool for managing Cloudtemp AWS resources and generating Cloudformation templates.") {
         for {
-          stackName <- opt[String]("--stack")
+          stackName <- opt[String]("stack")
             .description("The name of the stack")
-          label <- opt[String]("--label")
+          region <- opt[String]("region")
+            .description("The AWS region where the stack and its resources are created, unless specified otherwise")
+            .default(getDefaultRegion.getOrElse("eu-west-1"))
+          label <- opt[String]("label")
             .description("An additional discriminator label for the stack where applicable")
-          dockerImageTags <- opt[String]("--docker-image-tags")
+          stackS3Bucket <- opt[String]("stack-s3-bucket")
+            .description("The s3 bucket to use for the stack template and other resources")
+          stackS3Prefix <- opt[String]("stack-s3-prefix")
+            .description("The s3 key prefix to use for the stack template and other resources")
+          // TODO: add implicit for this
+          accountId <- noSpec(getAccount)
+          dockerImageTags <- opt[String]("docker-image-tags")
             .description("Mapping of docker images to tags, in the format <image_name>:<tag>,... . " +
               "By default, the stack will use the latest tag for images. This option allows to override this.")
-          printOnly <- opt[Boolean]("--print-only").defaultValue(false)
+          printOnly <- opt[Boolean]("print-only")
             .description("Print the generated template and operations, do not make any changes")
+            .default(false)
           context = StackContext(
-            stackName.getOrElse(getClass.getName),
+            stackName.getOrElse(getClass.getSimpleName.replaceAll("\\$", "")),
+            region,
+            stackS3Bucket,
+            stackS3Prefix,
             label,
             dockerImageTags.map {
               _.split(",").map { p =>
@@ -70,9 +84,9 @@ trait CloudformationStackApp extends CommandLineApp with CloudformationStack {
   //      template.toJson.prettyPrint
   //    }
 
-  def uploadTemplateToS3(stackName: String, template: String) = {
+  def uploadTemplateToS3(stackName: String, template: String)(implicit context: StackContext) = {
     println(s"uploading template for $stackName to s3")
-    val templateBucket = "cloudtemp-admin"
+    val templateBucket = context.s3Bucket.getOrElse(???)
     val templateFileName = s"$stackName-stack.json"
     val templatePath = s"cloudtemp-aws/$templateFileName"
     s3PutText(templateBucket, s"$templatePath", template)
@@ -97,9 +111,14 @@ trait CloudformationStackApp extends CommandLineApp with CloudformationStack {
     subcommand("create-stack")
       .header("Create a new stack.")
       .description("This command creates a new stack based on the specified stack name, level and optional label.") {
-        val template = stack.template
         for {
-          template <- template
+          accountId <- getAccount
+          s3Bucket = context.s3Bucket.getOrElse(s"scase-$accountId")
+          _ <- s3CreateBucket(s3Bucket, context.defaultRegion) handleErrorWith { _ =>
+            IO(logger.info(s"bucket $s3Bucket already exists"))
+          }
+          contextWithBucket = context.copy(s3Bucket = Some(s3Bucket))
+          template <- stack.template(contextWithBucket)
           stack <-
             if (context.printOnly)
               Try(println(template.toJson.prettyPrint))
@@ -107,7 +126,7 @@ trait CloudformationStackApp extends CommandLineApp with CloudformationStack {
               nameAndUploadTemplate(template) { (stackName, templateUrl) =>
                 println(s"creating stack $stackName from $templateUrl")
                 Try(createStack(stackName, templateUrl))
-              }
+              }(contextWithBucket)
         } yield stack
       }
 

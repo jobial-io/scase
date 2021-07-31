@@ -3,6 +3,9 @@ package io.jobial.scase.cloudformation
 
 case class StackContext(
   stackName: String,
+  defaultRegion: String,
+  s3Bucket: Option[String],
+  s3Prefix: Option[String],
   label: Option[String],
   dockerImageTags: Option[Map[String, String]],
   printOnly: Boolean,
