@@ -17,10 +17,15 @@ object SbtScaseCloudformationPlugin extends AutoPlugin {
   }
   import autoImport._
 
+  override lazy val buildSettings = Seq(
+    cloudformationStackClass := ""
+  )
+  
   override lazy val projectSettings = Seq(
     scaseCloudformation := {
       val args = spaceDelimited("").parsed
-      println(cloudformationStackClass.value)
+      
+      println("cloudformationStackClass: " + cloudformationStackClass.value)
       println(s"scaseCloudformation called with args ${args.toList}")
     }
   )
