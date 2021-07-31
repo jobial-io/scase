@@ -139,14 +139,13 @@ lazy val `scase-examples` = project
     assemblyShadeRules := Seq(
       ShadeRule.keep("io.jobial.scase.aws.lambda.example.HelloExample").inAll,
     ),
-    cloudformationStackClass := "io.jobial.scase.aws.lambda.example.HelloExample"
+    cloudformationStackClass := "io.jobial.scase.example.greeting.GreetingServiceStack"
   )
   .dependsOn(`scase-aws` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "compile->compile;test->test")
   .dependsOn(`scase-cloudformation` % "compile->compile;test->test")
 
 lazy val `sbt-scase-cloudformation` = (project in file("sbt-scase-cloudformation"))
-  .enablePlugins(SbtPlugin)
   .settings(
     name := "sbt-scase-cloudformation",
     pluginCrossBuild / sbtVersion := {
