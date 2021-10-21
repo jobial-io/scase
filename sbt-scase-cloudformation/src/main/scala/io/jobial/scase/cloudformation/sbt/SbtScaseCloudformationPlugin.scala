@@ -6,6 +6,9 @@ import Keys._
 import sbt.State.stateOps
 import complete.DefaultParsers._
 
+// Loosely based on https://codewithstyle.info/how-to-build-a-simple-sbt-plugin/
+// https://stackoverflow.com/questions/8973666/how-to-access-a-sbt-projects-settings-in-a-plugin
+
 object SbtScaseCloudformationPlugin extends AutoPlugin {
   override def trigger = allRequirements
   //override lazy val buildSettings = Seq(commands += helloCommand)
@@ -25,8 +28,8 @@ object SbtScaseCloudformationPlugin extends AutoPlugin {
     scaseCloudformation := {
       val args = spaceDelimited("").parsed
       
-      println("cloudformationStackClass: " + cloudformationStackClass.value)
-      println(s"scaseCloudformation called with args ${args.toList}")
+      //println("cloudformationStackClass: " + cloudformationStackClass.value)
+      println(s"scaseCloudformation called with args ${args.toList} for " + cloudformationStackClass.value)
     }
   )
 

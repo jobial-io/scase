@@ -17,6 +17,7 @@ ThisBuild / organization := "io.jobial"
 ThisBuild / scalaVersion := "2.12.13"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.13", "2.13.6")
 ThisBuild / version := "0.1.0"
+ThisBuild / isSnapshot := true
 
 ThisBuild / assemblyMergeStrategy in assembly := {
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
@@ -148,6 +149,7 @@ lazy val `scase-examples` = project
 lazy val `sbt-scase-cloudformation` = (project in file("sbt-scase-cloudformation"))
   .settings(
     name := "sbt-scase-cloudformation",
+    sbtPlugin := true,
     pluginCrossBuild / sbtVersion := {
       scalaBinaryVersion.value match {
         case "2.12" => "1.2.8" // set minimum sbt version
