@@ -4,8 +4,7 @@ import cats.Monad
 import cats.effect.{Concurrent, IO}
 import io.jobial.scase.marshalling.Marshaller
 
-// TODO: review why we need this; it used to have the messageId returned by the underlying transport, but this is
-//  - no longer required.
+// TODO: review why we need this; it used to have the messageId returned by the underlying transport.
 case class MessageSendResult[M: Marshaller]()
 
 trait MessageProducer[F[_], M] {

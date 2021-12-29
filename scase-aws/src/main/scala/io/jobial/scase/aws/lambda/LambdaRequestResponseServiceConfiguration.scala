@@ -9,6 +9,7 @@ case class LambdaRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshal
   functionName: String
 ) extends RequestResponseServiceConfiguration[REQ, RESP] {
 
+  // TODO: overload constructor for this
   val serviceName = functionName
 
   def client[F[_] : Concurrent] =

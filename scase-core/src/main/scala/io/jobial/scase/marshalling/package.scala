@@ -1,3 +1,3 @@
 package io.jobial.scase
 
-package object marshalling
+package object marshalling extends DefaultMarshallers

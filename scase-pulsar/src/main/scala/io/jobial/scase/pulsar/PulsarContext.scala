@@ -1,14 +1,14 @@
-package io.jobial.scase.pulsar.client
+package io.jobial.scase.pulsar
 
 import org.apache.pulsar.client.api.PulsarClient
 
 case class PulsarContext(
-  host: String,
-  port: Int,
-  tenant: String,
-  namespace: String
+  host: String = "localhost",
+  port: Int = 8080,
+  tenant: String = "public",
+  namespace: String = "default"
 ) {
-  
+
   val brokerUrl = s"pulsar://$host:$port"
 
   val client =

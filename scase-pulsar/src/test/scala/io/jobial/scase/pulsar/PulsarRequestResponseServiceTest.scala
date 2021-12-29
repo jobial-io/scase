@@ -3,8 +3,12 @@ package io.jobial.scase.pulsar
 import cats.effect.IO
 import io.jobial.scase.core.{RequestContext, RequestProcessor, RequestResponseMapping, RequestResponseTestSupport, SendRequestContext, TestRequest, TestRequest1, TestRequest2, TestResponse}
 import io.jobial.scase.local.{LocalRequestResponseServiceConfiguration, localServiceAndClient}
+
 import concurrent.duration._
 import scala.concurrent.TimeoutException
+import io.jobial.scase.marshalling.circe._
+import io.circe.generic.auto._
+
 
 class PulsarRequestResponseServiceTest
   extends RequestResponseTestSupport {
@@ -37,12 +41,16 @@ class PulsarRequestResponseServiceTest
         r.reply(Resp1())
     }
   }
+  
+  implicit val pulsarContext = PulsarContext()
+  
+  val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello", "hello")
 
   "request-response service" should "reply successfully" in {
     for {
-      t <- LocalRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello").serviceAndClient(requestProcessor)
-      (service, client) = t
+      service <- serviceConfig.service(requestProcessor)
       _ <- service.startService
+      client <- serviceConfig.client[IO]
       r1 <- client.sendRequest(request1)
       r11 <- client ? request1
       r2 <- client.sendRequest(request2)
@@ -53,25 +61,25 @@ class PulsarRequestResponseServiceTest
     )
   }
 
-  "another request-response service" should "reply successfully" in {
-    for {
-      t <- LocalRequestResponseServiceConfiguration[Req, Resp]("hello").serviceAndClient(anotherRequestProcessor)
-      (service, client) = t
-      _ <- service.startService
-      r <- client.sendRequest(Req1())
-      r1 <- client ? Req1()
-    } yield assert(Resp1() == r)
-  }
-
-  "request" should "time out if service is not started" in {
-    implicit val context = SendRequestContext(requestTimeout = Some(1.second))
-
-    recoverToSucceededIf[TimeoutException] {
-      for {
-        t <- localServiceAndClient("greeting", requestProcessor)
-        (_, client) = t
-        _ <- client ? request1
-      } yield succeed
-    }
-  }
+//  "another request-response service" should "reply successfully" in {
+//    for {
+//      t <- LocalRequestResponseServiceConfiguration[Req, Resp]("hello").serviceAndClient(anotherRequestProcessor)
+//      (service, client) = t
+//      _ <- service.startService
+//      r <- client.sendRequest(Req1())
+//      r1 <- client ? Req1()
+//    } yield assert(Resp1() == r)
+//  }
+//
+//  "request" should "time out if service is not started" in {
+//    implicit val context = SendRequestContext(requestTimeout = Some(1.second))
+//
+//    recoverToSucceededIf[TimeoutException] {
+//      for {
+//        t <- localServiceAndClient("greeting", requestProcessor)
+//        (_, client) = t
+//        _ <- client ? request1
+//      } yield succeed
+//    }
+//  }
 }

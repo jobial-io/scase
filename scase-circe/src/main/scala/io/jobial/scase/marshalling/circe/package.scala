@@ -1,4 +1,4 @@
 package io.jobial.scase.marshalling
 
 
-package object circe extends CirceMarshalling
+package object circe extends CirceMarshalling with CirceDefaultCodecs

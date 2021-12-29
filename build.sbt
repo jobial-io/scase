@@ -169,4 +169,4 @@ lazy val `scase-pulsar` = project
     assemblyPackageScala / assembleArtifact := false,
     assemblyPackageDependency / assembleArtifact := false
   )
-  .dependsOn(`scase-core` % "compile->compile;test->test")
+  .dependsOn(`scase-core` % "compile->compile;test->test", `scase-circe` % "test->test")

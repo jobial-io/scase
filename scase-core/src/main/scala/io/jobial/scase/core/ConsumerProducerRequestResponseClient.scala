@@ -61,11 +61,6 @@ case class ConsumerProducerRequestResponseClient[F[_]: Concurrent: Timer, REQ: M
     ConsumerProducerRequestResult {
 
       val producer = messageProducer()
-      // TODO: this seems to be critical line for initialization, figure out why...
-      //logger.debug(s"client sending requests to ${producer}")
-      //logger.debug(s"client sending requests")
-      //messageProducer.toString
-      //println(sendRequestContext)
       val correlationId = randomUUID.toString
 
       monitoringPublisher.increment(request.getClass.getName)
