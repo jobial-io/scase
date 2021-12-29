@@ -1,9 +1,10 @@
-package io.jobial.scase.example.greeting
+package io.jobial.scase.example.greeting.lambda
 
 import io.jobial.scase.aws.lambda.IOLambdaRequestHandler
 import io.jobial.scase.cloudformation.{CloudformationStackApp, StackContext}
+import io.jobial.scase.example.greeting.GreetingService
 
-object GreetingServiceStack extends CloudformationStackApp with GreetingServiceConfig {
+object GreetingServiceStack extends CloudformationStackApp with GreetingServiceLambdaConfig {
 
   object GreetingServiceLambdaRequestHandler
     extends IOLambdaRequestHandler(greetingServiceConfig)
@@ -13,4 +14,3 @@ object GreetingServiceStack extends CloudformationStackApp with GreetingServiceC
     lambda(GreetingServiceLambdaRequestHandler)
 
 }
-

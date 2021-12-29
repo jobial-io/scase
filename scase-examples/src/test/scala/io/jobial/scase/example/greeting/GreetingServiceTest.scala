@@ -1,6 +1,7 @@
 package io.jobial.scase.example.greeting
 
 import io.jobial.scase.core._
+import io.jobial.scase.example.greeting.lambda.GreetingServiceLambdaConfig
 import io.jobial.scase.local.localServiceAndClient
 import org.scalatest.flatspec.AsyncFlatSpec
 
@@ -11,7 +12,7 @@ import scala.concurrent.duration._
 class GreetingServiceTest
   extends AsyncFlatSpec
     with ScaseTestHelper
-    with GreetingServiceConfig {
+    with GreetingServiceLambdaConfig {
 
   "request-response service" should "reply successfully" in {
     for {

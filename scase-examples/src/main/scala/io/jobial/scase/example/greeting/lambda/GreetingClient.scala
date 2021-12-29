@@ -1,9 +1,10 @@
-package io.jobial.scase.example.greeting
+package io.jobial.scase.example.greeting.lambda
 
 import cats.effect.IO
+import io.jobial.scase.example.greeting.Hello
 import io.jobial.sclap.CommandLineApp
 
-object GreetingClient extends CommandLineApp with GreetingServiceConfig {
+object GreetingClient extends CommandLineApp with GreetingServiceLambdaConfig {
 
   def run =
     for {

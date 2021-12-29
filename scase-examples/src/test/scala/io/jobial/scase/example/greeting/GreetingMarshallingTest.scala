@@ -1,12 +1,13 @@
 package io.jobial.scase.example.greeting
 
 import io.jobial.scase.core._
+import io.jobial.scase.example.greeting.lambda.GreetingServiceLambdaConfig
 import org.scalatest.flatspec.AsyncFlatSpec
 
 class GreetingMarshallingTest
   extends AsyncFlatSpec
     with ScaseTestHelper
-    with GreetingServiceConfig {
+    with GreetingServiceLambdaConfig {
 
   import greetingServiceConfig._
 
