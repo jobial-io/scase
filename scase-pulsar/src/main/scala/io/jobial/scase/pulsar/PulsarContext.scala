@@ -4,7 +4,7 @@ import org.apache.pulsar.client.api.PulsarClient
 
 case class PulsarContext(
   host: String = "localhost",
-  port: Int = 8080,
+  port: Int = 6650,
   tenant: String = "public",
   namespace: String = "default"
 ) {

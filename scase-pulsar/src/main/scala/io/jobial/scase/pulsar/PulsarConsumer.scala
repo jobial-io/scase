@@ -41,6 +41,7 @@ case class PulsarConsumer[F[_], M](topic: String, subscriptions: Ref[F, List[Mes
     for {
       // TODO: eliminate IO here by implementing concurrentFromFuture
       pulsarMessage <- Concurrent[F].liftIO(IO.fromFuture(IO(toScala(consumer.receiveAsync))))
+      //      _ = println(s"received message $pulsarMessage on $topic")
       _ <- Unmarshaller[M].unmarshal(pulsarMessage.getData) match {
         case Right(message) =>
           val attributes = pulsarMessage.getProperties.toMap

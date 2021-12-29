@@ -46,7 +46,8 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
     val r: F[SendResponseResult[RESP]] =
       request.responseConsumerId match {
         case Some(responseConsumerId) =>
-
+          logger.info(s"found response consumer id $responseConsumerId in ")
+          
           (for {
             producer <- messageProducer(responseConsumerId)
             response <- Deferred[F, Either[Throwable, RESP]]

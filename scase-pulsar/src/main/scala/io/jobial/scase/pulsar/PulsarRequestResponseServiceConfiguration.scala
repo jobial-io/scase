@@ -22,6 +22,8 @@ case class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshal
   responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
 ) extends RequestResponseServiceConfiguration[REQ, RESP] {
 
+  val responseTopic = responseTopicOverride.getOrElse(s"$requestTopic-response-${randomUUID}")
+  
   def service[F[_] : Concurrent](requestProcessor: RequestProcessor[F, REQ, RESP]) =
     for {
       consumer <- PulsarConsumer[F, REQ](requestTopic)
@@ -32,16 +34,16 @@ case class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshal
       )
     } yield service
 
-  def client[F[_] : Concurrent : Timer]: F[RequestResponseClient[F, REQ, RESP]] =
+  def client[F[_] : Concurrent : Timer]: F[RequestResponseClient[F, REQ, RESP]] = {
+    val producer = PulsarProducer[F, REQ](requestTopic)
     for {
-      consumer <- PulsarConsumer[F, Either[Throwable, RESP]](requestTopic)
-      responseTopic = responseTopicOverride.getOrElse(s"$requestTopic-response-${randomUUID}")
-      producer = PulsarProducer[F, REQ](responseTopic)
+      consumer <- PulsarConsumer[F, Either[Throwable, RESP]](responseTopic)
       client <- ConsumerProducerRequestResponseClient[F, REQ, RESP](
         consumer,
         () => producer,
-        ""
+        responseTopic
       )
     } yield client
+  }
 
 }
