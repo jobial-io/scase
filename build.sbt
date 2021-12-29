@@ -131,21 +131,6 @@ lazy val `scase-circe` = project
     ).map(_ % CirceVersion))
   .dependsOn(`scase-core` % "compile->compile;test->test")
 
-lazy val `scase-examples` = project
-  .in(file("scase-examples"))
-  .settings(commonSettings)
-  .enablePlugins(SbtScaseCloudformationPlugin)
-  .settings(
-    //assembly / assemblyJarName := "utils.jar",
-    assemblyShadeRules := Seq(
-      ShadeRule.keep("io.jobial.scase.aws.lambda.example.HelloExample").inAll,
-    ),
-    cloudformationStackClass := "io.jobial.scase.example.greeting.GreetingServiceStack"
-  )
-  .dependsOn(`scase-aws` % "compile->compile;test->test")
-  .dependsOn(`scase-circe` % "compile->compile;test->test")
-  .dependsOn(`scase-cloudformation` % "compile->compile;test->test")
-
 lazy val `sbt-scase-cloudformation` = (project in file("sbt-scase-cloudformation"))
   .settings(
     name := "sbt-scase-cloudformation",
@@ -165,8 +150,24 @@ lazy val `scase-pulsar` = project
     libraryDependencies ++= Seq(
       "org.apache.pulsar" % "pulsar-client" % "2.9.0",
       "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.2"
-    ),
-    assemblyPackageScala / assembleArtifact := false,
-    assemblyPackageDependency / assembleArtifact := false
+    )
   )
-  .dependsOn(`scase-core` % "compile->compile;test->test", `scase-circe` % "test->test")
+  .dependsOn(`scase-core` % "compile->compile;test->test")
+  .dependsOn(`scase-circe` % "test->test")
+
+lazy val `scase-examples` = project
+  .in(file("scase-examples"))
+  .settings(commonSettings)
+  .enablePlugins(SbtScaseCloudformationPlugin)
+  .settings(
+    //assembly / assemblyJarName := "utils.jar",
+    assemblyShadeRules := Seq(
+      ShadeRule.keep("io.jobial.scase.aws.lambda.example.HelloExample").inAll,
+    ),
+    cloudformationStackClass := "io.jobial.scase.example.greeting.GreetingServiceStack"
+  )
+  .dependsOn(`scase-aws` % "compile->compile;test->test")
+  .dependsOn(`scase-circe` % "compile->compile;test->test")
+  .dependsOn(`scase-cloudformation` % "compile->compile;test->test")
+  .dependsOn(`scase-pulsar`)
+

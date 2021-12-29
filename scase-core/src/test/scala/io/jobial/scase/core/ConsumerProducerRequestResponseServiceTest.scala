@@ -21,7 +21,7 @@ class ConsumerProducerRequestResponseServiceTest
         { _ => IO(testMessageProducer) },
         testRequestProcessor
       )
-      s <- service.startService
+      s <- service.start
       d <- Deferred[IO, Either[Throwable, RESP]]
       _ <- testMessageProducer.subscribe({ m =>
         println("complete")
@@ -44,7 +44,7 @@ class ConsumerProducerRequestResponseServiceTest
         { _ => IO(testMessageProducer) },
         testRequestProcessor
       )
-      s <- service.startService
+      s <- service.start
       client <- ConsumerProducerRequestResponseClient[IO, REQ, RESP](
         testMessageProducer,
         () => testMessageConsumer,

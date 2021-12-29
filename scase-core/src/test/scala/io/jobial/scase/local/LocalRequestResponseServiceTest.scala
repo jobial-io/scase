@@ -42,7 +42,7 @@ class LocalRequestResponseServiceTest
     for {
       t <- LocalRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello").serviceAndClient(requestProcessor)
       (service, client) = t
-      _ <- service.startService
+      _ <- service.start
       r1 <- client.sendRequest(request1)
       r11 <- client ? request1
       r2 <- client.sendRequest(request2)
@@ -57,7 +57,7 @@ class LocalRequestResponseServiceTest
     for {
       t <- LocalRequestResponseServiceConfiguration[Req, Resp]("hello").serviceAndClient(anotherRequestProcessor)
       (service, client) = t
-      _ <- service.startService
+      _ <- service.start
       r <- client.sendRequest(Req1())
       r1 <- client ? Req1()
     } yield assert(Resp1() == r)

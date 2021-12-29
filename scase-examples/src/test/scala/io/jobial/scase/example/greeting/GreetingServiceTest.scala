@@ -18,7 +18,7 @@ class GreetingServiceTest
     for {
       t <- localServiceAndClient("greeting", new GreetingService {})
       (service, client) = t
-      _ <- service.startService
+      _ <- service.start
       helloResponse <- client ? Hello("everyone")
       hiResponse <- client ? Hi("everyone")
     } yield {

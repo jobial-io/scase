@@ -120,11 +120,11 @@ trait RemoteRequestResponseServiceConfiguration[REQ, RESP] extends RequestRespon
 
 trait RequestResponseService[F[_], REQ, RESP] {
 
-  def startService: F[RequestResponseServiceState[F, REQ]]
+  def start: F[RequestResponseServiceState[F, REQ]]
 }
 
 trait RequestResponseServiceState[F[_], REQ] {
 
-  def stopService: F[RequestResponseServiceState[F, REQ]]
+  def stop: F[RequestResponseServiceState[F, REQ]]
 }
 

@@ -49,7 +49,7 @@ class PulsarRequestResponseServiceTest
   "request-response service" should "reply successfully" in {
     for {
       service <- serviceConfig.service(requestProcessor)
-      _ <- service.startService
+      _ <- service.start
       client <- serviceConfig.client[IO]
       r1 <- client.sendRequest(request1)
       r11 <- client ? request1
@@ -65,7 +65,7 @@ class PulsarRequestResponseServiceTest
 //    for {
 //      t <- LocalRequestResponseServiceConfiguration[Req, Resp]("hello").serviceAndClient(anotherRequestProcessor)
 //      (service, client) = t
-//      _ <- service.startService
+//      _ <- service.start
 //      r <- client.sendRequest(Req1())
 //      r1 <- client ? Req1()
 //    } yield assert(Resp1() == r)

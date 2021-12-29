@@ -30,7 +30,7 @@ case class LocalOrRemoteServiceConfiguration[REQ, RESP](
     for {
       t <- localRequestResponseServiceDefinition.serviceAndClient(requestProcessor)
       (localService, localClient) = t
-      _ <- localService.startService
+      _ <- localService.start
       remoteService <- remoteServiceDefinition.service(requestProcessor)
     } yield localClient
 

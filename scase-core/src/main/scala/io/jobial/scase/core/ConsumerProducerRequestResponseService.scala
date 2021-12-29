@@ -18,7 +18,7 @@ case class ConsumerProducerRequestResponseServiceState[F[_] : Monad, REQ, RESP](
 ) extends RequestResponseServiceState[F, REQ]
   with Logging {
 
-  def stopService: F[RequestResponseServiceState[F, REQ]] =
+  def stop: F[RequestResponseServiceState[F, REQ]] =
     for {
       r <- subscription.cancel
       _ <- subscription.join
@@ -134,7 +134,7 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
     r
   }
 
-  def startService = {
+  def start = {
     logger.info(s"starting service for processor $requestProcessor")
 
     //val requestQueue = new LinkedBlockingQueue[() => Future[SendResponseResult[RESP]]]
