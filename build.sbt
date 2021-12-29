@@ -19,7 +19,7 @@ ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.13", "2.13.6")
 ThisBuild / version := "0.1.0"
 ThisBuild / isSnapshot := true
 
-ThisBuild / assemblyMergeStrategy in assembly := {
+ThisBuild / assembly / assemblyMergeStrategy := {
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
   case x => MergeStrategy.first
 }
@@ -55,7 +55,7 @@ lazy val root: Project = project
   .settings(commonSettings)
   .settings(
     publishArtifact := false,
-    publishArtifact in makePom := true,
+    makePom / publishArtifact := true,
     assemblyPackageScala / assembleArtifact := false,
     assemblyPackageDependency / assembleArtifact := false
   )
@@ -157,3 +157,16 @@ lazy val `sbt-scase-cloudformation` = (project in file("sbt-scase-cloudformation
       }
     }
   )
+
+lazy val `scase-pulsar` = project
+  .in(file("scase-pulsar"))
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.apache.pulsar" % "pulsar-client" % "2.9.0",
+      "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.2"
+    ),
+    assemblyPackageScala / assembleArtifact := false,
+    assemblyPackageDependency / assembleArtifact := false
+  )
+  .dependsOn(`scase-core` % "compile->compile;test->test")
