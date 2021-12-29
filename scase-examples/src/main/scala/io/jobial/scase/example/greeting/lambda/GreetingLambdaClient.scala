@@ -4,7 +4,7 @@ import cats.effect.IO
 import io.jobial.scase.example.greeting.Hello
 import io.jobial.sclap.CommandLineApp
 
-object GreetingClient extends CommandLineApp with GreetingServiceLambdaConfig {
+object GreetingLambdaClient extends CommandLineApp with GreetingServiceLambdaConfig {
 
   def run =
     for {

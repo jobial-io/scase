@@ -16,15 +16,16 @@ case class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshal
   batchingMaxPublishDelay: Duration = 1.millis,
 )(
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher
-  implicit context: PulsarContext,
-  cs: ContextShift[IO],
-  responseMarshaller: Marshaller[Either[Throwable, RESP]],
+  implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
   responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
 ) extends RequestResponseServiceConfiguration[REQ, RESP] {
 
   val responseTopic = responseTopicOverride.getOrElse(s"$requestTopic-response-${randomUUID}")
-  
-  def service[F[_] : Concurrent](requestProcessor: RequestProcessor[F, REQ, RESP]) =
+
+  def service[F[_] : Concurrent](requestProcessor: RequestProcessor[F, REQ, RESP])(
+    implicit context: PulsarContext,
+    cs: ContextShift[IO]
+  ) =
     for {
       consumer <- PulsarConsumer[F, REQ](requestTopic)
       service = ConsumerProducerRequestResponseService[F, REQ, RESP](
@@ -34,7 +35,10 @@ case class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshal
       )
     } yield service
 
-  def client[F[_] : Concurrent : Timer]: F[RequestResponseClient[F, REQ, RESP]] = {
+  def client[F[_] : Concurrent : Timer](
+    implicit context: PulsarContext,
+    cs: ContextShift[IO]
+  ): F[RequestResponseClient[F, REQ, RESP]] = {
     val producer = PulsarProducer[F, REQ](requestTopic)
     for {
       consumer <- PulsarConsumer[F, Either[Throwable, RESP]](responseTopic)
