@@ -44,9 +44,9 @@ class PulsarRequestResponseServiceTest
   
   implicit val pulsarContext = PulsarContext()
   
-  val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello")
-
   "request-response service" should "reply successfully" in {
+    val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello-test")
+
     for {
       service <- serviceConfig.service(requestProcessor)
       _ <- service.start
@@ -61,25 +61,28 @@ class PulsarRequestResponseServiceTest
     )
   }
 
-//  "another request-response service" should "reply successfully" in {
-//    for {
-//      t <- LocalRequestResponseServiceConfiguration[Req, Resp]("hello").serviceAndClient(anotherRequestProcessor)
-//      (service, client) = t
-//      _ <- service.start
-//      r <- client.sendRequest(Req1())
-//      r1 <- client ? Req1()
-//    } yield assert(Resp1() == r)
-//  }
-//
-//  "request" should "time out if service is not started" in {
-//    implicit val context = SendRequestContext(requestTimeout = Some(1.second))
-//
-//    recoverToSucceededIf[TimeoutException] {
-//      for {
-//        t <- localServiceAndClient("greeting", requestProcessor)
-//        (_, client) = t
-//        _ <- client ? request1
-//      } yield succeed
-//    }
-//  }
+  "another request-response service" should "reply successfully" in {
+    val serviceConfig = PulsarRequestResponseServiceConfiguration[Req, Resp]("another-test")
+
+    for {
+      service <- serviceConfig.service(anotherRequestProcessor)
+      _ <- service.start
+      client <- serviceConfig.client[IO]
+      r <- client.sendRequest(Req1())
+      r1 <- client ? Req1()
+    } yield assert(Resp1() == r)
+  }
+  
+  "request" should "time out if service is not started" in {
+    val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello-test")
+    implicit val context = SendRequestContext(requestTimeout = Some(1.second))
+
+    recoverToSucceededIf[TimeoutException] {
+      for {
+        service <- serviceConfig.service(requestProcessor)
+        client <- serviceConfig.client[IO]
+        _ <- client ? request1
+      } yield succeed
+    }
+  }
 }
