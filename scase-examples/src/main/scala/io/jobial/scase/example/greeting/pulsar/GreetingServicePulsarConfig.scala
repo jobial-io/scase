@@ -10,5 +10,5 @@ trait GreetingServicePulsarConfig {
   implicit val context = PulsarContext()
 
   val greetingServiceConfig =
-    PulsarRequestResponseServiceConfiguration[GreetingRequest[_ <: GreetingResponse], GreetingResponse]("greeting", "greeting")
+    PulsarRequestResponseServiceConfiguration[GreetingRequest[_ <: GreetingResponse], GreetingResponse]("greeting")
 }

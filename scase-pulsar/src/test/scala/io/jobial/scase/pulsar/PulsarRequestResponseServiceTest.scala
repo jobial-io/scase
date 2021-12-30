@@ -44,7 +44,7 @@ class PulsarRequestResponseServiceTest
   
   implicit val pulsarContext = PulsarContext()
   
-  val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello", "hello")
+  val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello")
 
   "request-response service" should "reply successfully" in {
     for {

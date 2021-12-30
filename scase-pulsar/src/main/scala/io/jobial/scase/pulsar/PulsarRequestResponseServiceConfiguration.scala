@@ -11,9 +11,9 @@ import scala.concurrent.duration._
 case class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
   serviceName: String,
   requestTopic: String,
-  responseTopicOverride: Option[String] = None,
-  requestTimeout: Duration = 5.minutes,
-  batchingMaxPublishDelay: Duration = 1.millis,
+  responseTopicOverride: Option[String],
+  requestTimeout: Duration,
+  batchingMaxPublishDelay: Duration,
 )(
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher
   implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
@@ -53,5 +53,22 @@ case class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshal
 }
 
 object PulsarRequestResponseServiceConfiguration {
-  
+
+  def apply[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
+    requestTopic: String,
+    responseTopicOverride: Option[String] = None,
+    requestTimeout: Duration = 5.minutes,
+    batchingMaxPublishDelay: Duration = 1.millis,
+  )(
+    //implicit monitoringPublisher: MonitoringPublisher = noPublisher
+    implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
+    responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
+  ): PulsarRequestResponseServiceConfiguration[REQ, RESP] =
+    PulsarRequestResponseServiceConfiguration[REQ, RESP](
+      requestTopic,
+      requestTopic,
+      responseTopicOverride,
+      requestTimeout,
+      batchingMaxPublishDelay
+    )
 }
