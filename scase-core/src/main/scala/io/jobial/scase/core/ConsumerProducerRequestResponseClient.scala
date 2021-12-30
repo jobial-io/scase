@@ -87,7 +87,6 @@ case class ConsumerProducerRequestResponseClient[F[_]: Concurrent: Timer, REQ: M
             ResponseConsumerIdKey -> responseConsumerId
           ) ++ sendRequestContext.requestTimeout.map(t => RequestTimeoutKey -> t.toMillis.toString)
         )
-        _ = println("waiting for result...")
         receiveResult <- sendRequestContext.requestTimeout match {
           case Some(requestTimeout) =>
             requestTimeout match {
@@ -126,7 +125,6 @@ object ConsumerProducerRequestResponseClient extends Logging {
     for {
       correlationsRef <- Ref.of[F, Map[String, CorrelationInfo[F, REQ, RESP]]](Map())
       subscription <- messageConsumer.subscribe { response =>
-        println(s"received response ${response.toString.take(500)}")
         logger.debug(s"received response ${response.toString.take(500)}")
 
         response.correlationId match {
@@ -137,7 +135,6 @@ object ConsumerProducerRequestResponseClient extends Logging {
                 case Some(correlationInfo) =>
                   response.message match {
                     case Right(payload) =>
-                      println(s"client received success: ${response.toString.take(500)}")
                       logger.debug(s"client received success: ${response.toString.take(500)}")
                       correlationInfo.responseDeferred.complete(
                         Right(

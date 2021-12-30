@@ -8,6 +8,7 @@ object GreetingPulsarServer extends CommandLineApp with GreetingServicePulsarCon
   def run =
     for {
       service <- greetingServiceConfig.service(new GreetingService{})
-      s <- service.start
-    } yield s
+      _ = println("starting service...")
+      result <- service.startAndJoin
+    } yield result
 }

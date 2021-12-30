@@ -51,3 +51,7 @@ case class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshal
   }
 
 }
+
+object PulsarRequestResponseServiceConfiguration {
+  
+}

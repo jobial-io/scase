@@ -18,13 +18,20 @@ case class ConsumerProducerRequestResponseServiceState[F[_] : Monad, REQ, RESP](
 ) extends RequestResponseServiceState[F, REQ]
   with Logging {
 
-  def stop: F[RequestResponseServiceState[F, REQ]] =
+  def stop =
     for {
       r <- subscription.cancel
       _ <- subscription.join
     } yield {
       logger.info(s"Shutting down $service")
       //service.executionContext.shutdown
+      this
+    }
+
+  def join =
+    for {
+      _ <- subscription.join
+    } yield {
       this
     }
 }
@@ -47,7 +54,7 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
       request.responseConsumerId match {
         case Some(responseConsumerId) =>
           logger.info(s"found response consumer id $responseConsumerId in ")
-          
+
           (for {
             producer <- messageProducer(responseConsumerId)
             response <- Deferred[F, Either[Throwable, RESP]]
@@ -176,7 +183,12 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
     }
   }
 
-
+  def startAndJoin: F[RequestResponseServiceState[F, REQ]] =
+    for {
+      state <- start
+      result <- state.join
+    } yield result
+    
 }
 
 case class ResponseConsumerIdNotFound() extends IllegalStateException

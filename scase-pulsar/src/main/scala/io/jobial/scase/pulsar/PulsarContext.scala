@@ -2,21 +2,31 @@ package io.jobial.scase.pulsar
 
 import org.apache.pulsar.client.api.PulsarClient
 
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
+
 case class PulsarContext(
   host: String = "localhost",
   port: Int = 6650,
   tenant: String = "public",
-  namespace: String = "default"
+  namespace: String = "default",
+  useDaemonThreadsInClient: Boolean = true
 ) {
-
   val brokerUrl = s"pulsar://$host:$port"
 
-  val client =
+  def createClient =
     PulsarClient
       .builder
       .serviceUrl(brokerUrl)
       .build
 
+  lazy val client =
+    if (useDaemonThreadsInClient) {
+      // Hack to initialize Pulsar client on a daemon thread so that it creates daemon threads itself...
+      import scala.concurrent.ExecutionContext.Implicits.global
+      Await.result(Future(createClient), 1.minute)
+    } else createClient
+  
   val persistentScheme = "persistent:"
 
   val nonPersistentScheme = "non-persistent:"
@@ -26,4 +36,5 @@ case class PulsarContext(
       topic
     else
       s"$persistentScheme//$tenant/$namespace/$topic"
+
 }

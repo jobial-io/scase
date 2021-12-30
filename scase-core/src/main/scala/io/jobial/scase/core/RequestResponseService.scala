@@ -2,7 +2,7 @@ package io.jobial.scase.core
 
 import cats.MonadError
 import cats.effect.Concurrent
-
+import cats.implicits._
 import scala.concurrent.duration._
 import scala.util.Try
 
@@ -121,10 +121,14 @@ trait RemoteRequestResponseServiceConfiguration[REQ, RESP] extends RequestRespon
 trait RequestResponseService[F[_], REQ, RESP] {
 
   def start: F[RequestResponseServiceState[F, REQ]]
+  
+  def startAndJoin: F[RequestResponseServiceState[F, REQ]]
 }
 
 trait RequestResponseServiceState[F[_], REQ] {
 
   def stop: F[RequestResponseServiceState[F, REQ]]
+  
+  def join: F[RequestResponseServiceState[F, REQ]]
 }
 
