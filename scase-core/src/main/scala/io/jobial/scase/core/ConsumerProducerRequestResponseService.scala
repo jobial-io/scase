@@ -52,7 +52,7 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
 
   private def handleRequest(request: MessageReceiveResult[F, REQ]) = {
     logger.info(s"received request in service: ${request.toString.take(500)}")
-    val r: F[Unit] =
+    val r: F[MessageSendResult[Either[Throwable, RESP]]] =
       request.responseConsumerId match {
         case Some(responseConsumerId) =>
           logger.info(s"found response consumer id $responseConsumerId in ")
@@ -103,29 +103,28 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
               for {
                 r <- processResultWithErrorHandling
                 res <- response.get
-                _ <- res match {
+                resultAfterSend <- res match {
                   case Right(r) =>
-                    //println("sending")
                     logger.debug(s"sending success to client for request: ${request.toString.take(500)} on $producer")
-                    val sendResult = producer.send(Right(r), responseAttributes)
-                    // commit request after result is written
-                    if (autoCommitRequest) {
-                      request.commit()
-                      logger.debug(s"service committed request: ${request.toString.take(500)} on $producer")
-                    }
-                    sendResult
+                    for {
+                      sendResult <- producer.send(Right(r), responseAttributes)
+                      // commit request after result is written
+                      _ <- if (autoCommitRequest) {
+                        logger.debug(s"service committing request: ${request.toString.take(500)} on $producer")
+                        request.commit()
+                      } else Monad[F].unit
+                    } yield sendResult
                   case Left(t) =>
-                    //println("failure")
                     logger.error(s"sending failure to client for request: ${request.toString.take(500)}", t)
                     for {
-                      _ <- producer.send(Left(t), responseAttributes)
-                    } yield
-                      if (autoCommitFailedRequest) {
+                      sendResult <- producer.send(Left(t), responseAttributes)
+                      _ <- if (autoCommitFailedRequest) {
+                        logger.debug(s"service committing request: ${request.toString.take(500)}")
                         request.commit()
-                        logger.debug(s"service committed request: ${request.toString.take(500)}")
-                      }
+                      } else Monad[F].unit
+                    } yield sendResult
                 }
-              } yield r
+              } yield resultAfterSend
              }
           } yield processorResult
         case None =>
