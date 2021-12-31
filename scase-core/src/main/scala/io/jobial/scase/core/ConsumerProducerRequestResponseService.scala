@@ -36,6 +36,8 @@ case class ConsumerProducerRequestResponseServiceState[F[_] : Monad, REQ, RESP](
     }
 }
 
+case class DefaultSendResponseResult[RESPONSE](response: RESPONSE) extends SendResponseResult[RESPONSE]
+
 case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
   messageConsumer: MessageConsumer[F, REQ],
   messageProducer: String => F[MessageProducer[F, Either[Throwable, RESP]]], // TODO: add support for fixed producer case
@@ -50,12 +52,12 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
 
   private def handleRequest(request: MessageReceiveResult[F, REQ]) = {
     logger.info(s"received request in service: ${request.toString.take(500)}")
-    val r: F[SendResponseResult[RESP]] =
+    val r: F[Unit] =
       request.responseConsumerId match {
         case Some(responseConsumerId) =>
           logger.info(s"found response consumer id $responseConsumerId in ")
 
-          (for {
+          for {
             producer <- messageProducer(responseConsumerId)
             response <- Deferred[F, Either[Throwable, RESP]]
             processorResult <- {
@@ -66,26 +68,28 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
                 requestProcessor.processRequestOrFail(new RequestContext[F] {
 
                   def reply[REQUEST, RESPONSE](req: REQUEST, r: RESPONSE)
-                    (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): F[SendResponseResult[RESPONSE]] = {
+                    (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): SendResponseResult[RESPONSE] = {
                     logger.debug(s"context sending response ${r.toString.take(500)}")
                     val re = r.asInstanceOf[RESP]
 
-                    for {
-                      _ <- response.complete(Right(re))
-                    } yield new SendResponseResult[RESPONSE] {}
+                    //                    for {
+                    //                      _ <- response.complete(Right(re))
+                    //                    } yield new 
+                    DefaultSendResponseResult[RESPONSE](r)
                   }
 
                   val requestTimeout = request.requestTimeout.getOrElse(Duration.Inf)
 
                 }, Concurrent[F])(request.message)
 
-              val processResultWithErrorHandling = processorResult.map(Right[Throwable, SendResponseResult[RESP]](_): Either[Throwable, SendResponseResult[RESP]]).handleErrorWith { case t =>
-                logger.error(s"request processing failed: ${request.toString.take(500)}", t)
-                val x = for {
-                  _ <- response.complete(Left(t))
-                } yield (Left(t): Either[Throwable, SendResponseResult[RESP]])
-                x
-              }
+              val processResultWithErrorHandling = processorResult
+                .flatMap { result =>
+                  response.complete(Right(result.response))
+                }
+                .handleErrorWith { case t =>
+                  logger.error(s"request processing failed: ${request.toString.take(500)}", t)
+                  response.complete(Left(t))
+                }
 
               // handle processor timeout
               //              futureWithTimeout(response.future, request.requestTimeout.getOrElse(10.minutes)) recover { case t =>
@@ -98,8 +102,8 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
               // send response when ready
               for {
                 r <- processResultWithErrorHandling
-                x <- response.get
-                y <- x match {
+                res <- response.get
+                _ <- res match {
                   case Right(r) =>
                     //println("sending")
                     logger.debug(s"sending success to client for request: ${request.toString.take(500)} on $producer")
@@ -121,21 +125,12 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
                         logger.debug(s"service committed request: ${request.toString.take(500)}")
                       }
                 }
-              } yield {
-                //println("finished sending reply")
-                r match {
-                  case Right(r) =>
-                    Monad[F].pure(r)
-                  case Left(t) =>
-                    // TODO: revisit this...
-                    Monad[F].pure(new SendResponseResult[RESP] {})
-                }
-              }
-            }
-          } yield processorResult).flatten
+              } yield r
+             }
+          } yield processorResult
         case None =>
           logger.error(s"response consumer id not found for request: ${request.toString.take(500)}")
-          MonadError[F, Throwable].raiseError[SendResponseResult[RESP]](ResponseConsumerIdNotFound())
+          MonadError[F, Throwable].raiseError(ResponseConsumerIdNotFound())
       }
 
     r
@@ -188,7 +183,7 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
       state <- start
       result <- state.join
     } yield result
-    
+
 }
 
 case class ResponseConsumerIdNotFound() extends IllegalStateException

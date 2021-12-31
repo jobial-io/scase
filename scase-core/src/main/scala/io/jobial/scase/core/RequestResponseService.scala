@@ -1,8 +1,9 @@
 package io.jobial.scase.core
 
-import cats.MonadError
-import cats.effect.Concurrent
+import cats.{Monad, MonadError}
+import cats.effect.{Concurrent, IO}
 import cats.implicits._
+
 import scala.concurrent.duration._
 import scala.util.Try
 
@@ -19,12 +20,15 @@ case class ResponseWrapper[RESP](
   correlationId: String
 )
 
-trait SendResponseResult[+RESP]
+trait SendResponseResult[+RESP] {
+  
+  def response: RESP
+}
 
 trait RequestContext[F[_]] {
 
   def reply[REQUEST, RESPONSE](request: REQUEST, response: RESPONSE)
-    (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): F[SendResponseResult[RESPONSE]]
+    (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): SendResponseResult[RESPONSE]
 
   def requestTimeout: Duration
 }
@@ -99,7 +103,7 @@ trait RequestProcessor[F[_], REQ, RESP] {
   def sequentialRequestProcessing = false
 
   def sequentialRequestProcessingTimeout = 1.hour
-
+  
 }
 
 /**

@@ -5,7 +5,7 @@ import cats.effect.Concurrent
 import cats.effect.concurrent.Deferred
 import cats.implicits._
 import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
-import io.jobial.scase.core.{RequestContext, RequestProcessor, RequestResponseMapping, SendResponseResult}
+import io.jobial.scase.core.{DefaultSendResponseResult, RequestContext, RequestProcessor, RequestResponseMapping, SendResponseResult}
 import io.jobial.scase.logging.Logging
 import org.apache.commons.io.IOUtils
 import org.joda.time.DateTime
@@ -29,7 +29,7 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP](val serviceConfiguration: L
       logger.warn(s"Already invoked with request Id $awsRequestId, not retrying.")
     } else {
       val requestString = IOUtils.toString(inputStream, "utf-8")
-      
+
 
       logger.info(s"received request: ${requestString.take(500)}")
 
@@ -45,18 +45,19 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP](val serviceConfiguration: L
               val requestTimeout = 15.minutes
 
               override def reply[REQUEST, RESPONSE](request: REQUEST, response: RESPONSE)
-                (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): F[SendResponseResult[RESPONSE]] =
-                for {
-                  _ <- responseDeferred.complete(Right(r.asInstanceOf[RESP]))
-                } yield new SendResponseResult[RESPONSE] {}
+                (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): SendResponseResult[RESPONSE] =
+                DefaultSendResponseResult[RESPONSE](response)
 
             }, concurrent)(request)
           // TODO: use redeem when Cats is upgraded, 2.0.0 simply doesn't support mapping errors to an F[B]...
-          _ <- processorResult.handleError { t =>
-            logger.error(s"request processing failed: $request", t)
-            responseDeferred.complete(Left(t))
-            new SendResponseResult[RESP] {}
-          }
+          _ <- processorResult
+            .map { result =>
+              responseDeferred.complete(Right(result.response))
+            }
+            .handleError { t =>
+              logger.error(s"request processing failed: $request", t)
+              responseDeferred.complete(Left(t))
+            }
         } yield
           // send response when ready
           r match {

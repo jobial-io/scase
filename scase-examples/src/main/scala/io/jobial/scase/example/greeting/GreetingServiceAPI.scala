@@ -2,7 +2,6 @@ package io.jobial.scase.example.greeting
 
 import io.jobial.scase.core._
 
-
 sealed trait GreetingRequest[RESPONSE] extends Request[RESPONSE]
 
 sealed trait GreetingResponse

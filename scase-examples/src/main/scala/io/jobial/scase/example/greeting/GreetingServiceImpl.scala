@@ -9,6 +9,8 @@ trait GreetingService extends RequestProcessor[IO, GreetingRequest[_ <: Greeting
     case m: Hello =>
       m ! HelloResponse(s"Hello, ${m.person}!")
     case m: Hi =>
-      m ! HiResponse(s"Hi ${m.person}!")
+      for {
+        _ <- IO(println(s"processing request $m..."))
+      } yield m ! HiResponse(s"Hi ${m.person}!") 
   }
 }

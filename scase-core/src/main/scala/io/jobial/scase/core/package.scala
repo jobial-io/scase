@@ -1,6 +1,7 @@
 package io.jobial.scase
 
 import cats.Monad
+import cats.effect.IO
 import io.jobial.scase.logging.Logging
 import shapeless._
 import cats.implicits._
@@ -56,4 +57,5 @@ package object core extends Logging {
       Monad[F].map(sendRequest(request).response)(_.message)
   }
 
+  implicit def sendResponseResultToIO[T](result: SendResponseResult[T]): IO[SendResponseResult[T]] = IO(result)
 }
