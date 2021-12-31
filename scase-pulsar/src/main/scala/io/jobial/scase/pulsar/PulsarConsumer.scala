@@ -5,6 +5,7 @@ import cats.effect.concurrent.Ref
 import cats.effect.{Concurrent, ContextShift, IO, Sync}
 import cats.implicits._
 import io.jobial.scase.core.{DefaultMessageConsumer, MessageReceiveResult}
+import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
 
 import java.util.UUID.randomUUID
@@ -15,7 +16,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 case class PulsarConsumer[F[_], M](topic: String, subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]])(implicit context: PulsarContext, cs: ContextShift[IO])
-  extends DefaultMessageConsumer[F, M] {
+  extends DefaultMessageConsumer[F, M] with Logging {
 
   val subscriptionName = s"$topic-subscription-${randomUUID}"
 
@@ -41,8 +42,9 @@ case class PulsarConsumer[F[_], M](topic: String, subscriptions: Ref[F, List[Mes
     for {
       // TODO: eliminate IO here by implementing concurrentFromFuture
       pulsarMessage <- Concurrent[F].liftIO(IO.fromFuture(IO(toScala(consumer.receiveAsync))))
-      //      _ = println(s"received message $pulsarMessage on $topic")
-      _ <- Unmarshaller[M].unmarshal(pulsarMessage.getData) match {
+      _ = logger.debug(s"received message ${new String(pulsarMessage.getData).take(200)} on $topic")
+      x = Unmarshaller[M].unmarshal(pulsarMessage.getData)
+      _ <- x match {
         case Right(message) =>
           val attributes = pulsarMessage.getProperties.toMap
           val messageReceiveResult = MessageReceiveResult(message, attributes, { () => Monad[F].pure() }, { () => Monad[F].pure() })

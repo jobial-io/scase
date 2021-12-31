@@ -13,7 +13,7 @@ case class TestResponse1(request: TestRequest1, greeting: String) extends TestRe
 
 case class TestResponse2(request: TestRequest2, greeting: String) extends TestResponse
 
-case object TestException extends Exception("test exception")
+case class TestException(message: String) extends Exception(message)
 
 trait RequestResponseTestModel {
 

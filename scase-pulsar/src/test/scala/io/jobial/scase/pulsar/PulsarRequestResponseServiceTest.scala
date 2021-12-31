@@ -1,13 +1,12 @@
 package io.jobial.scase.pulsar
 
 import cats.effect.IO
-import io.jobial.scase.core.{RequestContext, RequestProcessor, RequestResponseMapping, RequestResponseTestSupport, SendRequestContext, TestRequest, TestRequest1, TestRequest2, TestResponse}
-import io.jobial.scase.local.{LocalRequestResponseServiceConfiguration, localServiceAndClient}
-
-import concurrent.duration._
-import scala.concurrent.TimeoutException
-import io.jobial.scase.marshalling.circe._
 import io.circe.generic.auto._
+import io.jobial.scase.core._
+import io.jobial.scase.marshalling.circe._
+
+import scala.concurrent.TimeoutException
+import scala.concurrent.duration._
 
 
 class PulsarRequestResponseServiceTest
@@ -24,9 +23,9 @@ class PulsarRequestResponseServiceTest
     }
   }
 
-  trait Req
+  sealed trait Req
 
-  trait Resp
+  sealed trait Resp
 
   case class Req1() extends Req
 
@@ -41,9 +40,19 @@ class PulsarRequestResponseServiceTest
         r.reply(Resp1())
     }
   }
-  
+
+  val requestProcessorWithError = new RequestProcessor[IO, TestRequest[_ <: TestResponse], TestResponse] {
+    override def processRequest(implicit context: RequestContext[IO]) = {
+      case r: TestRequest1 =>
+        println("replying...")
+        r ! response1
+      case r: TestRequest2 =>
+        IO.raiseError(TestException("exception!!!"))
+    }
+  }
+
   implicit val pulsarContext = PulsarContext()
-  
+
   "request-response service" should "reply successfully" in {
     val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello-test")
 
@@ -72,9 +81,9 @@ class PulsarRequestResponseServiceTest
       r1 <- client ? Req1()
     } yield assert(Resp1() == r)
   }
-  
+
   "request" should "time out if service is not started" in {
-    val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello-test")
+    val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello-timeout-test")
     implicit val context = SendRequestContext(requestTimeout = Some(1.second))
 
     recoverToSucceededIf[TimeoutException] {
@@ -85,4 +94,19 @@ class PulsarRequestResponseServiceTest
       } yield succeed
     }
   }
+
+  "request-response service" should "reply with error" in {
+    val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello-error-test")
+
+    for {
+      service <- serviceConfig.service(requestProcessorWithError)
+      _ <- service.start
+      client <- serviceConfig.client[IO]
+      r1 <- client ? request1
+      r2 <- (client ? request2).map(_ => fail("expected exception")).handleErrorWith { case TestException("exception!!!") => IO(succeed) }
+    } yield {
+      assert(r1 === response1)
+    }
+  }
+
 }

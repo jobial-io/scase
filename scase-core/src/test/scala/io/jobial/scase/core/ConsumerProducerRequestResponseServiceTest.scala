@@ -82,11 +82,11 @@ class ConsumerProducerRequestResponseServiceTest
             println("replying...")
             r.reply(response1)
           case r: TestRequest2 =>
-            IO.raiseError(TestException)
+            IO.raiseError(TestException("exception!!!"))
         }
       },
       request2,
-      Left(TestException)
+      Left(TestException("exception!!!"))
     )
   }
 
