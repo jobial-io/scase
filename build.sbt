@@ -48,7 +48,7 @@ lazy val AwsLambdaJavaCoreVersion = "1.2.1"
 lazy val CommonsIoVersion = "2.8.0"
 lazy val CommonsLangVersion = "3.12.0"
 lazy val CloudformationTemplateGeneratorVersion = "3.10.5-SNAPSHOT"
-lazy val SclapVersion = "1.1.4"
+lazy val SclapVersion = "1.1.5"
 lazy val CirceVersion = "0.12.0-M3"
 lazy val SprayJsonVersion = "1.3.6"
 lazy val PulsarVersion = "2.9.0"
@@ -199,7 +199,8 @@ lazy val `scase-zio-example` = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio-interop-cats" % ZioVersion
+      "dev.zio" %% "zio-interop-cats" % ZioVersion,
+      "io.jobial" %% "sclap-zio" % SclapVersion
     )
   )
   .dependsOn(`scase-examples`)

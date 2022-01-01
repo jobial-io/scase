@@ -84,7 +84,7 @@ TODO: usage in sbt, maven...
 
 ### Cats Effect
 
-**Scase** is built on Cats Effect.
+**Scase** is built on Cats Effect. The usual effect types in Cats effect (IO, for example) are supported.
 
 ### ZIO
 

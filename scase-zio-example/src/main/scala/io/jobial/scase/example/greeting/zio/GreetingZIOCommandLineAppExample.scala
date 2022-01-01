@@ -1,6 +1,7 @@
 package io.jobial.scase.example.greeting.zio
 
 import io.jobial.scase.example.greeting.Hello
+import io.jobial.sclap.zio.ZIOCommandLineApp
 import zio._
 import zio.interop.catz._
 import zio.interop.catz.implicits._
