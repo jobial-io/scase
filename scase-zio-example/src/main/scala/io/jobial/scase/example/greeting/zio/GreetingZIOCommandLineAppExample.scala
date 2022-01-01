@@ -1,0 +1,17 @@
+package io.jobial.scase.example.greeting.zio
+
+import io.jobial.scase.example.greeting.Hello
+import zio._
+import zio.interop.catz._
+import zio.interop.catz.implicits._
+
+object GreetingZIOCommandLineAppExample extends ZIOCommandLineApp with GreetingServiceConfig {
+
+  def run =
+    for {
+      t <- greetingServiceConfig.serviceAndClient[Task](new GreetingService {})
+      (service, client) = t
+      _ <- service.start
+      helloResponse <- client ? Hello("world")
+    } yield println(helloResponse.sayingHello)
+}

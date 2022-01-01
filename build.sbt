@@ -35,7 +35,8 @@ lazy val commonSettings = Seq(
   publishTo := publishTo.value.orElse(sonatypePublishToBundle.value),
   sonatypeProjectHosting := Some(GitHubHosting("jobial-io", "scase", "orbang@jobial.io")),
   organizationName := "Jobial OÜ",
-  licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt"))
+  licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
+  addCompilerPlugin("org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full)
 )
 
 lazy val CatsVersion = "2.0.0"
@@ -51,6 +52,7 @@ lazy val SclapVersion = "1.1.4"
 lazy val CirceVersion = "0.12.0-M3"
 lazy val SprayJsonVersion = "1.3.6"
 lazy val PulsarVersion = "2.9.0"
+lazy val ZioVersion = "2.0.0.0-RC13" // TODO: upgrade when Cats version is upgraded
 
 lazy val root: Project = project
   .in(file("."))
@@ -185,7 +187,6 @@ lazy val `scase-examples` = project
 lazy val `scase-spray-json-example` = project
   .in(file("scase-spray-json-example"))
   .settings(commonSettings)
-  .enablePlugins(SbtScaseCloudformationPlugin)
   .settings(
     libraryDependencies ++= Seq(
       "io.jobial" %% "sclap" % SclapVersion
@@ -193,3 +194,12 @@ lazy val `scase-spray-json-example` = project
   )
   .dependsOn(`scase-spray-json` % "compile->compile;test->test")
   .dependsOn(`scase-pulsar`)
+
+lazy val `scase-zio-example` = project
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-interop-cats" % ZioVersion
+    )
+  )
+  .dependsOn(`scase-examples`)

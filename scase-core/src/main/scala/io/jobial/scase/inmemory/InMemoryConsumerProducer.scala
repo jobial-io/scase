@@ -6,10 +6,11 @@ import cats.effect.concurrent.{Deferred, Ref}
 import cats.implicits._
 import cats.effect.implicits._
 import io.jobial.scase.core.{DefaultMessageConsumer, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSendResult, MessageSubscription}
+import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 
-trait InMemoryConsumerProducer[F[_], M] extends DefaultMessageConsumer[F, M] with MessageProducer[F, M] {
+trait InMemoryConsumerProducer[F[_], M] extends DefaultMessageConsumer[F, M] with MessageProducer[F, M] with Logging {
 
   val deliverToAllSubscribers: Boolean
 
@@ -32,11 +33,11 @@ trait InMemoryConsumerProducer[F[_], M] extends DefaultMessageConsumer[F, M] wit
 
     for {
       r <- subscriptions.get
-      _ = println(r)
+      //_ = println(r)
       _ <- Traverse[List].sequence[F, Any](for {
         subscription <- r.asInstanceOf[List[MessageReceiveResult[F, M] => F[Any]]]
       } yield {
-        println(s"calling subscription on queue with $messageReceiveResult")
+        logger.debug(s"calling subscription on queue with $messageReceiveResult")
         subscription(messageReceiveResult)
       })
     } yield MessageSendResult[M]()
