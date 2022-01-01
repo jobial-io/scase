@@ -14,7 +14,7 @@
 name := "scase"
 
 ThisBuild / organization := "io.jobial"
-ThisBuild / scalaVersion := "2.11.12"
+ThisBuild / scalaVersion := "2.12.13"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.13", "2.13.6")
 ThisBuild / version := "0.1.0"
 ThisBuild / isSnapshot := true
@@ -61,8 +61,8 @@ lazy val root: Project = project
     assemblyPackageScala / assembleArtifact := false,
     assemblyPackageDependency / assembleArtifact := false
   )
-  .aggregate(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-examples`) // , `sbt-scase-cloudformation`
-  .dependsOn(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-examples`) // , `sbt-scase-cloudformation`
+  .aggregate(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-examples`, `sbt-scase-cloudformation`)
+  .dependsOn(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-examples`, `sbt-scase-cloudformation`)
 
 lazy val `scase-core` = project
   .in(file("scase-core"))
@@ -138,13 +138,21 @@ lazy val `scase-circe` = project
     ).map(_ % CirceVersion))
   .dependsOn(`scase-core` % "compile->compile;test->test")
 
-//lazy val `sbt-scase-cloudformation` = project
-//    .in(file("sbt-scase-cloudformation"))
-//    .settings(
-//      name := "sbt-scase-cloudformation",
-//      sbtPlugin := scalaBinaryVersion.value != "2.11",
-//      pluginCrossBuild / sbtVersion := "1.2.8" // set minimum sbt version
-//    )
+
+// check https://stackoverflow.com/questions/37525980/sbt-exclude-module-from-aggregates-or-compilation-based-on-scala-version
+lazy val `sbt-scase-cloudformation` = project
+    .in(file("sbt-scase-cloudformation"))
+    .settings(
+      name := "sbt-scase-cloudformation",
+      publish := scalaBinaryVersion.value == "2.12",
+//      unmanagedSources / excludeFilter := AllPassFilter,
+//      managedSources / excludeFilter := AllPassFilter,
+      Compile / unmanagedSourceDirectories := (if (scalaBinaryVersion.value == "2.12") Seq(baseDirectory.value / "src") else Nil),
+//      Compile / managedSourceDirectories := Nil,
+      publishMavenStyle := scalaBinaryVersion.value == "2.12",
+      sbtPlugin := scalaBinaryVersion.value == "2.12",
+      pluginCrossBuild / sbtVersion := "1.2.8" // set minimum sbt version
+    )
 
 lazy val `scase-pulsar` = project
   .in(file("scase-pulsar"))
