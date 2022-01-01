@@ -147,7 +147,7 @@ lazy val `sbt-scase-cloudformation` = project
       publish := scalaBinaryVersion.value == "2.12",
 //      unmanagedSources / excludeFilter := AllPassFilter,
 //      managedSources / excludeFilter := AllPassFilter,
-      Compile / unmanagedSourceDirectories := (if (scalaBinaryVersion.value == "2.12") Seq(baseDirectory.value / "src") else Nil),
+      Compile / unmanagedSourceDirectories := (if (scalaBinaryVersion.value == "2.12") Seq(baseDirectory.value / "src" / "main" / "scala") else Nil),
 //      Compile / managedSourceDirectories := Nil,
       publishMavenStyle := scalaBinaryVersion.value == "2.12",
       sbtPlugin := scalaBinaryVersion.value == "2.12",
