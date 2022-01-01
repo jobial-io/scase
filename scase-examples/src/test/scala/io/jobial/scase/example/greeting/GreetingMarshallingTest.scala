@@ -3,6 +3,7 @@ package io.jobial.scase.example.greeting
 import io.jobial.scase.core._
 import io.jobial.scase.example.greeting.lambda.GreetingServiceLambdaConfig
 import org.scalatest.flatspec.AsyncFlatSpec
+import cats.syntax.either._
 
 class GreetingMarshallingTest
   extends AsyncFlatSpec

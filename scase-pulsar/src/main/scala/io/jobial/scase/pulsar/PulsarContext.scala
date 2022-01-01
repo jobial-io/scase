@@ -22,7 +22,7 @@ case class PulsarContext(
 
   lazy val client =
     if (useDaemonThreadsInClient) {
-      // Hack to initialize Pulsar client on a daemon thread so that it creates daemon threads itself...
+      // Hack to initialize the Pulsar client on a daemon thread so that it creates daemon threads itself...
       import scala.concurrent.ExecutionContext.Implicits.global
       Await.result(Future(createClient), 1.minute)
     } else createClient

@@ -4,7 +4,7 @@ import cats.effect.IO
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 import org.apache.commons.io.IOUtils
 import spray.json._
-
+import io.jobial.scase.util.TryExtension
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, OutputStream, PrintStream}
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.Base64

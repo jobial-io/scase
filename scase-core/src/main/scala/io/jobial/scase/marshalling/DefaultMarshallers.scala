@@ -3,6 +3,7 @@ package io.jobial.scase.marshalling
 import cats.effect.IO
 
 import java.io.{InputStream, OutputStream}
+import scala.util.{Failure, Success, Try}
 
 trait DefaultMarshallers {
 

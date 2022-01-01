@@ -1,8 +1,8 @@
 package io.jobial.scase.marshalling.serialization
 
 import cats.effect.IO
-import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
-
+import io.jobial.scase.marshalling._
+import io.jobial.scase.util.TryExtension
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, ObjectInputStream, ObjectOutputStream, OutputStream}
 import java.util.Base64
 import java.util.zip.{GZIPInputStream, GZIPOutputStream}

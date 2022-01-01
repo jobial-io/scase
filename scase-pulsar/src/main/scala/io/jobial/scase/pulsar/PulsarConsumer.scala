@@ -10,7 +10,7 @@ import io.jobial.scase.marshalling.Unmarshaller
 
 import java.util.UUID.randomUUID
 import java.util.concurrent.{CompletableFuture, Executors}
-import scala.collection.convert.ImplicitConversions.`map AsScala`
+import scala.collection.JavaConverters._
 import scala.compat.java8.FutureConverters.toScala
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -46,7 +46,7 @@ case class PulsarConsumer[F[_], M](topic: String, subscriptions: Ref[F, List[Mes
       x = Unmarshaller[M].unmarshal(pulsarMessage.getData)
       _ <- x match {
         case Right(message) =>
-          val attributes = pulsarMessage.getProperties.toMap
+          val attributes = pulsarMessage.getProperties.asScala.toMap
           val messageReceiveResult = MessageReceiveResult(message, attributes, { () => Monad[F].pure() }, { () => Monad[F].pure() })
           callback(messageReceiveResult)
         case Left(error) =>

@@ -14,17 +14,18 @@
 name := "scase"
 
 ThisBuild / organization := "io.jobial"
-ThisBuild / scalaVersion := "2.12.13"
+ThisBuild / scalaVersion := "2.11.12"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.13", "2.13.6")
 ThisBuild / version := "0.1.0"
 ThisBuild / isSnapshot := true
+ThisBuild / scalacOptions += "-target:jvm-1.8"
 
 ThisBuild / assembly / assemblyMergeStrategy := {
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
   case x => MergeStrategy.first
 }
 
-import sbt.Keys.{description, publishConfiguration}
+import sbt.Keys.{description, libraryDependencies, publishConfiguration}
 import sbtassembly.AssemblyPlugin.autoImport.{ShadeRule, assemblyPackageScala}
 import xerial.sbt.Sonatype._
 
@@ -48,7 +49,8 @@ lazy val CommonsLangVersion = "3.12.0"
 lazy val CloudformationTemplateGeneratorVersion = "3.10.5-SNAPSHOT"
 lazy val SclapVersion = "1.1.4"
 lazy val CirceVersion = "0.12.0-M3"
-
+lazy val SprayJsonVersion = "1.3.6"
+lazy val PulsarVersion = "2.9.0"
 
 lazy val root: Project = project
   .in(file("."))
@@ -59,8 +61,8 @@ lazy val root: Project = project
     assemblyPackageScala / assembleArtifact := false,
     assemblyPackageDependency / assembleArtifact := false
   )
-  .aggregate(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-examples`, `sbt-scase-cloudformation`)
-  .dependsOn(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-examples`, `sbt-scase-cloudformation`)
+  .aggregate(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-examples`) // , `sbt-scase-cloudformation`
+  .dependsOn(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-examples`) // , `sbt-scase-cloudformation`
 
 lazy val `scase-core` = project
   .in(file("scase-core"))
@@ -115,8 +117,13 @@ lazy val `scase-spray-json` = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "io.spray" %% "spray-json" % "1.3.6"
-    )
+      "io.spray" %% "spray-json" % SprayJsonVersion
+    ),
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-core",
+      "io.circe" %% "circe-generic",
+      "io.circe" %% "circe-parser"
+    ).map(_ % CirceVersion)
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
 
@@ -131,24 +138,20 @@ lazy val `scase-circe` = project
     ).map(_ % CirceVersion))
   .dependsOn(`scase-core` % "compile->compile;test->test")
 
-lazy val `sbt-scase-cloudformation` = (project in file("sbt-scase-cloudformation"))
-  .settings(
-    name := "sbt-scase-cloudformation",
-    sbtPlugin := true,
-    pluginCrossBuild / sbtVersion := {
-      scalaBinaryVersion.value match {
-        case "2.12" => "1.2.8" // set minimum sbt version
-        case "2.13" => "1.2.8" // set minimum sbt version
-      }
-    }
-  )
+//lazy val `sbt-scase-cloudformation` = project
+//    .in(file("sbt-scase-cloudformation"))
+//    .settings(
+//      name := "sbt-scase-cloudformation",
+//      sbtPlugin := scalaBinaryVersion.value != "2.11",
+//      pluginCrossBuild / sbtVersion := "1.2.8" // set minimum sbt version
+//    )
 
 lazy val `scase-pulsar` = project
   .in(file("scase-pulsar"))
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "org.apache.pulsar" % "pulsar-client" % "2.9.0",
+      "org.apache.pulsar" % "pulsar-client" % PulsarVersion,
       "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.2"
     )
   )
@@ -171,3 +174,14 @@ lazy val `scase-examples` = project
   .dependsOn(`scase-cloudformation` % "compile->compile;test->test")
   .dependsOn(`scase-pulsar`)
 
+lazy val `scase-spray-json-example` = project
+  .in(file("scase-spray-json-example"))
+  .settings(commonSettings)
+  .enablePlugins(SbtScaseCloudformationPlugin)
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.jobial" %% "sclap" % SclapVersion
+    )
+  )
+  .dependsOn(`scase-spray-json` % "compile->compile;test->test")
+  .dependsOn(`scase-pulsar`)

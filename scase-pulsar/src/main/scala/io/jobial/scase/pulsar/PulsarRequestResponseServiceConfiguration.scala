@@ -13,7 +13,7 @@ case class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshal
   requestTopic: String,
   responseTopicOverride: Option[String],
   requestTimeout: Duration,
-  batchingMaxPublishDelay: Duration,
+  batchingMaxPublishDelay: Duration
 )(
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher
   implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
@@ -58,7 +58,7 @@ object PulsarRequestResponseServiceConfiguration {
     requestTopic: String,
     responseTopicOverride: Option[String] = None,
     requestTimeout: Duration = 5.minutes,
-    batchingMaxPublishDelay: Duration = 1.millis,
+    batchingMaxPublishDelay: Duration = 1.millis
   )(
     //implicit monitoringPublisher: MonitoringPublisher = noPublisher
     implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],

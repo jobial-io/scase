@@ -3,12 +3,12 @@ package io.jobial.scase.marshalling.circe
 import io.circe.Decoder.Result
 import io.circe.syntax.EncoderOps
 import io.circe.{Decoder, Encoder, HCursor, Json}
-
+import cats.syntax.either._
 import scala.util.Try
 
 trait CirceDefaultCodecs {
 
-  implicit val throwableEncoder = new Encoder[Throwable] {
+  implicit val throwableEncoder: Encoder[Throwable] = new Encoder[Throwable] {
     override def apply(a: Throwable): Json = Json.obj(
       "errorMessage" -> Json.fromString(a.getMessage),
       "errorType" -> Json.fromString(a.getClass.getName)
@@ -16,7 +16,7 @@ trait CirceDefaultCodecs {
     )
   }
 
-  implicit val throwableDecoder = new Decoder[Throwable] {
+  implicit val throwableDecoder:Decoder[Throwable] = new Decoder[Throwable] {
     override def apply(c: HCursor): Result[Throwable] = {
       for {
         message <- c.downField("errorMessage").as[String]
@@ -35,11 +35,13 @@ trait CirceDefaultCodecs {
   implicit def encodeEither[A, B](implicit
     encoderA: Encoder[A],
     encoderB: Encoder[B]
-  ): Encoder[Either[A, B]] = {
-    case Left(a) =>
-      encoderA(a)
-    case Right(b) =>
-      encoderB(b)
+  ): Encoder[Either[A, B]] = new Encoder[Either[A, B]] {
+    override def apply(o: Either[A, B]): Json = o match {
+      case Left(a: A) =>
+        encoderA(a)
+      case Right(b: B) =>
+        encoderB(b)
+    }
   }
 
   implicit def decodeEither[A, B](implicit
@@ -48,7 +50,7 @@ trait CirceDefaultCodecs {
   ): Decoder[Either[A, B]] = {
     val left: Decoder[Either[A, B]] = decoderA.map(Left.apply)
     val right: Decoder[Either[A, B]] = decoderB.map(Right.apply)
-    // Prioritising right to left
+    // Prioritising right over left
     right or left
   }
 
