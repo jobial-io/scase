@@ -5,7 +5,14 @@ pipelines:
   default:
     - step:
        script:
-       - build-with-sbt
+         - build-with-sbt
+       services:
+         - pulsar 
+
+definitions:
+  services:
+    pulsar:
+      image: apachepulsar/pulsar-standalone:2.7.4
 
 options:
   max-time: 30
