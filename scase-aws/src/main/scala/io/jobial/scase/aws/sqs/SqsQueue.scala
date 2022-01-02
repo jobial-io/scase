@@ -24,7 +24,7 @@ case class SqsQueue[F[_], M](
   cleanup: Boolean = false
 )(
   implicit override val awsContext: AwsContext
-) extends Queue[F, M]
+) extends MessageQueue[F, M]
   with SqsClient
   with Logging {
 

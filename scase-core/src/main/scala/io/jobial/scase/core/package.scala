@@ -16,12 +16,6 @@ package object core extends Logging {
     client: RequestResponseClient[F, _ >: REQUEST, _ >: RESPONSE], sendRequestContext: SendRequestContext = SendRequestContext(), M: Monad[F]): F[RESPONSE] =
     client.?(request)
 
-  val CorrelationIdKey = "CorrelationId"
-
-  val ResponseConsumerIdKey = "ResponseConsumerId"
-
-  val RequestTimeoutKey = "RequestTimeout"
-
   implicit class RequestExtension[F[_], REQUEST](request: REQUEST) {
 
     /**
@@ -30,6 +24,9 @@ package object core extends Logging {
     def reply[RESPONSE](response: RESPONSE)(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], context: RequestContext[F]) =
       context.reply(request, response)
 
+    /**
+     * Syntactic sugar to allow the syntax request ! response.
+     */
     def ![RESPONSE](response: RESPONSE)(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], context: RequestContext[F]) =
       reply(response)
   }
@@ -58,4 +55,11 @@ package object core extends Logging {
   }
 
   implicit def sendResponseResultToIO[T](result: SendResponseResult[T]): IO[SendResponseResult[T]] = IO(result)
+
+  val CorrelationIdKey = "CorrelationId"
+
+  val ResponseConsumerIdKey = "ResponseConsumerId"
+
+  val RequestTimeoutKey = "RequestTimeout"
+
 }

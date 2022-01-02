@@ -16,12 +16,7 @@ case class LocalRequestResponseServiceConfiguration[REQ, RESP](
   serviceName: String
 )(
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher
-
 ) extends RequestResponseServiceConfiguration[REQ, RESP] {
-
-  //  lazy val requestQueue = InMemoryQueue[F, REQ]()
-  //
-  //  lazy val responseQueue = InMemoryQueue[F, Either[Throwable, RESP]]()
 
   def serviceAndClient[F[_] : Concurrent: Timer](requestProcessor: RequestProcessor[F, REQ, RESP]) =
     for {
@@ -39,22 +34,4 @@ case class LocalRequestResponseServiceConfiguration[REQ, RESP](
       )
     } yield (service, client)
 
-  //  lazy val client =
-  //    ConsumerProducerRequestResponseClient[F, REQ, RESP](responseQueue, () => requestQueue,
-  //      responseConsumerId = randomUUID().toString, name = serviceName)
 }
-
-//case class LocalRequestResponseService[F[_], REQ, RESP](
-//  requestProcessor: RequestProcessor[F, REQ, RESP],
-//  requestQueue: InMemoryQueue[F, REQ],
-//  responseQueue: InMemoryQueue[F, Either[Throwable, RESP]]
-//)(
-//  implicit s: Concurrent[F]
-//) extends RequestResponseService[F, REQ, RESP] with Logging {
-//
-//  val service = ConsumerProducerRequestResponseService[F, REQ, RESP](
-//    requestQueue,
-//    { _ => Concurrent[F].delay(responseQueue) },
-//    requestProcessor
-//  )
-//}

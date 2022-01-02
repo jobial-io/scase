@@ -4,7 +4,7 @@ import cats.Monad
 import cats.implicits._
 import cats.effect.{ContextShift, IO, Sync}
 import cats.effect.concurrent.Ref
-import io.jobial.scase.core.{MessageReceiveResult, Queue}
+import io.jobial.scase.core.{MessageReceiveResult, MessageQueue}
 
 
 /**
@@ -14,7 +14,7 @@ case class InMemoryQueue[F[_], M](
   subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]],
   deliverToAllSubscribers: Boolean = true,
   allowMultipleSubscribers: Boolean = false
-) extends Queue[F, M] with InMemoryConsumerProducer[F, M]
+) extends MessageQueue[F, M] with InMemoryConsumerProducer[F, M]
 
 object InMemoryQueue {
 

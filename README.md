@@ -2,7 +2,7 @@
 
 Run Scala code as a portable serverless function or microservice, with zero boilerplate and maximum type safety.
 
-Scase is a lightweight library that bridges the gap between different microservice platforms / APIs and functional code.
+Scase is a lightweight library that bridges the gap between different microservice platforms / APIs and functional Scala code.
 
 ## Introduction
 
