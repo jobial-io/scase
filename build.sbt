@@ -47,7 +47,7 @@ lazy val AwsVersion = "1.11.557"
 lazy val AwsLambdaJavaCoreVersion = "1.2.1"
 lazy val CommonsIoVersion = "2.8.0"
 lazy val CommonsLangVersion = "3.12.0"
-lazy val CloudformationTemplateGeneratorVersion = "3.10.5-SNAPSHOT"
+lazy val CloudformationTemplateGeneratorVersion = "3.10.4"
 lazy val SclapVersion = "1.1.5"
 lazy val CirceVersion = "0.12.0-M3"
 lazy val SprayJsonVersion = "1.3.6"
@@ -106,7 +106,7 @@ lazy val `scase-cloudformation` = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "com.bayer" %% "cloud-formation-template-generator" % CloudformationTemplateGeneratorVersion,
+      "io.jobial" %% "cloud-formation-template-generator" % CloudformationTemplateGeneratorVersion,
       "io.jobial" %% "sclap" % SclapVersion
     ),
     assemblyPackageScala / assembleArtifact := false,
