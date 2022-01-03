@@ -1,27 +1,12 @@
 package io.jobial.scase.core
 
-import cats.{Monad, MonadError}
-import cats.effect.{Concurrent, IO}
-import cats.implicits._
+import cats.MonadError
 
 import scala.concurrent.duration._
 import scala.util.Try
 
-case class RequestWrapper[REQ](
-  payload: REQ,
-  correlationId: String,
-  responseConsumerId: String,
-  requestTimeout: Duration
-)
-
-// Error handling and correlation is part of the protocol, a wrapper is needed to allow meta information
-case class ResponseWrapper[RESP](
-  payload: Try[RESP],
-  correlationId: String
-)
-
 trait SendResponseResult[+RESP] {
-  
+
   def response: RESP
 }
 
@@ -79,6 +64,8 @@ trait RequestHandler[F[_], REQ, RESP] {
   /**
    * Reply is sent through the sender to enforce the response type specific for the request. 
    * Return type is SendResponseResult to make sure a reply has been sent by processRequest. 
+   *
+   * TODO: get rid of MonadError...
    */
   def handleRequestOrFail(implicit context: RequestContext[F], me: MonadError[F, Throwable]): Function[REQ, F[SendResponseResult[RESP]]] =
     handleRequest
@@ -92,5 +79,5 @@ trait RequestHandler[F[_], REQ, RESP] {
   def afterResponse(request: REQ): PartialFunction[Try[SendResponseResult[RESP]], Unit] = {
     case _ =>
   }
-  
+
 }

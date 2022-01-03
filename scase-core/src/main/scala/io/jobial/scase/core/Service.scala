@@ -1,12 +1,5 @@
 package io.jobial.scase.core
 
-import cats.{Monad, MonadError}
-import cats.effect.{Concurrent, IO}
-import cats.implicits._
-
-import scala.concurrent.duration._
-import scala.util.Try
-
 
 trait Service[F[_]] {
 

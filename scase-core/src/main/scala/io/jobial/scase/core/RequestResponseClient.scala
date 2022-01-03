@@ -8,7 +8,7 @@ trait RequestResult[F[_], RESPONSE] {
 
   def response: F[MessageReceiveResult[F, RESPONSE]]
 
-  def commit: F[_]
+  def commit: F[Unit]
 }
 
 case class SendRequestContext(

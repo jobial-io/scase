@@ -10,5 +10,3 @@ trait MessageHandler[F[_], M] {
 
   def handleMessage(implicit context: MessageContext[F]): Handler
 }
-
-

@@ -2,7 +2,7 @@ package io.jobial.scase.core
 
 trait SendResult[F[_]] {
 
-  def commit: F[_]
+  def commit: F[Unit]
 }
 
 trait SenderClient[F[_], REQ] {

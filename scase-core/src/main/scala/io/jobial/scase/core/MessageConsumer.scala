@@ -1,8 +1,6 @@
 package io.jobial.scase.core
 
 import cats.effect.Concurrent
-import cats.effect.concurrent.{Deferred, Ref}
-import cats.implicits._
 import io.jobial.scase.marshalling.Unmarshaller
 
 import scala.concurrent.duration._
@@ -11,7 +9,7 @@ case class MessageReceiveResult[F[_], M](
   message: M,
   attributes: Map[String, String],
   commit: () => F[Unit], // commit the message
-  rollback: () => F[_]
+  rollback: () => F[Unit]
 ) {
 
   def correlationId = attributes.get(CorrelationIdKey)
@@ -23,9 +21,9 @@ case class MessageReceiveResult[F[_], M](
 
 trait MessageSubscription[F[_], M] {
 
-  def join: F[_]
+  def join: F[Unit]
 
-  def cancel: F[_] // cancel the subscription
+  def cancel: F[Unit] // cancel the subscription
 
   def isCancelled: F[Boolean]
 }
@@ -33,10 +31,9 @@ trait MessageSubscription[F[_], M] {
 trait MessageConsumer[F[_], M] {
 
   // Subscribes to the message source. In the background, subscribe might start async processing (e.g. a Fiber to poll messages in a source).
+  // TODO: get rid of Concurrent
   def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]): F[MessageSubscription[F, M]]
 }
-
-
 
 case class CouldNotFindMessageToCommit[M](
   message: M
