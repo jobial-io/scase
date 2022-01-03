@@ -2,7 +2,13 @@
 
 Run Scala code as a portable serverless function or microservice, with zero boilerplate and maximum type safety.
 
-Scase is a lightweight library that bridges the gap between different microservice platforms / APIs and functional Scala code.
+Scase is a lightweight functional library that bridges the gap between microservice platforms / APIs and functional Scala code.
+
+Scase helps you achieve boring concepts like:
+
+ * Clean separation of service API, implementation and client side
+ * Portability: deployment on multiple platforms without rewriting any core logic
+ * Messaging patterns that typically arise in enterprise applications.
 
 ## Introduction
 
@@ -28,11 +34,11 @@ myClient ? MyRequest("hello") // : F[MyResponse]
 We want this to be **as type-safe as possible**, with no possibility of replying with the "wrong"
 type or forgetting to send a reply entirely.
 
-We also want an implementation **without any boilerplate** if possible.
+We also want an implementation **with no boilerplate** if possible.
 
 We usually don't care if the service is eventually **deployed as an AWS Lambda or an Apache Pulsar function or a standalone app in a container, or maybe run in an Akka Cluster, or in a test locally**.
 
-As an application developer, we want to focus on the business logic, and implement it on top of a **safe, concise and platform independent API**. We would like to be able to run the code in different environments without having to make changes.
+As an application developer, we want to focus on the business logic, and implement it on top of a **safe, concise and platform independent API**. We would like to be able to run the code in different environments with as little changes as possible.
 
 In addition, we would like to:
 

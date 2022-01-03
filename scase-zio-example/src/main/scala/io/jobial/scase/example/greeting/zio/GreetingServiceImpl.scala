@@ -4,9 +4,9 @@ import zio._
 import io.jobial.scase.core._
 import io.jobial.scase.example.greeting._
 
-trait GreetingService extends RequestProcessor[Task, GreetingRequest[_ <: GreetingResponse], GreetingResponse] {
+trait GreetingService extends RequestHandler[Task, GreetingRequest[_ <: GreetingResponse], GreetingResponse] {
 
-  def processRequest(implicit context: RequestContext[Task]) = {
+  def handleRequest(implicit context: RequestContext[Task]) = {
     case m: Hello =>
       ZIO(m ! HelloResponse(s"Hello, ${m.person}!"))
     case m: Hi =>

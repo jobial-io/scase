@@ -3,7 +3,7 @@ package io.jobial.scase.aws.lambda
 import cats.Monad
 import cats.effect.Concurrent
 import cats.implicits._
-import io.jobial.scase.aws.client.LambdaClient
+import io.jobial.scase.aws.client.{AwsContext, LambdaClient}
 import io.jobial.scase.core.{MessageReceiveResult, RequestResponseClient, RequestResponseMapping, RequestResult, SendRequestContext}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
@@ -14,8 +14,12 @@ import scala.concurrent.ExecutionContext
 
 case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP: Unmarshaller](
   functionName: String
-) extends RequestResponseClient[F, REQ, RESP] with LambdaClient {
+)(
+  implicit val awsContext: AwsContext
+) extends RequestResponseClient[F, REQ, RESP] {
 
+  import awsContext.lambdaClient._
+  
   // TODO: move this out
   implicit val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool)
 

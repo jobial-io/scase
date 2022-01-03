@@ -3,7 +3,7 @@ package io.jobial.scase.cloudformation
 import cats.effect.IO
 import com.amazonaws.services.cloudformation.model.DeleteStackResult
 import com.monsanto.arch.cloudformation.model.Template
-import io.jobial.scase.aws.client.{CloudformationClient, StsClient}
+import io.jobial.scase.aws.client.{AwsContext, CloudformationClient, StsClient}
 //import io.jobial.scase.cloudformation.ScaseCloudformation.{command, createChangeSetAndWaitForComplete, createStack, deleteStack, fromTry, httpsUrl, opt, param, s3PutText, subcommand, subcommands, updateStack}
 import io.jobial.sclap.CommandLineApp
 import spray.json._
@@ -12,8 +12,12 @@ import scala.util.{Failure, Success, Try}
 import collection.JavaConverters._
 
 
-trait CloudformationStackApp extends CommandLineApp with CloudformationClient with StsClient with CloudformationStack {
+trait CloudformationStackApp extends CommandLineApp with CloudformationClient with CloudformationStack {
 
+  implicit val awsContext = AwsContext()
+  
+  import awsContext.stsClient._
+  
   def run =
     command
       .header("Scase AWS Tool")

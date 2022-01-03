@@ -4,7 +4,8 @@ import cats.Monad
 import cats.effect.concurrent.Ref
 import cats.effect.{Concurrent, ContextShift, IO, Sync}
 import cats.implicits._
-import io.jobial.scase.core.{DefaultMessageConsumer, MessageReceiveResult}
+import io.jobial.scase.core.MessageReceiveResult
+import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
 

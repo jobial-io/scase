@@ -9,8 +9,8 @@ import scala.concurrent.duration.DurationInt
 class LocalRequestResponseServiceTest
   extends RequestResponseTestSupport {
 
-  val requestProcessor = new RequestProcessor[IO, TestRequest[_ <: TestResponse], TestResponse] {
-    override def processRequest(implicit context: RequestContext[IO]) = {
+  val requestProcessor = new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
+    override def handleRequest(implicit context: RequestContext[IO]) = {
       case r: TestRequest1 =>
         println("replying...")
         r ! response1
@@ -30,8 +30,8 @@ class LocalRequestResponseServiceTest
 
   implicit def m = new RequestResponseMapping[Req1, Resp1] {}
 
-  val anotherRequestProcessor = new RequestProcessor[IO, Req, Resp] {
-    override def processRequest(implicit context: RequestContext[IO]): Processor = {
+  val anotherRequestProcessor = new RequestHandler[IO, Req, Resp] {
+    override def handleRequest(implicit context: RequestContext[IO]): Handler = {
       case r: Req1 =>
         println("replying...")
         r.reply(Resp1())

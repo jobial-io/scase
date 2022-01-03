@@ -66,11 +66,11 @@ trait RequestContext[F[_]] {
 trait Request[RESPONSE]
 
 // The actual service logic is separated from the message producer and consumers in the RequestProcessor
-trait RequestProcessor[F[_], REQ, RESP] {
+trait RequestHandler[F[_], REQ, RESP] {
 
-  type Processor = Function[REQ, F[SendResponseResult[RESP]]]
+  type Handler = Function[REQ, F[SendResponseResult[RESP]]]
 
-  def processor(f: Processor): Processor = f
+  def handler(f: Handler): Handler = f
 
   def responseTransformer(f: F[SendResponseResult[RESP]] => F[SendResponseResult[RESP]]) = f
 
@@ -80,59 +80,17 @@ trait RequestProcessor[F[_], REQ, RESP] {
    * Reply is sent through the sender to enforce the response type specific for the request. 
    * Return type is SendResponseResult to make sure a reply has been sent by processRequest. 
    */
-  def processRequestOrFail(implicit context: RequestContext[F], me: MonadError[F, Throwable]): Function[REQ, F[SendResponseResult[RESP]]] =
-    processRequest
+  def handleRequestOrFail(implicit context: RequestContext[F], me: MonadError[F, Throwable]): Function[REQ, F[SendResponseResult[RESP]]] =
+    handleRequest
   //  orElse {
   //      case request =>
   //        MonadError[F, Throwable].raiseError(UnknownRequest(request))
   //    }
 
-  def processRequest(implicit context: RequestContext[F]): Processor
+  def handleRequest(implicit context: RequestContext[F]): Handler
 
   def afterResponse(request: REQ): PartialFunction[Try[SendResponseResult[RESP]], Unit] = {
     case _ =>
   }
-
-  /**
-   * Indicates that the requests are intended to be processed sequentially by this request processor.
-   * It is up to the service implementation to enforce this. The request processor can still use concurrency (e.g. Futures),
-   * setting this field to true only guarantees that each future returned by the processor are waited before it starts
-   * processing a new request. This functionality is useful in cases where the service needs to use an external resource
-   * that can only be used exclusively (e.g. a browser).
-   */
-  def sequentialRequestProcessing = false
-
-  def sequentialRequestProcessingTimeout = 1.hour
   
 }
-
-/**
- * Configuration for a service. The service definition can be used to create or deploy the service as well as
- * creating a client for it. The service definition can be shared between the server and client side.
- */
-trait RequestResponseServiceConfiguration[REQ, RESP] {
-
-  def serviceName: String
-}
-
-trait RemoteRequestResponseServiceConfiguration[REQ, RESP] extends RequestResponseServiceConfiguration[REQ, RESP] {
-
-  def service[F[_] : Concurrent](requestProcessor: RequestProcessor[F, REQ, RESP]): F[RequestResponseService[F, REQ, RESP]]
-
-  def client[F[_] : Concurrent]: F[RequestResponseClient[F, REQ, RESP]]
-}
-
-trait RequestResponseService[F[_], REQ, RESP] {
-
-  def start: F[RequestResponseServiceState[F, REQ]]
-  
-  def startAndJoin: F[RequestResponseServiceState[F, REQ]]
-}
-
-trait RequestResponseServiceState[F[_], REQ] {
-
-  def stop: F[RequestResponseServiceState[F, REQ]]
-  
-  def join: F[RequestResponseServiceState[F, REQ]]
-}
-

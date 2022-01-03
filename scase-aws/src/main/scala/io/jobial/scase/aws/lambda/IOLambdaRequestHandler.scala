@@ -1,13 +1,13 @@
 package io.jobial.scase.aws.lambda
 
 import cats.effect.{Concurrent, IO}
-import io.jobial.scase.core.RequestProcessor
+import io.jobial.scase.core.RequestHandler
 
 import scala.concurrent.ExecutionContext
 
 abstract class IOLambdaRequestHandler[REQ, RESP](serviceConfiguration: LambdaRequestResponseServiceConfiguration[REQ, RESP])
   extends LambdaRequestHandler[IO, REQ, RESP](serviceConfiguration) {
-  this: RequestProcessor[IO, REQ, RESP] =>
+  this: RequestHandler[IO, REQ, RESP] =>
 
   implicit val cs = IO.contextShift(ExecutionContext.global)
 

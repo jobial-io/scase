@@ -1,17 +1,16 @@
-package io.jobial.scase.core
+package io.jobial.scase.core.impl
 
-import cats.{Monad, MonadError}
-
-import java.util.UUID.randomUUID
-import cats.effect.{Concurrent, IO, Timer}
 import cats.effect.concurrent.{Deferred, Ref}
 import cats.effect.implicits.catsEffectSyntaxConcurrent
+import cats.effect.{Concurrent, Timer}
+import cats.implicits._
+import cats.{Monad, MonadError}
+import io.jobial.scase.core.{CorrelationIdKey, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSubscription, RequestResponseClient, RequestResponseMapping, RequestResult, RequestTimeoutKey, ResponseConsumerIdKey, SendRequestContext}
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 import io.jobial.scase.monitoring.{MonitoringPublisher, dummyPublisher}
-import cats.implicits._
 
-import scala.concurrent.ExecutionContext
+import java.util.UUID.randomUUID
 import scala.concurrent.duration.FiniteDuration
 
 case class CorrelationInfo[F[_], REQ, RESP](

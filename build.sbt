@@ -53,6 +53,9 @@ lazy val CirceVersion = "0.12.0-M3"
 lazy val SprayJsonVersion = "1.3.6"
 lazy val PulsarVersion = "2.9.0"
 lazy val ZioVersion = "2.0.0.0-RC13" // TODO: upgrade when Cats version is upgraded
+lazy val ScalaJava8CompatVersion = "1.0.2"
+lazy val LogbackVersion = "1.2.3"
+lazy val ShapelessVersion = "2.3.3"
 
 lazy val root: Project = project
   .in(file("."))
@@ -79,8 +82,8 @@ lazy val `scase-core` = project
       "org.scalatest" %% "scalatest" % ScalatestVersion % "test",
       "commons-io" % "commons-io" % CommonsIoVersion,
       "org.apache.commons" % "commons-lang3" % CommonsLangVersion,
-      "ch.qos.logback" % "logback-classic" % "1.2.3" % "test",
-      "com.chuusai" %% "shapeless" % "2.3.3"
+      "ch.qos.logback" % "logback-classic" % LogbackVersion % "test",
+      "com.chuusai" %% "shapeless" % ShapelessVersion
     )
   )
 
@@ -100,6 +103,7 @@ lazy val `scase-aws` = project
     assemblyPackageDependency / assembleArtifact := false
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
+  .dependsOn(`scase-circe` % "test->test")
 
 lazy val `scase-cloudformation` = project
   .in(file("scase-cloudformation"))
@@ -162,7 +166,7 @@ lazy val `scase-pulsar` = project
   .settings(
     libraryDependencies ++= Seq(
       "org.apache.pulsar" % "pulsar-client" % PulsarVersion,
-      "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.2"
+      "org.scala-lang.modules" %% "scala-java8-compat" % ScalaJava8CompatVersion
     )
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")

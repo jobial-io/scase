@@ -1,21 +1,19 @@
-package io.jobial.scase.core
+package io.jobial.scase.core.impl
 
 import cats.effect.Concurrent
-import cats.{Monad, MonadError}
-
-import java.util.concurrent.LinkedBlockingQueue
 import cats.effect.concurrent.Deferred
 import cats.implicits._
+import cats.{Monad, MonadError}
+import io.jobial.scase.core.{CorrelationIdKey, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSendResult, MessageSubscription, RequestContext, RequestHandler, RequestResponseMapping, SendResponseResult, Service, ServiceState}
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{ExecutionContext, Future}
 
-case class ConsumerProducerRequestResponseServiceState[F[_] : Monad, REQ, RESP](
-  subscription: MessageSubscription[F, REQ],
-  service: ConsumerProducerRequestResponseService[F, REQ, RESP]
-) extends RequestResponseServiceState[F, REQ]
+case class DefaultServiceState[F[_] : Monad, M](
+  subscription: MessageSubscription[F, M],
+  service: Service[F]
+) extends ServiceState[F]
   with Logging {
 
   def stop =
@@ -41,14 +39,14 @@ case class DefaultSendResponseResult[RESPONSE](response: RESPONSE) extends SendR
 case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
   messageConsumer: MessageConsumer[F, REQ],
   messageProducer: String => F[MessageProducer[F, Either[Throwable, RESP]]], // TODO: add support for fixed producer case
-  requestProcessor: RequestProcessor[F, REQ, RESP],
+  requestHandler: RequestHandler[F, REQ, RESP],
   messageProducerForErrors: Option[MessageProducer[F, REQ]] = None, // TODO: implement this
   autoCommitRequest: Boolean = true,
   autoCommitFailedRequest: Boolean = true
 )(
   implicit responseMarshallable: Marshaller[Either[Throwable, RESP]]
   //sourceContext: SourceContext
-) extends RequestResponseService[F, REQ, RESP] with Logging {
+) extends DefaultService[F] with Logging {
 
   private def handleRequest(request: MessageReceiveResult[F, REQ]) = {
     logger.info(s"received request in service: ${request.toString.take(500)}")
@@ -65,7 +63,7 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
               // TODO: make this a Deferred
 
               val processorResult =
-                requestProcessor.processRequestOrFail(new RequestContext[F] {
+                requestHandler.handleRequestOrFail(new RequestContext[F] {
 
                   def reply[REQUEST, RESPONSE](req: REQUEST, r: RESPONSE)
                     (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): SendResponseResult[RESPONSE] = {
@@ -136,7 +134,7 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
   }
 
   def start = {
-    logger.info(s"starting service for processor $requestProcessor")
+    logger.info(s"starting service for processor $requestHandler")
 
     //val requestQueue = new LinkedBlockingQueue[() => Future[SendResponseResult[RESP]]]
 
@@ -172,17 +170,11 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
       // process requests asynchronously
       subscription <- messageConsumer.subscribe(handleRequest)
     } yield {
-      logger.info(s"started service for processor $requestProcessor")
-      ConsumerProducerRequestResponseServiceState(subscription, this)
+      logger.info(s"started service for processor $requestHandler")
+      DefaultServiceState(subscription, this)
     }
   }
-
-  def startAndJoin: F[RequestResponseServiceState[F, REQ]] =
-    for {
-      state <- start
-      result <- state.join
-    } yield result
-
+  
 }
 
 case class ResponseConsumerIdNotFound() extends IllegalStateException

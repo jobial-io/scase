@@ -79,13 +79,13 @@ trait SqsClient extends S3Client with Logging {
     sqs.setQueueAttributes(new SetQueueAttributesRequest().withQueueUrl(queueUrl)
       .addAttributesEntry(QueueAttributeName.ReceiveMessageWaitTimeSeconds.toString, defaultMaxReceiveMessageWaitTime.toString))
 
-  def setMessageRetentionPeriod(queueUrl: String, messageRetentionPeriod: Duration) = {
+  def setMessageRetentionPeriod(queueUrl: String, messageRetentionPeriod: Duration) = IO {
     sqs.setQueueAttributes(new SetQueueAttributesRequest().withQueueUrl(queueUrl)
       .addAttributesEntry(QueueAttributeName.MessageRetentionPeriod
         .toString, messageRetentionPeriod.toSeconds.toString))
   }
 
-  def setVisibilityTimeout(queueUrl: String, visibilityTimeout: Duration) = {
+  def setVisibilityTimeout(queueUrl: String, visibilityTimeout: Duration) = IO {
     // TODO: report this bug
     assert(!sqs.isInstanceOf[AmazonSQSBufferedAsyncClient] || visibilityTimeout > (0.seconds),
       "Cannot set visibility timeout to 0 seconds on a buffered client due to a bug which casues hanging in receiveMessages")

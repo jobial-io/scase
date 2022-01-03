@@ -5,7 +5,8 @@ import cats.{Monad, Traverse}
 import cats.effect.concurrent.{Deferred, Ref}
 import cats.implicits._
 import cats.effect.implicits._
-import io.jobial.scase.core.{DefaultMessageConsumer, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSendResult, MessageSubscription}
+import io.jobial.scase.core.impl.DefaultMessageConsumer
+import io.jobial.scase.core.{MessageConsumer, MessageProducer, MessageReceiveResult, MessageSendResult, MessageSubscription}
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 

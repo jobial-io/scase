@@ -8,4 +8,15 @@ case class AwsContext(
   sqsExtendedS3BucketName: Option[String] = None
 ) {
   
+  lazy val sqsClient = new SqsClient {
+    def awsContext: AwsContext = AwsContext.this
+  }
+
+  lazy val lambdaClient = new LambdaClient {
+    def awsContext: AwsContext = AwsContext.this
+  }
+  
+  lazy val stsClient = new StsClient {
+    override def awsContext: AwsContext = AwsContext.this
+  }
 }

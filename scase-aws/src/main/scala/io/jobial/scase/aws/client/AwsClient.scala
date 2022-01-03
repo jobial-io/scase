@@ -11,7 +11,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait AwsClient {
 
-  def awsContext = AwsContext()
+  def awsContext: AwsContext
   
   /**
    * Clients are supposed to be thread safe: https://forums.aws.amazon.com/message.jspa?messageID=191621

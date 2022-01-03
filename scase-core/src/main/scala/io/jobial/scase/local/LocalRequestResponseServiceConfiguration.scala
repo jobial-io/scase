@@ -2,7 +2,8 @@ package io.jobial.scase.local
 
 import cats.effect.{Concurrent, Timer}
 import cats.implicits._
-import io.jobial.scase.core.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService, RequestProcessor, RequestResponseService, RequestResponseServiceConfiguration}
+import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService}
+import io.jobial.scase.core.{RequestHandler, RequestResponseServiceConfiguration}
 import io.jobial.scase.inmemory.InMemoryQueue
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.serialization._
@@ -18,7 +19,7 @@ case class LocalRequestResponseServiceConfiguration[REQ, RESP](
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher
 ) extends RequestResponseServiceConfiguration[REQ, RESP] {
 
-  def serviceAndClient[F[_] : Concurrent: Timer](requestProcessor: RequestProcessor[F, REQ, RESP]) =
+  def serviceAndClient[F[_] : Concurrent: Timer](requestProcessor: RequestHandler[F, REQ, RESP]) =
     for {
       requestQueue <- InMemoryQueue[F, REQ]
       responseQueue <- InMemoryQueue[F, Either[Throwable, RESP]]

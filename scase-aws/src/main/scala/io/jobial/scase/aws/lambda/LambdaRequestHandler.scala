@@ -5,7 +5,8 @@ import cats.effect.Concurrent
 import cats.effect.concurrent.Deferred
 import cats.implicits._
 import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
-import io.jobial.scase.core.{DefaultSendResponseResult, RequestContext, RequestProcessor, RequestResponseMapping, SendResponseResult}
+import io.jobial.scase.core.impl.DefaultSendResponseResult
+import io.jobial.scase.core.{RequestContext, RequestHandler, RequestResponseMapping, SendResponseResult}
 import io.jobial.scase.logging.Logging
 import org.apache.commons.io.IOUtils
 import org.joda.time.DateTime
@@ -15,7 +16,7 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.DurationInt
 
 abstract class LambdaRequestHandler[F[_], REQ, RESP](val serviceConfiguration: LambdaRequestResponseServiceConfiguration[REQ, RESP]) extends RequestStreamHandler with Logging {
-  this: RequestProcessor[F, REQ, RESP] =>
+  this: RequestHandler[F, REQ, RESP] =>
 
   implicit def concurrent: Concurrent[F]
 
@@ -39,7 +40,7 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP](val serviceConfiguration: L
           responseDeferred <- Deferred[F, Either[Throwable, RESP]]
           r <- responseDeferred.get
           processorResult: F[SendResponseResult[RESP]] =
-            processRequestOrFail(new RequestContext[F] {
+            handleRequestOrFail(new RequestContext[F] {
 
               // TODO: revisit this
               val requestTimeout = 15.minutes
@@ -83,7 +84,7 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP](val serviceConfiguration: L
 }
 
 trait LambdaScheduledRequestHandler[F[_], REQ, RESP] extends LambdaRequestHandler[F, REQ, RESP] {
-  this: RequestProcessor[F, REQ, RESP] =>
+  this: RequestHandler[F, REQ, RESP] =>
 
   def mapScheduledEvent(event: CloudWatchEvent): REQ
 }

@@ -1,15 +1,16 @@
-package io.jobial.scase.pulsar
+package io.jobial.scase.aws.sqs
 
+import cats.effect.IO
+import io.jobial.scase.core._
 import cats.effect.IO
 import io.circe.generic.auto._
 import io.jobial.scase.core._
 import io.jobial.scase.marshalling.circe._
-
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration._
 
 
-class PulsarRequestResponseServiceTest
+class SqsRequestResponseServiceTest
   extends RequestResponseTestSupport {
 
   val requestProcessor = new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
@@ -51,10 +52,8 @@ class PulsarRequestResponseServiceTest
     }
   }
 
-  implicit val pulsarContext = PulsarContext()
-
   "request-response service" should "reply successfully" in {
-    val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello-test")
+    val serviceConfig = SqsRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("test-hello")
 
     for {
       service <- serviceConfig.service(requestProcessor)
@@ -71,7 +70,7 @@ class PulsarRequestResponseServiceTest
   }
 
   "another request-response service" should "reply successfully" in {
-    val serviceConfig = PulsarRequestResponseServiceConfiguration[Req, Resp]("another-test")
+    val serviceConfig = SqsRequestResponseServiceConfiguration[Req, Resp]("test-another")
 
     for {
       service <- serviceConfig.service(anotherRequestProcessor)
@@ -83,7 +82,7 @@ class PulsarRequestResponseServiceTest
   }
 
   "request" should "time out if service is not started" in {
-    val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello-timeout-test")
+    val serviceConfig = SqsRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("test-hello-timeout")
     implicit val context = SendRequestContext(requestTimeout = Some(1.second))
 
     recoverToSucceededIf[TimeoutException] {
@@ -96,7 +95,7 @@ class PulsarRequestResponseServiceTest
   }
 
   "request-response service" should "reply with error" in {
-    val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello-error-test")
+    val serviceConfig = SqsRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("test-hello-error")
 
     for {
       service <- serviceConfig.service(requestProcessorWithError)
