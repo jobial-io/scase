@@ -44,6 +44,7 @@ lazy val ScalaLoggingVersion = "3.9.2"
 lazy val ScalatestVersion = "3.2.3"
 lazy val SourcecodeVersion = "0.2.3"
 lazy val AwsVersion = "1.11.557"
+lazy val AmazonSqsJavaExtendedClientLibVersion = "1.2.2"
 lazy val AwsLambdaJavaCoreVersion = "1.2.1"
 lazy val CommonsIoVersion = "2.8.0"
 lazy val CommonsLangVersion = "3.12.0"
@@ -93,7 +94,9 @@ lazy val `scase-aws` = project
   .settings(
     libraryDependencies ++= Seq(
       "com.amazonaws" % "aws-java-sdk-sqs" % AwsVersion excludeAll ("commons-logging"),
-      "com.amazonaws" % "amazon-sqs-java-extended-client-lib" % "master-SNAPSHOT" excludeAll ("commons-logging"),
+      "com.amazonaws" % "amazon-sqs-java-extended-client-lib" % AmazonSqsJavaExtendedClientLibVersion excludeAll ("commons-logging"),
+      "org.slf4j" % "jcl-over-slf4j" % "1.7.32",
+      "commons-logging" % "commons-logging-api" % "1.1",
       "com.amazonaws" % "aws-java-sdk-lambda" % AwsVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-java-sdk-cloudformation" % AwsVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-lambda-java-core" % AwsLambdaJavaCoreVersion excludeAll ("commons-logging"),
@@ -147,18 +150,18 @@ lazy val `scase-circe` = project
 
 // check https://stackoverflow.com/questions/37525980/sbt-exclude-module-from-aggregates-or-compilation-based-on-scala-version
 lazy val `sbt-scase-cloudformation` = project
-    .in(file("sbt-scase-cloudformation"))
-    .settings(
-      name := "sbt-scase-cloudformation",
-      publish := scalaBinaryVersion.value == "2.12",
-//      unmanagedSources / excludeFilter := AllPassFilter,
-//      managedSources / excludeFilter := AllPassFilter,
-      Compile / unmanagedSourceDirectories := (if (scalaBinaryVersion.value == "2.12") Seq(baseDirectory.value / "src" / "main" / "scala") else Nil),
-//      Compile / managedSourceDirectories := Nil,
-      publishMavenStyle := scalaBinaryVersion.value == "2.12",
-      sbtPlugin := scalaBinaryVersion.value == "2.12",
-      pluginCrossBuild / sbtVersion := "1.2.8" // set minimum sbt version
-    )
+  .in(file("sbt-scase-cloudformation"))
+  .settings(
+    name := "sbt-scase-cloudformation",
+    publish := scalaBinaryVersion.value == "2.12",
+    //      unmanagedSources / excludeFilter := AllPassFilter,
+    //      managedSources / excludeFilter := AllPassFilter,
+    Compile / unmanagedSourceDirectories := (if (scalaBinaryVersion.value == "2.12") Seq(baseDirectory.value / "src" / "main" / "scala") else Nil),
+    //      Compile / managedSourceDirectories := Nil,
+    publishMavenStyle := scalaBinaryVersion.value == "2.12",
+    sbtPlugin := scalaBinaryVersion.value == "2.12",
+    pluginCrossBuild / sbtVersion := "1.2.8" // set minimum sbt version
+  )
 
 lazy val `scase-pulsar` = project
   .in(file("scase-pulsar"))
