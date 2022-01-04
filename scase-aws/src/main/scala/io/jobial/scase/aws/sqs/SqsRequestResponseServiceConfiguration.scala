@@ -5,7 +5,7 @@ import cats.implicits._
 import io.jobial.scase.aws.client.AwsContext
 import io.jobial.scase.aws.client.Hash.uuid
 import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService}
-import io.jobial.scase.core.{RequestHandler, RequestResponseClient, ServiceConfiguration}
+import io.jobial.scase.core.{MessageProducer, RequestHandler, RequestResponseClient, ServiceConfiguration}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
@@ -23,25 +23,25 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
 
   //lazy val queues = createQueues
 
-  val responseConsumerId = uuid(8)
+  val responseProducerId = uuid(8)
 
   val requestQueueUrl = requestQueueName
 
-  val responseQueueUrl = s"$requestQueueName-response-$responseConsumerId"
+  val responseQueueUrl = s"$requestQueueName-response-$responseProducerId"
 
-  def service[F[_] : Concurrent](requestProcessor: RequestHandler[F, REQ, RESP])(
+  def service[F[_] : Concurrent](requestHandler: RequestHandler[F, REQ, RESP])(
     implicit awsContext: AwsContext = AwsContext(),
     cs: ContextShift[IO]
   ) = {
     val requestConsumer = SqsConsumer[F, REQ](requestQueueUrl, cleanup = false)
     val responseProducer = SqsProducer[F, Either[Throwable, RESP]](responseQueueUrl, cleanup = true)
-    val service = ConsumerProducerRequestResponseService[F, REQ, RESP](
-      requestConsumer,
-      // add caching here
-      responseQueueUrl => Concurrent[F].delay(responseProducer),
-      requestProcessor
-    )
-    Concurrent[F].pure(service)
+    for {
+      service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
+        requestConsumer,
+        { _ => Concurrent[F].delay(responseProducer) }: String => F[MessageProducer[F, Either[Throwable, RESP]]],
+        requestHandler
+      )
+    } yield service
   }
 
   //https://cb372.github.io/scalacache/

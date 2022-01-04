@@ -16,7 +16,7 @@ case class MessageReceiveResult[F[_], M](
 
   def requestTimeout = attributes.get(RequestTimeoutKey).map(_.toLong.millis)
 
-  def responseConsumerId = attributes.get(ResponseConsumerIdKey)
+  def responseProducerId = attributes.get(ResponseProducerIdKey)
 }
 
 trait MessageSubscription[F[_], M] {

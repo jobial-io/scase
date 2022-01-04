@@ -12,7 +12,7 @@ import scala.concurrent.duration._
 class PulsarRequestResponseServiceTest
   extends RequestResponseTestSupport {
 
-  val requestProcessor = new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
+  val requestHandler = new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
     override def handleRequest(implicit context: RequestContext[IO]) = {
       case r: TestRequest1 =>
         println("replying...")
@@ -41,7 +41,7 @@ class PulsarRequestResponseServiceTest
     }
   }
 
-  val requestProcessorWithError = new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
+  val requestHandlerWithError = new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
     override def handleRequest(implicit context: RequestContext[IO]) = {
       case r: TestRequest1 =>
         println("replying...")
@@ -57,7 +57,7 @@ class PulsarRequestResponseServiceTest
     val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello-test")
 
     for {
-      service <- serviceConfig.service(requestProcessor)
+      service <- serviceConfig.service(requestHandler)
       _ <- service.start
       client <- serviceConfig.client[IO]
       r1 <- client.sendRequest(request1)
@@ -88,7 +88,7 @@ class PulsarRequestResponseServiceTest
 
     recoverToSucceededIf[TimeoutException] {
       for {
-        service <- serviceConfig.service(requestProcessor)
+        service <- serviceConfig.service(requestHandler)
         client <- serviceConfig.client[IO]
         _ <- client ? request1
       } yield succeed
@@ -99,7 +99,7 @@ class PulsarRequestResponseServiceTest
     val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello-error-test")
 
     for {
-      service <- serviceConfig.service(requestProcessorWithError)
+      service <- serviceConfig.service(requestHandlerWithError)
       _ <- service.start
       client <- serviceConfig.client[IO]
       r1 <- client ? request1

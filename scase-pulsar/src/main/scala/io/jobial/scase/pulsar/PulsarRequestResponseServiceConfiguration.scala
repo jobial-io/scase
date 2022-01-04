@@ -1,7 +1,7 @@
 package io.jobial.scase.pulsar
 
 import cats.effect.{Concurrent, ContextShift, IO, Timer}
-import io.jobial.scase.core.{RequestHandler, RequestResponseClient, ServiceConfiguration}
+import io.jobial.scase.core.{MessageConsumer, MessageProducer, RequestHandler, RequestResponseClient, ServiceConfiguration}
 import cats.implicits._
 import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
@@ -23,17 +23,16 @@ case class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshal
 
   val responseTopic = responseTopicOverride.getOrElse(s"$requestTopic-response-${randomUUID}")
 
-  def service[F[_] : Concurrent](requestProcessor: RequestHandler[F, REQ, RESP])(
+  def service[F[_] : Concurrent](requestHandler: RequestHandler[F, REQ, RESP])(
     implicit context: PulsarContext,
     cs: ContextShift[IO]
   ) =
     for {
       consumer <- PulsarConsumer[F, REQ](requestTopic)
-      service = ConsumerProducerRequestResponseService[F, REQ, RESP](
+      service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
         consumer,
-        // TODO: add caching here
-        { responseTopic => Concurrent[F].delay(PulsarProducer[F, Either[Throwable, RESP]](responseTopic)) },
-        requestProcessor
+        { responseTopic => Concurrent[F].delay(PulsarProducer[F, Either[Throwable, RESP]](responseTopic)) }: String => F[MessageProducer[F, Either[Throwable, RESP]]],
+        requestHandler
       )
     } yield service
 

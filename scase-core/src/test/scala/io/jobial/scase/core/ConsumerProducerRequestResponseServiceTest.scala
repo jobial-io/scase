@@ -19,7 +19,7 @@ class ConsumerProducerRequestResponseServiceTest
       testMessageProducer <- InMemoryQueue[IO, Either[Throwable, RESP]]
       service = ConsumerProducerRequestResponseService[IO, REQ, RESP](
         testMessageConsumer,
-        { _ => IO(testMessageProducer) },
+        { _: String => IO(testMessageProducer) },
         testRequestProcessor
       )
       s <- service.start
@@ -28,7 +28,7 @@ class ConsumerProducerRequestResponseServiceTest
         println("complete")
         d.complete(m.message)
       })
-      _ <- testMessageConsumer.send(request, Map(ResponseConsumerIdKey -> ""))
+      _ <- testMessageConsumer.send(request, Map(ResponseProducerIdKey -> ""))
       r <- d.get
     } yield assert(r == response)
 
@@ -40,9 +40,9 @@ class ConsumerProducerRequestResponseServiceTest
     for {
       testMessageConsumer <- InMemoryQueue[IO, REQ]
       testMessageProducer <- InMemoryQueue[IO, Either[Throwable, RESP]]
-      service = ConsumerProducerRequestResponseService[IO, REQ, RESP](
+      service <- ConsumerProducerRequestResponseService[IO, REQ, RESP](
         testMessageConsumer,
-        { _ => IO(testMessageProducer) },
+        { _: String => IO(testMessageProducer) },
         testRequestProcessor
       )
       s <- service.start

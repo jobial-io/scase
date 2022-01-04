@@ -9,7 +9,7 @@ import scala.concurrent.duration.DurationInt
 class LocalRequestResponseServiceTest
   extends RequestResponseTestSupport {
 
-  val requestProcessor = new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
+  val requestHandler = new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
     override def handleRequest(implicit context: RequestContext[IO]) = {
       case r: TestRequest1 =>
         println("replying...")
@@ -40,7 +40,7 @@ class LocalRequestResponseServiceTest
 
   "request-response service" should "reply successfully" in {
     for {
-      t <- LocalRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello").serviceAndClient(requestProcessor)
+      t <- LocalRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello").serviceAndClient(requestHandler)
       (service, client) = t
       _ <- service.start
       r1 <- client.sendRequest(request1)
@@ -68,7 +68,7 @@ class LocalRequestResponseServiceTest
 
     recoverToSucceededIf[TimeoutException] {
       for {
-        t <- localServiceAndClient("greeting", requestProcessor)
+        t <- localServiceAndClient("greeting", requestHandler)
         (_, client) = t
         _ <- client ? request1
       } yield succeed

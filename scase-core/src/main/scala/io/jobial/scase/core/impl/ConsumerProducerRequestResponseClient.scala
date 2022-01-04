@@ -5,7 +5,7 @@ import cats.effect.implicits.catsEffectSyntaxConcurrent
 import cats.effect.{Concurrent, Timer}
 import cats.implicits._
 import cats.{Monad, MonadError}
-import io.jobial.scase.core.{CorrelationIdKey, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSubscription, RequestResponseClient, RequestResponseMapping, RequestResult, RequestTimeoutKey, ResponseConsumerIdKey, SendRequestContext}
+import io.jobial.scase.core.{CorrelationIdKey, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSubscription, RequestResponseClient, RequestResponseMapping, RequestResult, RequestTimeoutKey, ResponseProducerIdKey, SendRequestContext}
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 import io.jobial.scase.monitoring.MonitoringPublisher
@@ -24,7 +24,7 @@ case class ConsumerProducerRequestResponseClient[F[_]: Concurrent: Timer, REQ: M
   messageSubscription: MessageSubscription[F, Either[Throwable, RESP]],
   messageConsumer: MessageConsumer[F, Either[Throwable, RESP]],
   messageProducer: () => MessageProducer[F, REQ],
-  responseConsumerId: String,
+  responseProducerId: String,
   autoCommitResponse: Boolean,
   name: String
 )(
@@ -83,7 +83,7 @@ case class ConsumerProducerRequestResponseClient[F[_]: Concurrent: Timer, REQ: M
           request,
           Map(
             CorrelationIdKey -> correlationId,
-            ResponseConsumerIdKey -> responseConsumerId
+            ResponseProducerIdKey -> responseProducerId
           ) ++ sendRequestContext.requestTimeout.map(t => RequestTimeoutKey -> t.toMillis.toString)
         )
         receiveResult <- sendRequestContext.requestTimeout match {
@@ -114,7 +114,7 @@ object ConsumerProducerRequestResponseClient extends Logging {
   def apply[F[_]: Concurrent: Timer, REQ: Marshaller, RESP](
     messageConsumer: MessageConsumer[F, Either[Throwable, RESP]],
     messageProducer: () => MessageProducer[F, REQ],
-    responseConsumerId: String,
+    responseProducerId: String,
     autoCommitResponse: Boolean = true,
     name: String = randomUUID.toString
   )(
@@ -178,6 +178,6 @@ object ConsumerProducerRequestResponseClient extends Logging {
             Monad[F].pure()
         }
       }
-    } yield ConsumerProducerRequestResponseClient(correlationsRef, subscription, messageConsumer, messageProducer, responseConsumerId, autoCommitResponse, name)
+    } yield ConsumerProducerRequestResponseClient(correlationsRef, subscription, messageConsumer, messageProducer, responseProducerId, autoCommitResponse, name)
 
 }

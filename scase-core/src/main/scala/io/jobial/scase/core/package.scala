@@ -58,8 +58,8 @@ package object core extends Logging {
 
   val CorrelationIdKey = "CorrelationId"
 
-  val ResponseConsumerIdKey = "ResponseConsumerId"
+  val ResponseProducerIdKey = "ResponseProducerId"
 
   val RequestTimeoutKey = "RequestTimeout"
-
+  
 }

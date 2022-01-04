@@ -1,7 +1,7 @@
 package io.jobial.scase.core.impl
 
 import cats.effect.Concurrent
-import cats.effect.concurrent.Deferred
+import cats.effect.concurrent.{Deferred, Ref}
 import cats.implicits._
 import cats.{Monad, MonadError}
 import io.jobial.scase.core.{CorrelationIdKey, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSendResult, MessageSubscription, RequestContext, RequestHandler, RequestResponseMapping, SendResponseResult, Service, ServiceState}
@@ -37,29 +37,50 @@ case class DefaultServiceState[F[_] : Monad, M](
 case class DefaultSendResponseResult[RESPONSE](response: RESPONSE) extends SendResponseResult[RESPONSE]
 
 case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
+  producersCacheRef: Option[Ref[F, Map[String, MessageProducer[F, Either[Throwable, RESP]]]]],
   messageConsumer: MessageConsumer[F, REQ],
-  messageProducer: String => F[MessageProducer[F, Either[Throwable, RESP]]], // TODO: add support for fixed producer case
+  messageProducer: String => F[MessageProducer[F, Either[Throwable, RESP]]],
   requestHandler: RequestHandler[F, REQ, RESP],
-  messageProducerForErrors: Option[MessageProducer[F, REQ]] = None, // TODO: implement this
-  autoCommitRequest: Boolean = true,
-  autoCommitFailedRequest: Boolean = true
+  messageProducerForErrors: Option[MessageProducer[F, REQ]], // TODO: implement this
+  autoCommitRequest: Boolean,
+  autoCommitFailedRequest: Boolean
 )(
   implicit responseMarshallable: Marshaller[Either[Throwable, RESP]]
   //sourceContext: SourceContext
 ) extends DefaultService[F] with Logging {
 
   private def handleRequest(request: MessageReceiveResult[F, REQ]) = {
-    logger.info(s"received request in service: ${request.toString.take(500)}")
+    logger.debug(s"received request in service: ${request.toString.take(500)}")
     val r: F[MessageSendResult[Either[Throwable, RESP]]] =
-      request.responseConsumerId match {
-        case Some(responseConsumerId) =>
-          logger.info(s"found response consumer id $responseConsumerId in ")
+      request.responseProducerId match {
+        case Some(responseProducerId) =>
+          logger.debug(s"found response producer id $responseProducerId in request")
 
           for {
-            producer <- messageProducer(responseConsumerId)
+            producer <- producersCacheRef match {
+              case Some(producersCacheRef) =>
+                for {
+                  producerCache <- producersCacheRef.get
+                  producer <- producerCache.get(responseProducerId) match {
+                    case Some(producer) =>
+                      Monad[F].pure(producer)
+                    case None =>
+                      messageProducer(responseProducerId)
+                  }
+                  _ <- producersCacheRef.update {
+                    producersCache =>
+                      producersCache + (responseProducerId -> producer)
+                  }
+                } yield producer
+              case None =>
+                // Just call the provided function for a new producer
+                messageProducer(responseProducerId)
+            }
             response <- Deferred[F, Either[Throwable, RESP]]
             processorResult <- {
-              logger.debug(s"found response producer $producer for request in service: ${request.toString.take(500)}")
+              logger.debug(s"found response producer $producer for request in service: ${
+                request.toString.take(500)
+              }")
               // TODO: make this a Deferred
 
               val processorResult =
@@ -67,7 +88,9 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
 
                   def reply[REQUEST, RESPONSE](req: REQUEST, r: RESPONSE)
                     (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): SendResponseResult[RESPONSE] = {
-                    logger.debug(s"context sending response ${r.toString.take(500)}")
+                    logger.debug(s"context sending response ${
+                      r.toString.take(500)
+                    }")
                     val re = r.asInstanceOf[RESP]
 
                     //                    for {
@@ -81,12 +104,16 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
                 }, Concurrent[F])(request.message)
 
               val processResultWithErrorHandling = processorResult
-                .flatMap { result =>
-                  response.complete(Right(result.response))
+                .flatMap {
+                  result =>
+                    response.complete(Right(result.response))
                 }
-                .handleErrorWith { case t =>
-                  logger.error(s"request processing failed: ${request.toString.take(500)}", t)
-                  response.complete(Left(t))
+                .handleErrorWith {
+                  case t =>
+                    logger.error(s"request processing failed: ${
+                      request.toString.take(500)
+                    }", t)
+                    response.complete(Left(t))
                 }
 
               // handle processor timeout
@@ -103,31 +130,39 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
                 res <- response.get
                 resultAfterSend <- res match {
                   case Right(r) =>
-                    logger.debug(s"sending success to client for request: ${request.toString.take(500)} on $producer")
+                    logger.debug(s"sending success to client for request: ${
+                      request.toString.take(500)
+                    } on $producer")
                     for {
                       sendResult <- producer.send(Right(r), responseAttributes)
                       // commit request after result is written
                       _ <- if (autoCommitRequest) {
-                        logger.debug(s"service committing request: ${request.toString.take(500)} on $producer")
+                        logger.debug(s"service committing request: ${
+                          request.toString.take(500)
+                        } on $producer")
                         request.commit()
                       } else Monad[F].unit
                     } yield sendResult
                   case Left(t) =>
-                    logger.error(s"sending failure to client for request: ${request.toString.take(500)}", t)
+                    logger.error(s"sending failure to client for request: ${
+                      request.toString.take(500)
+                    }", t)
                     for {
                       sendResult <- producer.send(Left(t), responseAttributes)
                       _ <- if (autoCommitFailedRequest) {
-                        logger.debug(s"service committing request: ${request.toString.take(500)}")
+                        logger.debug(s"service committing request: ${
+                          request.toString.take(500)
+                        }")
                         request.commit()
                       } else Monad[F].unit
                     } yield sendResult
                 }
               } yield resultAfterSend
-             }
+            }
           } yield processorResult
         case None =>
           logger.error(s"response consumer id not found for request: ${request.toString.take(500)}")
-          MonadError[F, Throwable].raiseError(ResponseConsumerIdNotFound())
+          MonadError[F, Throwable].raiseError(ResponseProducerIdNotFound())
       }
 
     r
@@ -140,7 +175,7 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
 
     //    val state: ConsumerProducerRequestResponseServiceState[REQ, RESP] = 
     for {
-      //        if (requestProcessor.sequentialRequestProcessing) {
+      //        if (requestHandler.sequentialRequestProcessing) {
       //          // add requests to a queue and process then sequentially
       //
       //          val subscription = messageConsumer.subscribe { request: MessageReceiveResult[REQ] =>
@@ -156,7 +191,7 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
       //              if (!subscription.isCancelled) {
       //                Option(requestQueue.poll(10, TimeUnit.MILLISECONDS)).map { r =>
       //                  logger.debug(s"got request from request queue in $this")
-      //                  result(r(), requestProcessor.sequentialRequestProcessingTimeout)
+      //                  result(r(), requestHandler.sequentialRequestProcessingTimeout)
       //                }
       //              }
       //            }.flatMap(_ => pollRequestQueue)
@@ -174,7 +209,38 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
       DefaultServiceState(subscription, this)
     }
   }
-  
+
 }
 
-case class ResponseConsumerIdNotFound() extends IllegalStateException
+object ConsumerProducerRequestResponseService {
+
+  def apply[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
+    messageConsumer: MessageConsumer[F, REQ],
+    messageProducer: String => F[MessageProducer[F, Either[Throwable, RESP]]],
+    requestHandler: RequestHandler[F, REQ, RESP],
+    messageProducerForErrors: Option[MessageProducer[F, REQ]] = None, // TODO: implement this
+    autoCommitRequest: Boolean = true,
+    autoCommitFailedRequest: Boolean = true,
+    reuseProducers: Boolean = true
+  )(
+    implicit responseMarshallable: Marshaller[Either[Throwable, RESP]]
+    //sourceContext: SourceContext
+  ): F[ConsumerProducerRequestResponseService[F, REQ, RESP]] =
+    for {
+      producersCacheRef <-
+        if (reuseProducers)
+          Ref.of[F, Map[String, MessageProducer[F, Either[Throwable, RESP]]]](Map()).map(Some(_))
+        else
+          Concurrent[F].pure(None)
+    } yield ConsumerProducerRequestResponseService(
+      producersCacheRef,
+      messageConsumer,
+      messageProducer,
+      requestHandler,
+      messageProducerForErrors,
+      autoCommitRequest,
+      autoCommitFailedRequest
+    )
+}
+
+case class ResponseProducerIdNotFound() extends IllegalStateException

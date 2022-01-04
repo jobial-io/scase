@@ -13,7 +13,7 @@ import scala.concurrent.duration._
 class SqsRequestResponseServiceTest
   extends RequestResponseTestSupport {
 
-  val requestProcessor = new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
+  val requestHandler = new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
     override def handleRequest(implicit context: RequestContext[IO]) = {
       case r: TestRequest1 =>
         println("replying...")
@@ -42,7 +42,7 @@ class SqsRequestResponseServiceTest
     }
   }
 
-  val requestProcessorWithError = new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
+  val requestHandlerWithError = new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
     override def handleRequest(implicit context: RequestContext[IO]) = {
       case r: TestRequest1 =>
         println("replying...")
@@ -56,7 +56,7 @@ class SqsRequestResponseServiceTest
     val serviceConfig = SqsRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("test-hello")
 
     for {
-      service <- serviceConfig.service(requestProcessor)
+      service <- serviceConfig.service(requestHandler)
       _ <- service.start
       client <- serviceConfig.client[IO]
       r1 <- client.sendRequest(request1)
@@ -87,7 +87,7 @@ class SqsRequestResponseServiceTest
 
     recoverToSucceededIf[TimeoutException] {
       for {
-        service <- serviceConfig.service(requestProcessor)
+        service <- serviceConfig.service(requestHandler)
         client <- serviceConfig.client[IO]
         _ <- client ? request1
       } yield succeed
@@ -98,7 +98,7 @@ class SqsRequestResponseServiceTest
     val serviceConfig = SqsRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("test-hello-error")
 
     for {
-      service <- serviceConfig.service(requestProcessorWithError)
+      service <- serviceConfig.service(requestHandlerWithError)
       _ <- service.start
       client <- serviceConfig.client[IO]
       r1 <- client ? request1
