@@ -18,11 +18,6 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
   responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
 ) extends ServiceConfiguration {
 
-  //  def createQueues = 
-  //    SqsRequestResponseQueues[REQ, RESP](queueNamePrefix, cleanup)
-
-  //lazy val queues = createQueues
-
   val responseProducerId = uuid(8)
 
   val requestQueueUrl = requestQueueName
@@ -32,26 +27,24 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
   def service[F[_] : Concurrent](requestHandler: RequestHandler[F, REQ, RESP])(
     implicit awsContext: AwsContext = AwsContext(),
     cs: ContextShift[IO]
-  ) = {
-    val requestConsumer = SqsConsumer[F, REQ](requestQueueUrl, cleanup = false)
-    val responseProducer = SqsProducer[F, Either[Throwable, RESP]](responseQueueUrl, cleanup = true)
-    for {
-      service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
-        requestConsumer,
-        { _ => Concurrent[F].delay(responseProducer) }: String => F[MessageProducer[F, Either[Throwable, RESP]]],
-        requestHandler
-      )
-    } yield service
-  }
+  ) = for {
+    requestConsumer <- SqsConsumer[F, REQ](requestQueueUrl, cleanup = false)
+    responseProducer <- SqsProducer[F, Either[Throwable, RESP]](responseQueueUrl, cleanup = true)
+    service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
+      requestConsumer, { _ => Concurrent[F].delay(responseProducer) }: String => F[MessageProducer[F, Either[Throwable, RESP]]],
+      requestHandler
+    )
+  } yield service
+  
 
   //https://cb372.github.io/scalacache/
   def client[F[_] : Concurrent : Timer](
     implicit awsContext: AwsContext = AwsContext(),
     cs: ContextShift[IO]
   ): F[RequestResponseClient[F, REQ, RESP]] = {
-    val producer = SqsProducer[F, REQ](requestQueueUrl)
-    val consumer = SqsConsumer[F, Either[Throwable, RESP]](responseQueueUrl)
     for {
+      consumer <- SqsConsumer[F, Either[Throwable, RESP]](responseQueueUrl)
+      producer <- SqsProducer[F, REQ](requestQueueUrl)
       client <- ConsumerProducerRequestResponseClient[F, REQ, RESP](
         consumer,
         () => producer,

@@ -13,13 +13,23 @@ trait DefaultMessageConsumer[F[_], M] extends MessageConsumer[F, M] {
 
   val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]]
 
-  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]): F[Unit]
+  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Deferred[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]): F[Unit]
+
+  def receiveMessagesUntilCancelled[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Deferred[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]): F[Unit] =
+    for {
+      _ <- receiveMessages(callback, cancelled)
+      c <- cancelled.get
+      _ <- if (!c) receiveMessagesUntilCancelled(callback, cancelled) else Concurrent[F].unit
+    } yield ()
+    
+  def initialize(implicit concurrent: Concurrent[F]) = Concurrent[F].unit
 
   override def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]): F[MessageSubscription[F, M]] =
     for {
+      _ <- initialize
       _ <- subscriptions.update(callback :: _)
       cancelled <- Deferred[F, Boolean]
-      _ <- Concurrent[F].start(receiveMessages(callback))
+      _ <- Concurrent[F].start(receiveMessagesUntilCancelled(callback, cancelled))
     } yield
       new MessageSubscription[F, M] {
 

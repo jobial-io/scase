@@ -1,7 +1,7 @@
 package io.jobial.scase.pulsar
 
 import cats.Monad
-import cats.effect.concurrent.Ref
+import cats.effect.concurrent.{Deferred, Ref}
 import cats.effect.{Concurrent, ContextShift, IO, Sync}
 import cats.implicits._
 import io.jobial.scase.core.MessageReceiveResult
@@ -33,7 +33,7 @@ case class PulsarConsumer[F[_], M](topic: String, subscriptions: Ref[F, List[Mes
 
   implicit def toScalaFuture[T](f: CompletableFuture[T]) = toScala[T](f)
 
-  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]): F[Unit] =
+  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Deferred[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]): F[Unit] =
     for {
       pulsarMessage <- Concurrent[F].liftIO(IO.fromFuture(IO(toScala(consumer.receiveAsync))))
       _ = logger.debug(s"received message ${new String(pulsarMessage.getData).take(200)} on $topic")
@@ -47,8 +47,7 @@ case class PulsarConsumer[F[_], M](topic: String, subscriptions: Ref[F, List[Mes
           // TODO: add logging
           Monad[F].pure(error.printStackTrace)
       }
-      r <- receiveMessages(callback)
-    } yield r
+    } yield ()
 }
 
 object PulsarConsumer {

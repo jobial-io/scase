@@ -9,15 +9,18 @@ import cats.implicits._
 import io.jobial.scase.marshalling.serialization._
 import org.scalatest.flatspec.AsyncFlatSpec
 
-class SqsQueueTest extends AsyncFlatSpec with ScaseTestHelper {
+class SqsConsumerProducerTest extends AsyncFlatSpec with ScaseTestHelper {
 
   implicit val awsContext = AwsContext(region = Some("eu-west-1"), sqsExtendedS3BucketName = Some("cloudtemp-sqs"))
 
   val message1 = TestRequest1("hello")
 
   val message2 = TestRequest2("bello")
+  
+  val queueUrl = s"test-queue-${uuid(5)}"
 
-  val testQueueLarge = SqsQueue.create[IO, Array[Byte]](s"test-queue-${uuid(5)}").unsafeRunSync()
+  val testProducer = SqsProducer[IO, Array[Byte]](queueUrl)
+  val testConsumer = SqsConsumer[IO, Array[Byte]](queueUrl)
   
 //  val testQueue = SqsQueue[IO, TestRequest[_ <: TestResponse]](s"test-queue-${uuid(5)}")
 
@@ -54,7 +57,8 @@ class SqsQueueTest extends AsyncFlatSpec with ScaseTestHelper {
 
   "sending a large message to the queue" should "succeed" in {
     for {
-      r <- testQueueLarge.send(largeMessage)
+      testProducer <- testProducer
+      r <- testProducer.send(largeMessage)
     } yield {
       //println(r)
       succeed
@@ -64,7 +68,8 @@ class SqsQueueTest extends AsyncFlatSpec with ScaseTestHelper {
   "receiving a large message" should "succeed" in {
     for {
       messages <- MVar[IO].empty[Array[Byte]]
-      m <- IO.race(testQueueLarge.subscribe { result =>
+      testConsumer <- testConsumer
+      m <- IO.race(testConsumer.subscribe { result =>
         for {
           _ <- result.commit()
           _ = println("putting message into var")
@@ -72,8 +77,10 @@ class SqsQueueTest extends AsyncFlatSpec with ScaseTestHelper {
         } yield ()
       },
         messages.take)
-    } yield
+    } yield {
+      println(m)
       assert(m.right.map(_ sameElements largeMessage).getOrElse(fail))
+    }
   }
 
 

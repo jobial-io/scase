@@ -31,7 +31,7 @@ and on the client side:
 myClient ? MyRequest("hello") // : F[MyResponse]
 ```
 
-We want this to be **as type-safe as possible**, with no possibility of replying with the "wrong"
+As a developer, we want this to be **as type-safe as possible**, with no possibility of replying with the "wrong"
 type or forgetting to send a reply entirely.
 
 We also want an implementation **with no boilerplate** if possible.
@@ -71,6 +71,8 @@ In addition, we would like to:
 * Purely functional, from top to bottom, but without the need to understand any complicated FP constructs
 
 Additionally, **Scase** does not force you to use a specific "convention" when it comes to modelling your messages or correlating request and response types. It comes with sensible defaults and support for common styles, but all of these are pluggable and easy to customize.
+
+Scase can also be used as an easy-to-use, universal, functional alternative to native messaging APIs (e.g. for Apache Pulsar, Kafka, SQS and so on). 
 
 ## An example
 

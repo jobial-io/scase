@@ -17,7 +17,7 @@ trait InMemoryConsumerProducer[F[_], M] extends DefaultMessageConsumer[F, M] wit
 
   val allowMultipleSubscribers: Boolean
 
-  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]) =
+  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Deferred[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]) =
     // Noop as send handles the subscribers
     Concurrent[F].unit
 
