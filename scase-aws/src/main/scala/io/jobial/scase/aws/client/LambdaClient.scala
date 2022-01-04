@@ -1,5 +1,7 @@
 package io.jobial.scase.aws.client
 
+import cats.implicits._
+import cats.effect.{ContextShift, IO}
 import com.amazonaws.services.lambda.model.{InvokeRequest, InvokeResult}
 import com.amazonaws.services.lambda.{AWSLambdaAsync, AWSLambdaAsyncClientBuilder}
 
@@ -8,18 +10,19 @@ import scala.concurrent.{ExecutionContext, Future}
 trait LambdaClient extends AwsClient {
   lazy val lambda = buildAwsAsyncClient[AWSLambdaAsyncClientBuilder, AWSLambdaAsync](AWSLambdaAsyncClientBuilder.standard)
 
-  def invoke(functionName: String, payload: String)(implicit ec: ExecutionContext): Future[InvokeResult] = for {
-    result <- lambda.invokeAsync(new InvokeRequest()
-      .withFunctionName(functionName)
-      .withPayload(payload)
-    )
-    //    result <-
-    //      // TODO: review if this is correct...
-    //      if (Option(result.getFunctionError).isDefined)
-    //        failed(unmarshalException(result))
-    //      else
-    //        successful(result)
-  } yield result
+  def invoke(functionName: String, payload: String)(implicit ec: ExecutionContext) =
+      for {
+        result <- lambda.invokeAsync(new InvokeRequest()
+          .withFunctionName(functionName)
+          .withPayload(payload)
+        )
+        //    result <-
+        //      // TODO: review if this is correct...
+        //      if (Option(result.getFunctionError).isDefined)
+        //        failed(unmarshalException(result))
+        //      else
+        //        successful(result)
+      } yield result
 
   //  private def unmarshalException(result: InvokeResult) = {
   //    val responseString = new String(result.getPayload.array, "utf-8")

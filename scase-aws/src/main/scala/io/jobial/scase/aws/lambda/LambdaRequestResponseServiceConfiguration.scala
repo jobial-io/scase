@@ -5,6 +5,8 @@ import io.jobial.scase.aws.client.AwsContext
 import io.jobial.scase.core.ServiceConfiguration
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
+import scala.concurrent.ExecutionContext
+
 case class LambdaRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
   functionName: String
 ) extends ServiceConfiguration {
@@ -12,7 +14,7 @@ case class LambdaRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshal
   // TODO: overload constructor for this
   val serviceName = functionName
 
-  def client[F[_] : Concurrent](implicit awsContext: AwsContext = AwsContext()) =
+  def client[F[_] : Concurrent](implicit awsContext: AwsContext = AwsContext(), ec: ExecutionContext) =
     Concurrent[F].delay(LambdaRequestResponseClient[F, REQ, RESP](functionName))
 
   val requestMarshaller = Marshaller[REQ]
