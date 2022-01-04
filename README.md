@@ -15,7 +15,7 @@ Scase is a lightweight functional library that bridges the gap between microserv
 When we think of implementing a microservice or a serverless function, we typically want to do something like:
 
 ```scala
-// Service logic:
+// Service code:
 case m: MyRequest =>
   // do processing in some effect F and then:
   m.reply(MyResponse(...))
@@ -120,9 +120,11 @@ ZIO is supported seamlessly through ZIO cats-interop:
 
 ### Request-response
 
+### One-way
+
 ### Stream processing
 
-### Sink service
+### Routing
 
 ### What about HTTP?
 

@@ -125,7 +125,10 @@ case class SqsConsumer[F[_], M](
               else Concurrent[F].unit
           } yield ()
 
-        val join = receiveMessages
+        val join =
+          for {
+            _ <- receiveMessages
+          } yield ()
 
         def cancel =
           cancelled.set(true)

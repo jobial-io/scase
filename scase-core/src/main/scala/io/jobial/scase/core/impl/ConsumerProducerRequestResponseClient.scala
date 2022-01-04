@@ -8,7 +8,7 @@ import cats.{Monad, MonadError}
 import io.jobial.scase.core.{CorrelationIdKey, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSubscription, RequestResponseClient, RequestResponseMapping, RequestResult, RequestTimeoutKey, ResponseConsumerIdKey, SendRequestContext}
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
-import io.jobial.scase.monitoring.{MonitoringPublisher, dummyPublisher}
+import io.jobial.scase.monitoring.MonitoringPublisher
 
 import java.util.UUID.randomUUID
 import scala.concurrent.duration.FiniteDuration
@@ -29,7 +29,7 @@ case class ConsumerProducerRequestResponseClient[F[_]: Concurrent: Timer, REQ: M
   name: String
 )(
   implicit   responseMarshallable: Unmarshaller[Either[Throwable, RESP]],
-  monitoringPublisher: MonitoringPublisher
+  //monitoringPublisher: MonitoringPublisher
 ) extends RequestResponseClient[F, REQ, RESP] with Logging {
 
   val holdOntoOutstandingRequest = true
@@ -62,7 +62,7 @@ case class ConsumerProducerRequestResponseClient[F[_]: Concurrent: Timer, REQ: M
       val producer = messageProducer()
       val correlationId = randomUUID.toString
 
-      monitoringPublisher.increment(request.getClass.getName)
+      //monitoringPublisher.increment(request.getClass.getName)
       logger.info(s"sending ${request.toString.take(500)} with $correlationId using $this")
 
       //implicit val cs = IO.contextShift(ExecutionContext.global)
@@ -119,7 +119,7 @@ object ConsumerProducerRequestResponseClient extends Logging {
     name: String = randomUUID.toString
   )(
     implicit responseMarshallable: Unmarshaller[Either[Throwable, RESP]],
-    monitoringPublisher: MonitoringPublisher = dummyPublisher
+    // monitoringPublisher: MonitoringPublisher
   ): F[ConsumerProducerRequestResponseClient[F, REQ, RESP]] =
     for {
       correlationsRef <- Ref.of[F, Map[String, CorrelationInfo[F, REQ, RESP]]](Map())

@@ -1,15 +1,12 @@
 package io.jobial.scase.aws.sqs
 
-import cats.implicits._
 import cats.effect.{Concurrent, ContextShift, IO, Timer}
+import cats.implicits._
 import io.jobial.scase.aws.client.AwsContext
 import io.jobial.scase.aws.client.Hash.uuid
 import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService}
-import io.jobial.scase.core.{RequestHandler, RequestResponseClient, RequestResponseServiceConfiguration}
+import io.jobial.scase.core.{RequestHandler, RequestResponseClient, ServiceConfiguration}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
-
-import java.util.concurrent.atomic.AtomicBoolean
-import scala.concurrent.Future.successful
 
 case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
   serviceName: String,
@@ -19,7 +16,7 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher
   implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
   responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
-) extends RequestResponseServiceConfiguration[REQ, RESP] {
+) extends ServiceConfiguration {
 
   //  def createQueues = 
   //    SqsRequestResponseQueues[REQ, RESP](queueNamePrefix, cleanup)

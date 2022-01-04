@@ -8,5 +8,5 @@ trait MessageHandler[F[_], M] {
 
   type Handler = Function[M, F[Unit]]
 
-  def handleMessage(implicit context: MessageContext[F]): Handler
+  def handle(implicit context: MessageContext[F]): Handler
 }

@@ -2,12 +2,12 @@ package io.jobial.scase.aws.lambda
 
 import cats.effect.Concurrent
 import io.jobial.scase.aws.client.AwsContext
-import io.jobial.scase.core.RequestResponseServiceConfiguration
+import io.jobial.scase.core.ServiceConfiguration
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 case class LambdaRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
   functionName: String
-) extends RequestResponseServiceConfiguration[REQ, RESP] {
+) extends ServiceConfiguration {
 
   // TODO: overload constructor for this
   val serviceName = functionName

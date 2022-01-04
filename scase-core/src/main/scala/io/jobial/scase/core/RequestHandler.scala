@@ -3,7 +3,6 @@ package io.jobial.scase.core
 import cats.MonadError
 
 import scala.concurrent.duration._
-import scala.util.Try
 
 trait SendResponseResult[+RESP] {
 
@@ -16,6 +15,29 @@ trait RequestContext[F[_]] {
     (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): SendResponseResult[RESPONSE]
 
   def requestTimeout: Duration
+}
+
+trait RequestHandler[F[_], REQ, RESP] {
+
+  type Handler = Function[REQ, F[SendResponseResult[RESP]]]
+
+  def handleRequest(implicit context: RequestContext[F]): Handler
+
+  /**
+   * Reply is sent through the sender to enforce the response type specific for the request. 
+   * Return type is SendResponseResult to make sure a reply has been sent by processRequest. 
+   *
+   * TODO: get rid of MonadError...
+   */
+  def handleRequestOrFail(implicit context: RequestContext[F], me: MonadError[F, Throwable]): Function[REQ, F[SendResponseResult[RESP]]] =
+    handleRequest
+  //  orElse {
+  //      case request =>
+  //        MonadError[F, Throwable].raiseError(UnknownRequest(request))
+  //    }
+
+  case class UnknownRequest(request: REQ) extends IllegalStateException
+
 }
 
 
@@ -49,35 +71,3 @@ trait RequestContext[F[_]] {
  *
  */
 trait Request[RESPONSE]
-
-// The actual service logic is separated from the message producer and consumers in the RequestProcessor
-trait RequestHandler[F[_], REQ, RESP] {
-
-  type Handler = Function[REQ, F[SendResponseResult[RESP]]]
-
-  def handler(f: Handler): Handler = f
-
-  def responseTransformer(f: F[SendResponseResult[RESP]] => F[SendResponseResult[RESP]]) = f
-
-  case class UnknownRequest(request: REQ) extends IllegalStateException
-
-  /**
-   * Reply is sent through the sender to enforce the response type specific for the request. 
-   * Return type is SendResponseResult to make sure a reply has been sent by processRequest. 
-   *
-   * TODO: get rid of MonadError...
-   */
-  def handleRequestOrFail(implicit context: RequestContext[F], me: MonadError[F, Throwable]): Function[REQ, F[SendResponseResult[RESP]]] =
-    handleRequest
-  //  orElse {
-  //      case request =>
-  //        MonadError[F, Throwable].raiseError(UnknownRequest(request))
-  //    }
-
-  def handleRequest(implicit context: RequestContext[F]): Handler
-
-  def afterResponse(request: REQ): PartialFunction[Try[SendResponseResult[RESP]], Unit] = {
-    case _ =>
-  }
-
-}

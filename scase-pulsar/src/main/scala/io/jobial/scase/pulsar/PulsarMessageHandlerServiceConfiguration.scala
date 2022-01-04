@@ -1,17 +1,15 @@
 package io.jobial.scase.pulsar
 
-import cats.effect.{Concurrent, ContextShift, IO, Timer}
+import cats.effect.{Concurrent, ContextShift, IO}
 import cats.implicits._
-import io.jobial.scase.core.impl.{ConsumerMessageHandlerService, ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService}
-import io.jobial.scase.core.{MessageHandler, MessageHandlerServiceConfiguration, RequestHandler, RequestResponseClient, RequestResponseServiceConfiguration}
-import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
-
-import java.util.UUID.randomUUID
-import scala.concurrent.duration._
+import io.jobial.scase.core.impl.ConsumerMessageHandlerService
+import io.jobial.scase.core.{MessageHandler, ServiceConfiguration}
+import io.jobial.scase.marshalling.Unmarshaller
 
 case class PulsarMessageHandlerServiceConfiguration[M: Unmarshaller](
+  serviceName: String,
   topic: String
-) extends MessageHandlerServiceConfiguration[M] {
+) extends ServiceConfiguration {
 
   def service[F[_] : Concurrent](handler: MessageHandler[F, M])
     (

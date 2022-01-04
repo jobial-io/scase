@@ -1,7 +1,7 @@
 package io.jobial.scase.pulsar
 
 import cats.effect.{Concurrent, ContextShift, IO, Timer}
-import io.jobial.scase.core.{RequestHandler, RequestResponseClient, RequestResponseServiceConfiguration}
+import io.jobial.scase.core.{RequestHandler, RequestResponseClient, ServiceConfiguration}
 import cats.implicits._
 import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
@@ -19,7 +19,7 @@ case class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshal
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher
   implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
   responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
-) extends RequestResponseServiceConfiguration[REQ, RESP] {
+) extends ServiceConfiguration {
 
   val responseTopic = responseTopicOverride.getOrElse(s"$requestTopic-response-${randomUUID}")
 

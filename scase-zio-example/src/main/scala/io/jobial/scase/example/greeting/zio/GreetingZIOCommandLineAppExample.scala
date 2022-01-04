@@ -5,6 +5,7 @@ import io.jobial.sclap.zio.ZIOCommandLineApp
 import zio._
 import zio.interop.catz._
 import zio.interop.catz.implicits._
+import zio.console._
 
 object GreetingZIOCommandLineAppExample extends ZIOCommandLineApp with GreetingServiceConfig {
 
@@ -14,5 +15,6 @@ object GreetingZIOCommandLineAppExample extends ZIOCommandLineApp with GreetingS
       (service, client) = t
       _ <- service.start
       helloResponse <- client ? Hello("world")
-    } yield println(helloResponse.sayingHello)
+      _ <- putStr(helloResponse.sayingHello)
+    } yield ()
 }

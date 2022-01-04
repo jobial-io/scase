@@ -23,9 +23,11 @@ trait DefaultMessageConsumer[F[_], M] extends MessageConsumer[F, M] {
     } yield
       new MessageSubscription[F, M] {
 
-        override def join =
-          cancelled.get
-
+        override def join = 
+          for {
+            _ <- cancelled.get
+          } yield ()
+        
         override def cancel =
           cancelled.complete(true)
 

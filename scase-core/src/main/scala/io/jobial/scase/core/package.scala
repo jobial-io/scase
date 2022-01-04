@@ -8,14 +8,6 @@ import cats.implicits._
 
 package object core extends Logging {
 
-  implicit def requestResultToResponse[F[_] : Monad, RESPONSE](requestResult: RequestResult[F, RESPONSE]) =
-    requestResult.response.map(_.message)
-
-  implicit def sendRequest[F[_], REQUEST, RESPONSE](request: REQUEST)(
-    implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE],
-    client: RequestResponseClient[F, _ >: REQUEST, _ >: RESPONSE], sendRequestContext: SendRequestContext = SendRequestContext(), M: Monad[F]): F[RESPONSE] =
-    client.?(request)
-
   implicit class RequestExtension[F[_], REQUEST](request: REQUEST) {
 
     /**
@@ -30,6 +22,14 @@ package object core extends Logging {
     def ![RESPONSE](response: RESPONSE)(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], context: RequestContext[F]) =
       reply(response)
   }
+
+  implicit def requestResultToResponse[F[_] : Monad, RESPONSE](requestResult: RequestResult[F, RESPONSE]) =
+    requestResult.response.map(_.message)
+
+  implicit def sendRequest[F[_], REQUEST, RESPONSE](request: REQUEST)(
+    implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE],
+    client: RequestResponseClient[F, _ >: REQUEST, _ >: RESPONSE], sendRequestContext: SendRequestContext = SendRequestContext(), M: Monad[F]): F[RESPONSE] =
+    client.?(request)
 
   implicit def requestTagBasedRequestResponseMapping[REQUEST <: Request[RESPONSE], RESPONSE] =
     new RequestResponseMapping[REQUEST, RESPONSE] {}

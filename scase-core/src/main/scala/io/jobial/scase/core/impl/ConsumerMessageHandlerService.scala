@@ -17,7 +17,7 @@ case class ConsumerMessageHandlerService[F[_] : Concurrent, M: Unmarshaller](
         val messageContext = new MessageContext[F] {
 
         }
-        messageHandler.handleMessage(messageContext)(messageReceiveResult.message)
+        messageHandler.handle(messageContext)(messageReceiveResult.message)
       }
     } yield
       DefaultServiceState(subscription, this)

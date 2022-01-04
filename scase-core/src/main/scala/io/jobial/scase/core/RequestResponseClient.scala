@@ -1,6 +1,5 @@
 package io.jobial.scase.core
 
-import scala.annotation.implicitNotFound
 import scala.concurrent.duration.Duration
 
 
@@ -15,9 +14,6 @@ case class SendRequestContext(
   requestTimeout: Option[Duration] = None,
   attributes: Map[String, String] = Map()
 )
-
-@implicitNotFound("No mapping found from request type ${REQUEST} to response type ${RESPONSE}")
-trait RequestResponseMapping[REQUEST, RESPONSE]
 
 trait RequestResponseClient[F[_], REQ, RESP] {
   

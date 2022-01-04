@@ -1,16 +1,10 @@
 package io.jobial.scase.core
 
 /**
- * Configuration for a service. The service definition can be used to create or deploy the service as well as
- * creating a client for it. The service definition can be shared between the server and client side.
+ * Configuration for a service. The service config can be used to create or deploy a service or to
+ * create a client for it. A service configuration can be shared between the server and client side.
  */
-trait RequestResponseServiceConfiguration[REQ, RESP] {
+trait ServiceConfiguration {
 
   def serviceName: String
-}
-
-trait MessageHandlerServiceConfiguration[M] {
-}
-
-trait SubscriptionConfiguration[M] {
 }
