@@ -4,7 +4,7 @@ import cats.effect.IO
 import cats.effect.concurrent.Deferred
 import cats.implicits._
 import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService}
-import io.jobial.scase.inmemory.InMemoryQueue
+import io.jobial.scase.inmemory.InMemoryConsumerProducer
 import io.jobial.scase.marshalling.serialization._
 
 import scala.concurrent.duration.DurationInt
@@ -15,8 +15,8 @@ class ConsumerProducerRequestResponseServiceTest
 
   def testRequestResponse[REQ, RESP](testRequestProcessor: RequestHandler[IO, REQ, RESP], request: REQ, response: Either[Throwable, RESP]) =
     for {
-      testMessageConsumer <- InMemoryQueue[IO, REQ]
-      testMessageProducer <- InMemoryQueue[IO, Either[Throwable, RESP]]
+      testMessageConsumer <- InMemoryConsumerProducer[IO, REQ]()
+      testMessageProducer <- InMemoryConsumerProducer[IO, Either[Throwable, RESP]]()
       service = ConsumerProducerRequestResponseService[IO, REQ, RESP](
         testMessageConsumer,
         { _: String => IO(testMessageProducer) },
@@ -38,8 +38,8 @@ class ConsumerProducerRequestResponseServiceTest
     implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]
   ) =
     for {
-      testMessageConsumer <- InMemoryQueue[IO, REQ]
-      testMessageProducer <- InMemoryQueue[IO, Either[Throwable, RESP]]
+      testMessageConsumer <- InMemoryConsumerProducer[IO, REQ]()
+      testMessageProducer <- InMemoryConsumerProducer[IO, Either[Throwable, RESP]]()
       service <- ConsumerProducerRequestResponseService[IO, REQ, RESP](
         testMessageConsumer,
         { _: String => IO(testMessageProducer) },

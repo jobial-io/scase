@@ -19,7 +19,7 @@ case class CorrelationInfo[F[_], REQ, RESP](
   request: Option[REQ]
 )
 
-case class ConsumerProducerRequestResponseClient[F[_]: Concurrent: Timer, REQ: Marshaller, RESP](
+class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Marshaller, RESP](
   correlationsRef: Ref[F, Map[String, CorrelationInfo[F, REQ, RESP]]],
   messageSubscription: MessageSubscription[F, Either[Throwable, RESP]],
   messageConsumer: MessageConsumer[F, Either[Throwable, RESP]],
@@ -28,7 +28,7 @@ case class ConsumerProducerRequestResponseClient[F[_]: Concurrent: Timer, REQ: M
   autoCommitResponse: Boolean,
   name: String
 )(
-  implicit   responseMarshallable: Unmarshaller[Either[Throwable, RESP]],
+  implicit responseMarshaller: Unmarshaller[Either[Throwable, RESP]],
   //monitoringPublisher: MonitoringPublisher
 ) extends RequestResponseClient[F, REQ, RESP] with Logging {
 
@@ -97,7 +97,6 @@ case class ConsumerProducerRequestResponseClient[F[_]: Concurrent: Timer, REQ: M
           case None =>
             receiveResultDeferred.get
         }
-        // TODO: revisit this - maybe Marshallable[RESPONSE] should be an implicit
         r <- receiveResult.asInstanceOf[Either[Throwable, MessageReceiveResult[F, RESPONSE]]] match {
           case Right(r) =>
             Monad[F].pure(r)
@@ -111,14 +110,14 @@ case class ConsumerProducerRequestResponseClient[F[_]: Concurrent: Timer, REQ: M
 
 object ConsumerProducerRequestResponseClient extends Logging {
 
-  def apply[F[_]: Concurrent: Timer, REQ: Marshaller, RESP](
+  def apply[F[_] : Concurrent : Timer, REQ: Marshaller, RESP](
     messageConsumer: MessageConsumer[F, Either[Throwable, RESP]],
     messageProducer: () => MessageProducer[F, REQ],
     responseProducerId: String,
     autoCommitResponse: Boolean = true,
     name: String = randomUUID.toString
   )(
-    implicit responseMarshallable: Unmarshaller[Either[Throwable, RESP]],
+    implicit responseMarshaller: Unmarshaller[Either[Throwable, RESP]],
     // monitoringPublisher: MonitoringPublisher
   ): F[ConsumerProducerRequestResponseClient[F, REQ, RESP]] =
     for {
@@ -178,6 +177,6 @@ object ConsumerProducerRequestResponseClient extends Logging {
             Monad[F].pure()
         }
       }
-    } yield ConsumerProducerRequestResponseClient(correlationsRef, subscription, messageConsumer, messageProducer, responseProducerId, autoCommitResponse, name)
+    } yield new ConsumerProducerRequestResponseClient(correlationsRef, subscription, messageConsumer, messageProducer, responseProducerId, autoCommitResponse, name)
 
 }

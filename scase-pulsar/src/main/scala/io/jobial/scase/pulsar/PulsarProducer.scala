@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
 import scala.compat.java8.FutureConverters.toScala
 
-case class PulsarProducer[F[_], M](topic: String)(implicit context: PulsarContext, cs: ContextShift[IO]) extends MessageProducer[F, M] {
+class PulsarProducer[F[_], M](topic: String)(implicit context: PulsarContext, cs: ContextShift[IO]) extends MessageProducer[F, M] {
 
   lazy val producer =
     context
@@ -33,4 +33,10 @@ case class PulsarProducer[F[_], M](topic: String)(implicit context: PulsarContex
       ))))
     } yield MessageSendResult[M]()
 
+}
+
+object PulsarProducer {
+  
+  def apply[F[_], M](topic: String)(implicit context: PulsarContext, cs: ContextShift[IO]) =
+    new PulsarProducer[F, M](topic)
 }

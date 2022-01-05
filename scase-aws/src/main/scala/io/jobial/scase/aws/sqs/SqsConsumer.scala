@@ -17,9 +17,9 @@ import scala.concurrent.duration._
 /**
  * Consumer implementation for AWS SQS.
  */
-case class SqsConsumer[F[_], M](
+class SqsConsumer[F[_], M](
   queueUrl: String,
-  subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]],
+  val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]],
   messageRetentionPeriod: Option[Duration],
   visibilityTimeout: Option[Duration],
   cleanup: Boolean
@@ -127,5 +127,5 @@ object SqsConsumer {
     implicit awsContext: AwsContext
   ): F[SqsConsumer[F, M]] = for {
     subscriptions <- Ref.of[F, List[MessageReceiveResult[F, M] => F[_]]](List())
-  } yield SqsConsumer[F, M](queueUrl, subscriptions, messageRetentionPeriod, visibilityTimeout, cleanup)
+  } yield new SqsConsumer[F, M](queueUrl, subscriptions, messageRetentionPeriod, visibilityTimeout, cleanup)
 }

@@ -1,6 +1,6 @@
 package io.jobial.scase.inmemory
 
-import cats.effect.Concurrent
+import cats.effect.{Concurrent, Sync}
 import cats.{Monad, Traverse}
 import cats.effect.concurrent.{Deferred, Ref}
 import cats.implicits._
@@ -11,14 +11,14 @@ import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 
-trait InMemoryConsumerProducer[F[_], M] extends DefaultMessageConsumer[F, M] with MessageProducer[F, M] with Logging {
-
-  val deliverToAllSubscribers: Boolean
-
-  val allowMultipleSubscribers: Boolean
-
+class InMemoryConsumerProducer[F[_], M](
+  val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]],
+  deliverToAllSubscribers: Boolean,
+  allowMultipleSubscribers: Boolean 
+) extends DefaultMessageConsumer[F, M] with MessageProducer[F, M] with Logging {
+  
   def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Deferred[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]) =
-    // Noop as send handles the subscribers
+  // Noop as send handles the subscribers
     Concurrent[F].unit
 
   /**
@@ -45,4 +45,14 @@ trait InMemoryConsumerProducer[F[_], M] extends DefaultMessageConsumer[F, M] wit
 
 
   }
+}
+
+object InMemoryConsumerProducer {
+
+  def apply[F[_] : Sync, M](
+    deliverToAllSubscribers: Boolean = false,
+    allowMultipleSubscribers: Boolean = false
+  ): F[InMemoryConsumerProducer[F, M]] = for {
+    subscriptions <- Ref.of[F, List[MessageReceiveResult[F, M] => F[_]]](List())
+  } yield new InMemoryConsumerProducer[F, M](subscriptions, deliverToAllSubscribers, allowMultipleSubscribers)
 }

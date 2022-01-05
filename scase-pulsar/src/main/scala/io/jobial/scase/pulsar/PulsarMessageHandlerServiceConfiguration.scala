@@ -18,7 +18,7 @@ case class PulsarMessageHandlerServiceConfiguration[M: Unmarshaller](
     ) =
     for {
       consumer <- PulsarConsumer[F, M](topic)
-      service = ConsumerMessageHandlerService(
+      service = new ConsumerMessageHandlerService(
         consumer,
         handler
       )

@@ -10,33 +10,8 @@ import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 import scala.concurrent.duration.Duration
 
-case class DefaultServiceState[F[_] : Monad, M](
-  subscription: MessageSubscription[F, M],
-  service: Service[F]
-) extends ServiceState[F]
-  with Logging {
 
-  def stop =
-    for {
-      r <- subscription.cancel
-      _ <- subscription.join
-    } yield {
-      logger.info(s"Shutting down $service")
-      //service.executionContext.shutdown
-      this
-    }
-
-  def join =
-    for {
-      _ <- subscription.join
-    } yield {
-      this
-    }
-}
-
-case class DefaultSendResponseResult[RESPONSE](response: RESPONSE) extends SendResponseResult[RESPONSE]
-
-case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
+class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
   producersCacheRef: Option[Ref[F, Map[String, MessageProducer[F, Either[Throwable, RESP]]]]],
   messageConsumer: MessageConsumer[F, REQ],
   messageProducer: String => F[MessageProducer[F, Either[Throwable, RESP]]],
@@ -45,7 +20,7 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
   autoCommitRequest: Boolean,
   autoCommitFailedRequest: Boolean
 )(
-  implicit responseMarshallable: Marshaller[Either[Throwable, RESP]]
+  implicit responseMarshaller: Marshaller[Either[Throwable, RESP]]
   //sourceContext: SourceContext
 ) extends DefaultService[F] with Logging {
 
@@ -212,6 +187,32 @@ case class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmars
 
 }
 
+case class DefaultServiceState[F[_] : Monad, M](
+  subscription: MessageSubscription[F, M],
+  service: Service[F]
+) extends ServiceState[F]
+  with Logging {
+
+  def stop =
+    for {
+      r <- subscription.cancel
+      _ <- subscription.join
+    } yield {
+      logger.info(s"Shutting down $service")
+      //service.executionContext.shutdown
+      this
+    }
+
+  def join =
+    for {
+      _ <- subscription.join
+    } yield {
+      this
+    }
+}
+
+case class DefaultSendResponseResult[RESPONSE](response: RESPONSE) extends SendResponseResult[RESPONSE]
+
 object ConsumerProducerRequestResponseService {
 
   def apply[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
@@ -223,7 +224,7 @@ object ConsumerProducerRequestResponseService {
     autoCommitFailedRequest: Boolean = true,
     reuseProducers: Boolean = true
   )(
-    implicit responseMarshallable: Marshaller[Either[Throwable, RESP]]
+    implicit responseMarshaller: Marshaller[Either[Throwable, RESP]]
     //sourceContext: SourceContext
   ): F[ConsumerProducerRequestResponseService[F, REQ, RESP]] =
     for {
@@ -232,7 +233,7 @@ object ConsumerProducerRequestResponseService {
           Ref.of[F, Map[String, MessageProducer[F, Either[Throwable, RESP]]]](Map()).map(Some(_))
         else
           Concurrent[F].pure(None)
-    } yield ConsumerProducerRequestResponseService(
+    } yield new ConsumerProducerRequestResponseService(
       producersCacheRef,
       messageConsumer,
       messageProducer,

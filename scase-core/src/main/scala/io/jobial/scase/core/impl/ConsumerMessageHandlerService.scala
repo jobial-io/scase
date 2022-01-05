@@ -6,7 +6,7 @@ import io.jobial.scase.core.{MessageConsumer, MessageContext, MessageHandler, Se
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
 
-case class ConsumerMessageHandlerService[F[_] : Concurrent, M: Unmarshaller](
+class ConsumerMessageHandlerService[F[_] : Concurrent, M: Unmarshaller](
   consumer: MessageConsumer[F, M],
   messageHandler: MessageHandler[F, M]
 ) extends DefaultService[F] with Logging {
