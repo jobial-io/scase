@@ -17,7 +17,11 @@ class InMemoryConsumerProducer[F[_], M](
   allowMultipleSubscribers: Boolean 
 ) extends DefaultMessageConsumer[F, M] with MessageProducer[F, M] with Logging {
   
-  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Deferred[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]) =
+  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]) =
+  // Noop as send handles the subscribers
+    Concurrent[F].unit
+
+  override def receiveMessagesUntilCancelled[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]) =
   // Noop as send handles the subscribers
     Concurrent[F].unit
 
@@ -34,11 +38,10 @@ class InMemoryConsumerProducer[F[_], M](
 
     for {
       r <- subscriptions.get
-      //_ = println(r)
       _ <- Traverse[List].sequence[F, Any](for {
         subscription <- r.asInstanceOf[List[MessageReceiveResult[F, M] => F[Any]]]
       } yield {
-        logger.debug(s"calling subscription on queue with $messageReceiveResult")
+        logger.info(s"calling subscription on queue with $messageReceiveResult")
         subscription(messageReceiveResult)
       })
     } yield MessageSendResult[M]()
@@ -50,8 +53,8 @@ class InMemoryConsumerProducer[F[_], M](
 object InMemoryConsumerProducer {
 
   def apply[F[_] : Sync, M](
-    deliverToAllSubscribers: Boolean = false,
-    allowMultipleSubscribers: Boolean = false
+    deliverToAllSubscribers: Boolean = true,
+    allowMultipleSubscribers: Boolean = true
   ): F[InMemoryConsumerProducer[F, M]] = for {
     subscriptions <- Ref.of[F, List[MessageReceiveResult[F, M] => F[_]]](List())
   } yield new InMemoryConsumerProducer[F, M](subscriptions, deliverToAllSubscribers, allowMultipleSubscribers)

@@ -1,15 +1,15 @@
 package io.jobial.scase.aws.sqs
 
+import cats.Traverse
 import cats.effect.concurrent.{Deferred, Ref}
-import cats.effect.{Concurrent, IO, LiftIO, Sync}
+import cats.effect.{Concurrent, IO, Sync}
 import cats.implicits._
-import cats.{Monad, Traverse}
+import io.jobial.scase.aws.client.AwsContext
 import io.jobial.scase.aws.client.identitymap.identityTrieMap
-import io.jobial.scase.aws.client.{AwsContext, S3Client, SqsClient}
 import io.jobial.scase.core._
 import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.logging.Logging
-import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
+import io.jobial.scase.marshalling.Unmarshaller
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
@@ -19,6 +19,7 @@ import scala.concurrent.duration._
  */
 class SqsConsumer[F[_], M](
   queueUrl: String,
+  outstandingMessagesRef: Ref[F, collection.Map[M, String]],
   val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]],
   messageRetentionPeriod: Option[Duration],
   visibilityTimeout: Option[Duration],
@@ -35,7 +36,7 @@ class SqsConsumer[F[_], M](
       _ <- createQueueIfNotExists(queueUrl)
       _ <- if (cleanup) IO(sys.addShutdownHook({ () =>
         try {
-          println(s"deleting queue $queueUrl")
+          logger.debug(s"deleting queue $queueUrl")
           deleteQueue(queueUrl).unsafeRunSync()
         } catch {
           case t: Throwable =>
@@ -48,13 +49,10 @@ class SqsConsumer[F[_], M](
     } yield ())
   
   //  _ <- concurrent.liftIO(initialize)
-  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Deferred[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]) = {
+  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]) = {
     logger.debug(s"subscribed with callback $callback to queue $queueUrl")
 
-    val outstandingMessagesRef = Ref.of[F, collection.Map[M, String]](identityTrieMap[M, String])
-
     for {
-      outstandingMessages <- outstandingMessagesRef
       // TODO: set visibility timeout to 0 here to allow other clients receiving uncorrelated messages
       messages <- Concurrent[F].delay {
         logger.debug(s"waiting for messages on $queueUrl")
@@ -67,24 +65,23 @@ class SqsConsumer[F[_], M](
           //                        try {
           for {
             unmarshalledMessage <- Concurrent[F].fromEither(u.unmarshalFromText(sqsMessage.getBody))
-            _ <- outstandingMessages.update(_ + ((unmarshalledMessage, sqsMessage.getReceiptHandle)))
+            _ <- outstandingMessagesRef.update(_ + ((unmarshalledMessage, sqsMessage.getReceiptHandle)))
             r <- callback(
               MessageReceiveResult(
                 message = unmarshalledMessage,
                 // TODO: add standard attributes returned by getAttributes...
-                attributes = sqsMessage.getMessageAttributes.asScala.toMap.filter(e => Option(e._2.getStringValue).isDefined).mapValues(_.getStringValue).toMap,
+                attributes = sqsMessage.getMessageAttributes.asScala.toMap.filter(e => Option(e._2.getStringValue).isDefined).mapValues(_.getStringValue),
                 commit = { () =>
-                  // TODO: this is ugly
                   for {
-                    o <- outstandingMessages.get
+                    o <- outstandingMessagesRef.get
                     r <- o.get(unmarshalledMessage) match {
                       case Some(receiptHandle) =>
                         Concurrent[F].delay(deleteMessage(queueUrl, receiptHandle))
                       case _ =>
                         Concurrent[F].raiseError(CouldNotFindMessageToCommit(unmarshalledMessage))
                     }
-                    _ <- outstandingMessages.update(_ - unmarshalledMessage)
-                  } yield println("committed")
+                    _ <- outstandingMessagesRef.update(_ - unmarshalledMessage)
+                  } yield ()
                 },
                 rollback = { () =>
                   ???
@@ -127,5 +124,6 @@ object SqsConsumer {
     implicit awsContext: AwsContext
   ): F[SqsConsumer[F, M]] = for {
     subscriptions <- Ref.of[F, List[MessageReceiveResult[F, M] => F[_]]](List())
-  } yield new SqsConsumer[F, M](queueUrl, subscriptions, messageRetentionPeriod, visibilityTimeout, cleanup)
+    outstandingMessagesRef <- Ref.of[F, collection.Map[M, String]](identityTrieMap[M, String])
+  } yield new SqsConsumer[F, M](queueUrl, outstandingMessagesRef, subscriptions, messageRetentionPeriod, visibilityTimeout, cleanup)
 }

@@ -34,6 +34,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshalle
           for {
             producer <- producersCacheRef match {
               case Some(producersCacheRef) =>
+                // Producers are cached...
                 for {
                   producerCache <- producersCacheRef.get
                   producer <- producerCache.get(responseProducerId) match {
@@ -48,14 +49,12 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshalle
                   }
                 } yield producer
               case None =>
-                // Just call the provided function for a new producer
+                // Just call the provided function for a new producer...
                 messageProducer(responseProducerId)
             }
             response <- Deferred[F, Either[Throwable, RESP]]
             processorResult <- {
-              logger.debug(s"found response producer $producer for request in service: ${
-                request.toString.take(500)
-              }")
+              logger.debug(s"found response producer $producer for request in service: ${request.toString.take(500)}")
               // TODO: make this a Deferred
 
               val processorResult =
@@ -63,14 +62,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshalle
 
                   def reply[REQUEST, RESPONSE](req: REQUEST, r: RESPONSE)
                     (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): SendResponseResult[RESPONSE] = {
-                    logger.debug(s"context sending response ${
-                      r.toString.take(500)
-                    }")
-                    val re = r.asInstanceOf[RESP]
-
-                    //                    for {
-                    //                      _ <- response.complete(Right(re))
-                    //                    } yield new 
+                    logger.debug(s"context sending response ${r.toString.take(500)}")
                     DefaultSendResponseResult[RESPONSE](r)
                   }
 
@@ -85,17 +77,11 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshalle
                 }
                 .handleErrorWith {
                   case t =>
-                    logger.error(s"request processing failed: ${
-                      request.toString.take(500)
-                    }", t)
+                    logger.error(s"request processing failed: ${request.toString.take(500)}", t)
                     response.complete(Left(t))
                 }
 
-              // handle processor timeout
-              //              futureWithTimeout(response.future, request.requestTimeout.getOrElse(10.minutes)) recover { case t =>
-              //                logger.error(s"request processing exceeded the request timeout: $request")
-              //                // TODO: fail response? interrupt processor?
-              //              }
+              // TODO: handle handleRequest timeout
 
               val responseAttributes = request.correlationId.map(correlationId => Map(CorrelationIdKey -> correlationId)).getOrElse(Map())
 
@@ -105,29 +91,21 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshalle
                 res <- response.get
                 resultAfterSend <- res match {
                   case Right(r) =>
-                    logger.debug(s"sending success to client for request: ${
-                      request.toString.take(500)
-                    } on $producer")
+                    logger.debug(s"sending success to client for request: ${request.toString.take(500)} on $producer")
                     for {
                       sendResult <- producer.send(Right(r), responseAttributes)
                       // commit request after result is written
                       _ <- if (autoCommitRequest) {
-                        logger.debug(s"service committing request: ${
-                          request.toString.take(500)
-                        } on $producer")
+                        logger.debug(s"service committing request: ${request.toString.take(500)} on $producer")
                         request.commit()
                       } else Monad[F].unit
                     } yield sendResult
                   case Left(t) =>
-                    logger.error(s"sending failure to client for request: ${
-                      request.toString.take(500)
-                    }", t)
+                    logger.error(s"sending failure to client for request: ${request.toString.take(500)}", t)
                     for {
                       sendResult <- producer.send(Left(t), responseAttributes)
                       _ <- if (autoCommitFailedRequest) {
-                        logger.debug(s"service committing request: ${
-                          request.toString.take(500)
-                        }")
+                        logger.debug(s"service committing request: ${request.toString.take(500)}")
                         request.commit()
                       } else Monad[F].unit
                     } yield sendResult
@@ -146,38 +124,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshalle
   def start = {
     logger.info(s"starting service for processor $requestHandler")
 
-    //val requestQueue = new LinkedBlockingQueue[() => Future[SendResponseResult[RESP]]]
-
-    //    val state: ConsumerProducerRequestResponseServiceState[REQ, RESP] = 
     for {
-      //        if (requestHandler.sequentialRequestProcessing) {
-      //          // add requests to a queue and process then sequentially
-      //
-      //          val subscription = messageConsumer.subscribe { request: MessageReceiveResult[REQ] =>
-      //            requestQueue.add({ () =>
-      //              handleRequest(request).unsafeToFuture()
-      //            })
-      //          }
-      //
-      //          def pollRequestQueue: Future[_] =
-      //            Future {
-      //              // TODO: make this recursive to yield (trampolining)
-      //              logger.info(s"polling request queue in $this")
-      //              if (!subscription.isCancelled) {
-      //                Option(requestQueue.poll(10, TimeUnit.MILLISECONDS)).map { r =>
-      //                  logger.debug(s"got request from request queue in $this")
-      //                  result(r(), requestHandler.sequentialRequestProcessingTimeout)
-      //                }
-      //              }
-      //            }.flatMap(_ => pollRequestQueue)
-      //          // TODO: this could be generalized into a sequential queue or something which could be used as the messageProducer
-      //          //  - or as a wrapper around it
-      //
-      //          pollRequestQueue
-      //
-      //          subscription
-      //        } else
-      // process requests asynchronously
       subscription <- messageConsumer.subscribe(handleRequest)
     } yield {
       logger.info(s"started service for processor $requestHandler")

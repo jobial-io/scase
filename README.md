@@ -82,6 +82,7 @@ A few things to highlight in the example:
 * The request must be replied using the right type, again, it is checked at compile time
 * The response message on the client side is type-safe, e.g. for Hello the client code receives a HelloResponse and for Hi the response type is HiResponse
 * It is not possible to send a request that does not conform to the client's type, this is checked at compile time.
+* You don't have to use Cats Effect's IO: you can use other effect types, or if you are not familiar with functional effects or need to use non-pure code, you can just ...
 
 ## How to use
 
@@ -127,6 +128,11 @@ ZIO is supported seamlessly through ZIO cats-interop:
 ### Stream processing
 
 ### Routing
+
+### Transactional transports
+
+If the underlying transport supports transactional messaging (SQS, for example), Scase exposes this functionality through the
+Consumer and Producer APIs.
 
 ### What about HTTP?
 

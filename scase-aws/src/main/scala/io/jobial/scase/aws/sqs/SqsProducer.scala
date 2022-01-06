@@ -33,7 +33,7 @@ class SqsProducer[F[_], M](
       _ <- createQueueIfNotExists(queueUrl)
       _ <- if (cleanup) IO(sys.addShutdownHook({ () =>
         try {
-          println(s"deleting queue $queueUrl")
+          logger.debug(s"deleting queue $queueUrl")
           deleteQueue(queueUrl).unsafeRunSync()
         } catch {
           case t: Throwable =>

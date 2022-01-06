@@ -33,7 +33,7 @@ class PulsarConsumer[F[_], M](topic: String, val subscriptions: Ref[F, List[Mess
 
   implicit def toScalaFuture[T](f: CompletableFuture[T]) = toScala[T](f)
 
-  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Deferred[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]): F[Unit] =
+  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]): F[Unit] =
     for {
       pulsarMessage <- Concurrent[F].liftIO(IO.fromFuture(IO(toScala(consumer.receiveAsync))))
       _ = logger.debug(s"received message ${new String(pulsarMessage.getData).take(200)} on $topic")
@@ -41,7 +41,7 @@ class PulsarConsumer[F[_], M](topic: String, val subscriptions: Ref[F, List[Mess
       _ <- x match {
         case Right(message) =>
           val attributes = pulsarMessage.getProperties.asScala.toMap
-          val messageReceiveResult = MessageReceiveResult(message, attributes, { () => Monad[F].pure() }, { () => Monad[F].pure() })
+          val messageReceiveResult = MessageReceiveResult(message, attributes, { () => Monad[F].unit }, { () => Monad[F].unit })
           callback(messageReceiveResult)
         case Left(error) =>
           // TODO: add logging

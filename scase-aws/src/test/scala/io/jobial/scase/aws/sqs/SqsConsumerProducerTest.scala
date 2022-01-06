@@ -16,13 +16,13 @@ class SqsConsumerProducerTest extends AsyncFlatSpec with ScaseTestHelper {
   val message1 = TestRequest1("hello")
 
   val message2 = TestRequest2("bello")
-  
+
   val queueUrl = s"test-queue-${uuid(5)}"
 
   val testProducer = SqsProducer[IO, Array[Byte]](queueUrl)
   val testConsumer = SqsConsumer[IO, Array[Byte]](queueUrl)
-  
-//  val testQueue = SqsQueue[IO, TestRequest[_ <: TestResponse]](s"test-queue-${uuid(5)}")
+
+  //  val testQueue = SqsQueue[IO, TestRequest[_ <: TestResponse]](s"test-queue-${uuid(5)}")
 
 
   //  "sending to queue" should "succeed" in {
@@ -69,16 +69,15 @@ class SqsConsumerProducerTest extends AsyncFlatSpec with ScaseTestHelper {
     for {
       messages <- MVar[IO].empty[Array[Byte]]
       testConsumer <- testConsumer
-      m <- IO.race(testConsumer.subscribe { result =>
+      subscription <- testConsumer.subscribe { result =>
         for {
           _ <- result.commit()
-          _ = println("putting message into var")
           _ <- messages.put(result.message)
         } yield ()
-      },
+      }
+      m <- IO.race(subscription.join,
         messages.take)
     } yield {
-      println(m)
       assert(m.right.map(_ sameElements largeMessage).getOrElse(fail))
     }
   }

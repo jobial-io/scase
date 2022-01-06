@@ -17,7 +17,7 @@ class ConsumerProducerRequestResponseServiceTest
     for {
       testMessageConsumer <- InMemoryConsumerProducer[IO, REQ]()
       testMessageProducer <- InMemoryConsumerProducer[IO, Either[Throwable, RESP]]()
-      service = ConsumerProducerRequestResponseService[IO, REQ, RESP](
+      service <- ConsumerProducerRequestResponseService[IO, REQ, RESP](
         testMessageConsumer,
         { _: String => IO(testMessageProducer) },
         testRequestProcessor
