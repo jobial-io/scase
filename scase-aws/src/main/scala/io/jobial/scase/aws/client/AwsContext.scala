@@ -4,7 +4,7 @@ import com.amazonaws.auth.AWSCredentials
 
 case class AwsContext(
   credentials: Option[AWSCredentials] = None,
-  region: Option[String] = None,
+  region: Option[String] = sys.env.get("AWS_DEFAULT_REGION"),
   sqsExtendedS3BucketName: Option[String] = None
 ) {
   
