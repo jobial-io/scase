@@ -34,8 +34,6 @@ myClient ? MyRequest("hello") // : F[MyResponse]
 As a developer, we want this to be **as type-safe as possible**, with no possibility of replying with the "wrong"
 type or forgetting to send a reply entirely.
 
-We also want an implementation **with no boilerplate** if possible.
-
 We usually don't care if the service is eventually **deployed as an AWS Lambda or an Apache Pulsar function or a standalone app in a container, or maybe run in an Akka Cluster, or in a test locally**.
 
 As an application developer, we want to focus on the business logic, and implement it on top of a **safe, concise and platform independent API**. We would like to be able to run the code in different environments with as little changes as possible.
@@ -93,7 +91,8 @@ TODO: usage in sbt, maven...
 
 ### Cats Effect
 
-**Scase** is built on Cats Effect. The usual effect types in Cats effect (IO, for example) are supported.
+Although **Scase** is internally built on Cats Effect, it is implemented using the "tagless final" pattern which makes the API agnostic to the effect type chosen by the application developer. 
+Of course, it supports the effect types provided by Cats Effect itself (IO, for example).
 
 ### ZIO
 
@@ -107,28 +106,30 @@ ZIO is supported seamlessly through ZIO cats-interop:
 
 ### AWS SNS
 
+...
+
 ### AWS CloudFormation
 
 ### Apache Pulsar
 
 ### Kafka
-
+...
 ### Akka
-
+...
 ### JMS
-
+...
 ### Local
 
 ## Messaging patterns
 
 ### Request-response
-
+...
 ### One-way
-
+...
 ### Stream processing
-
+...
 ### Routing
-
+...
 ### Transactional transports
 
 If the underlying transport supports transactional messaging (SQS, for example), Scase exposes this functionality through the
