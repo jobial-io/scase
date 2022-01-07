@@ -35,6 +35,8 @@ class SqsRequestResponseServiceTest
   case class Resp1() extends Resp
 
   implicit def m = new RequestResponseMapping[Req1, Resp1] {}
+  
+  implicit val sendRequestContext = SendRequestContext(requestTimeout = Some(30.seconds))
 
   val anotherRequestProcessor = new RequestHandler[IO, Req, Resp] {
     override def handleRequest(implicit context: RequestContext[IO]): Handler = {
@@ -85,7 +87,7 @@ class SqsRequestResponseServiceTest
 
   "request" should "time out if service is not started" in {
     val serviceConfig = SqsRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse](s"test-hello-timeout-${uuid(5)}")
-    implicit val context = SendRequestContext(requestTimeout = Some(1.second))
+    implicit val sendRequestContext = SendRequestContext(requestTimeout = Some(1.second))
 
     recoverToSucceededIf[TimeoutException] {
       for {
