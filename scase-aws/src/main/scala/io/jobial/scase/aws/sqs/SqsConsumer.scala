@@ -76,6 +76,7 @@ class SqsConsumer[F[_], M](
                     o <- outstandingMessagesRef.get
                     r <- o.get(unmarshalledMessage) match {
                       case Some(receiptHandle) =>
+                        println(s"deleted message $unmarshalledMessage")
                         Concurrent[F].delay(deleteMessage(queueUrl, receiptHandle))
                       case _ =>
                         Concurrent[F].raiseError(CouldNotFindMessageToCommit(unmarshalledMessage))

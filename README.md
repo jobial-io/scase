@@ -34,7 +34,7 @@ myClient ? MyRequest("hello") // : F[MyResponse]
 As a developer, we want this to be **as type-safe as possible**, with no possibility of replying with the "wrong"
 type or forgetting to send a reply entirely.
 
-We usually don't care if the service is eventually **deployed as an AWS Lambda or an Apache Pulsar function or a standalone app in a container, or maybe run in an Akka Cluster, or in a test locally**.
+It is usually not important if the service is eventually **deployed as an AWS Lambda or an Apache Pulsar function or a standalone app in a container, or maybe run in an Akka Cluster, or in a test locally**.
 
 As an application developer, we want to focus on the business logic, and implement it on top of a **safe, concise and platform independent API**. We would like to be able to run the code in different environments with as little changes as possible.
 
@@ -119,6 +119,9 @@ ZIO is supported seamlessly through ZIO cats-interop:
 ### JMS
 ...
 ### Local
+
+### Tibco Rendezvous
+...
 
 ## Messaging patterns
 

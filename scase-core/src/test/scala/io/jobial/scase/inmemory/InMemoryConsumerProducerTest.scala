@@ -6,7 +6,7 @@ import io.jobial.scase.core.{ScaseTestHelper, TestRequest1}
 import io.jobial.scase.marshalling.serialization._
 import org.scalatest.flatspec.AsyncFlatSpec
 
-class InMemoryQueueTest extends AsyncFlatSpec with ScaseTestHelper {
+class InMemoryConsumerProducerTest extends AsyncFlatSpec with ScaseTestHelper {
 
   "request-response service" should "reply" in {
     val request = TestRequest1("1")
