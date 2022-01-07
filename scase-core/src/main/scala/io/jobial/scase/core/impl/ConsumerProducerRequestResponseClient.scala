@@ -27,7 +27,7 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
   autoCommitResponse: Boolean,
   name: String
 )(
-  implicit responseMarshaller: Unmarshaller[Either[Throwable, RESP]],
+  implicit responseMarshaller: Unmarshaller[Either[Throwable, RESP]]
   //monitoringPublisher: MonitoringPublisher
 ) extends RequestResponseClient[F, REQ, RESP] with Logging {
 
@@ -105,7 +105,7 @@ object ConsumerProducerRequestResponseClient extends Logging {
     autoCommitResponse: Boolean = true,
     name: String = randomUUID.toString
   )(
-    implicit responseMarshaller: Unmarshaller[Either[Throwable, RESP]],
+    implicit responseMarshaller: Unmarshaller[Either[Throwable, RESP]]
     // monitoringPublisher: MonitoringPublisher
   ): F[ConsumerProducerRequestResponseClient[F, REQ, RESP]] =
     for {
