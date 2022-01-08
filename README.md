@@ -233,6 +233,8 @@ sealed trait GreetingRequest[RESPONSE] extends Request[RESPONSE]
 sealed trait GreetingResponse
 
 case class Hello(person: String) extends GreetingRequest[HelloResponse]
+
+case class HelloResponse(sayingHello: String) extends GreetingResponse
 ...
 ```
 
