@@ -17,8 +17,7 @@ import io.jobial.scase.aws.sqs.SqsRequestResponseServiceConfiguration
 import io.jobial.scase.marshalling.circe._
 
 trait GreetingServiceSqsConfig {
-
-
+  
   val greetingServiceConfig =
     SqsRequestResponseServiceConfiguration[GreetingRequest[_ <: GreetingResponse], GreetingResponse]("greeting")
 }
