@@ -96,9 +96,10 @@ A few things to highlight in the example:
 
 * The service must handle every message, it is a compile time error if a request is not replied appropriately
 * The request must be replied using the right type, again, it is checked at compile time
-* The response message on the client side is type-safe, e.g. for Hello the client code receives a HelloResponse and for Hi the response type is HiResponse
+* The response message on the client side is type-safe; for example, for `Hello` the client code receives a `HelloResponse` and for `Hi` the response type is `HiResponse`
 * It is not possible to send a request that does not conform to the client's type, this is checked at compile time.
-* You don't have to use Cats Effect's IO: you can use other effect types, or if you are not familiar with functional effects or need to use non-pure code, you can just ...
+* You don't have to use Cats Effect's `IO`: you can use any other effect type. If you are not familiar with functional effects or need to use non-pure code, you can just wrap
+your code in an `IO`.
 
 ## How to use
 
@@ -133,7 +134,9 @@ Of course, it supports the effect types provided by Cats Effect itself (IO, for 
 
 ### ZIO
 
-ZIO is supported seamlessly through ZIO cats-interop: 
+ZIO is supported seamlessly through ZIO cats-interop:
+
+[Example](scase-zio-example/src/main/scala/io/jobial/scase/example/greeting/zio)
 
 ## Integrations
 
