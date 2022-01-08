@@ -5,7 +5,7 @@ pipelines:
   default:
     - step:
        script:
-         - build-with-sbt +compile +test +publish
+         - build-with-sbt
        services:
          - pulsar 
 
