@@ -10,15 +10,16 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-
 name := "scase"
 
 ThisBuild / organization := "io.jobial"
 ThisBuild / scalaVersion := "2.12.13"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.13", "2.13.6")
 ThisBuild / version := "0.1.0"
-ThisBuild / isSnapshot := true
 ThisBuild / scalacOptions += "-target:jvm-1.8"
+ThisBuild / publishArtifact in(Test, packageBin) := true
+ThisBuild / publishArtifact in(Test, packageSrc) := true
+ThisBuild / publishArtifact in(Test, packageDoc) := true
 
 ThisBuild / assembly / assemblyMergeStrategy := {
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
@@ -194,6 +195,11 @@ lazy val `scase-lambda-example` = project
 
 lazy val `scase-sqs-example` = project
   .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.jobial" %% "sclap" % SclapVersion
+    )
+  )
   .dependsOn(`scase-aws` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "compile->compile;test->test")
 

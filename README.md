@@ -40,7 +40,7 @@ It is usually not important if the service is eventually **deployed as an AWS La
 
 In addition, we would like to:
 
-* Be able to access the service from anywhere, in a type-safe way
+* Be able to access services from anywhere, in a type-safe way, using the same API
 
 * Decouple the business logic from frameworks like **Akka** or **AWS Lambda**
 
