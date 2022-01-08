@@ -71,7 +71,6 @@ lazy val root: Project = project
   .dependsOn(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-lambda-example`, `scase-pulsar-example`, `sbt-scase-cloudformation`)
 
 lazy val `scase-core` = project
-  .in(file("scase-core"))
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
@@ -89,7 +88,6 @@ lazy val `scase-core` = project
   )
 
 lazy val `scase-aws` = project
-  .in(file("scase-aws"))
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
@@ -109,7 +107,6 @@ lazy val `scase-aws` = project
   .dependsOn(`scase-circe` % "test->test")
 
 lazy val `scase-cloudformation` = project
-  .in(file("scase-cloudformation"))
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
@@ -122,7 +119,6 @@ lazy val `scase-cloudformation` = project
   .dependsOn(`scase-aws` % "compile->compile;test->test")
 
 lazy val `scase-spray-json` = project
-  .in(file("scase-spray-json"))
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
@@ -137,7 +133,6 @@ lazy val `scase-spray-json` = project
   .dependsOn(`scase-core` % "compile->compile;test->test")
 
 lazy val `scase-circe` = project
-  .in(file("scase-circe"))
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
@@ -150,7 +145,6 @@ lazy val `scase-circe` = project
 
 // check https://stackoverflow.com/questions/37525980/sbt-exclude-module-from-aggregates-or-compilation-based-on-scala-version
 lazy val `sbt-scase-cloudformation` = project
-  .in(file("sbt-scase-cloudformation"))
   .settings(
     name := "sbt-scase-cloudformation",
     publish := scalaBinaryVersion.value == "2.12",
@@ -164,7 +158,6 @@ lazy val `sbt-scase-cloudformation` = project
   )
 
 lazy val `scase-pulsar` = project
-  .in(file("scase-pulsar"))
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
@@ -176,22 +169,16 @@ lazy val `scase-pulsar` = project
   .dependsOn(`scase-circe` % "test->test")
 
 lazy val `scase-pulsar-example` = project
-  .in(file("scase-pulsar-example"))
   .settings(commonSettings)
-  //.enablePlugins(SbtScaseCloudformationPlugin)
   .settings(
-    //assembly / assemblyJarName := "utils.jar",
-    assemblyShadeRules := Seq(
-      ShadeRule.keep("io.jobial.scase.aws.lambda.example.HelloExample").inAll,
+    libraryDependencies ++= Seq(
+      "io.jobial" %% "sclap" % SclapVersion
     )
-   // cloudformationStackClass := "io.jobial.scase.example.greeting.GreetingServiceStack"
   )
   .dependsOn(`scase-circe` % "compile->compile;test->test")
-  .dependsOn(`scase-cloudformation` % "compile->compile;test->test")
   .dependsOn(`scase-pulsar`)
 
 lazy val `scase-lambda-example` = project
-  .in(file("scase-lambda-example"))
   .settings(commonSettings)
   //.enablePlugins(SbtScaseCloudformationPlugin)
   .settings(
@@ -205,8 +192,12 @@ lazy val `scase-lambda-example` = project
   .dependsOn(`scase-circe` % "compile->compile;test->test")
   .dependsOn(`scase-cloudformation` % "compile->compile;test->test")
 
+lazy val `scase-sqs-example` = project
+  .settings(commonSettings)
+  .dependsOn(`scase-aws` % "compile->compile;test->test")
+  .dependsOn(`scase-circe` % "compile->compile;test->test")
+
 lazy val `scase-spray-json-example` = project
-  .in(file("scase-spray-json-example"))
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
