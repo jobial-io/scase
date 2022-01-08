@@ -25,8 +25,3 @@ case class HelloResponse(sayingHello: String) extends GreetingResponse
 case class Hi(person: String) extends GreetingRequest[HiResponse]
 
 case class HiResponse(sayingHi: String) extends GreetingResponse
-
-
-
-
-

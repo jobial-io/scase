@@ -107,6 +107,7 @@ trait SqsClient extends S3Client with Logging {
         .toString, visibilityTimeout.toSeconds.toString))
   }
 
+  // TODO: using async client
   def receiveMessage(queueUrl: String, maxNumberOfMessages: Int = 10, maxReceiveMessageWaitTime: Int = defaultMaxReceiveMessageWaitTime) =
     sqsExtended.getOrElse(sqs).receiveMessage(new ReceiveMessageRequest()
       .withQueueUrl(queueUrl)

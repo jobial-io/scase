@@ -32,7 +32,7 @@ myClient ? MyRequest("hello") // : F[MyResponse]
 ```
 
 We want the code to be **as type-safe as possible**, with no possibility of replying with the "wrong"
-type or forgetting to send a reply entirely.
+type or forgetting to send a response entirely.
 
 Application developers like to focus on the business logic, implemented on top of a **safe, concise and platform independent API**.
 
@@ -40,7 +40,7 @@ It is usually not important if the service is eventually **deployed as an AWS La
 
 In addition, we would like to:
 
-* Be able to access services from anywhere, in a type-safe way, using the same API
+* Be able to access services from anywhere, in a type-safe way, using a uniform API
 
 * Decouple the business logic from frameworks like **Akka** or **AWS Lambda**
 
@@ -54,11 +54,10 @@ In addition, we would like to:
 
 * Maximum type safety and no boilerplate
 * Portable code between deployment and runtime environments, without rewriting
-* Out-of-the-box support for deployment on a range of runtime environments, like **AWS Lambda**, **SQS**, **SNS**, **
-  Akka**,
+* Support for deployment on a range of runtime environments, like **AWS Lambda**, **SQS**, **SNS**, **Akka**,
   **Apache Pulsar**, **Kafka** or standalone app
 * Simple, future proof, platform independent code for your application logic
-* Out-of-the-box integration with Cloudformation
+* Integration with Cloudformation
 * Easily extendable support for serialization and network protocols, with built-in support for Circe, Spray Json, Java serialization and others
 * Integrated with effect systems like **Cats Effect**, **ZIO**, **Monix** (can also be used seamlessly with Scala / Java Futures)
 * Lightweight, modular, extendable design that provides a simple layer between runtime and application code - not a "
@@ -169,6 +168,8 @@ ZIO is supported seamlessly through ZIO cats-interop:
 ...
 ### Local
 
+[Example](scase-core/src/test/scala/io/jobial/scase/local/LocalRequestResponseServiceTest.scala)
+
 ### Tibco Rendezvous
 ...
 
@@ -205,7 +206,7 @@ Of course, nothing prevents anyone from deploying a **Scase** service as an HTTP
 
 ### Marshalling
 
-Marshalling / unmarshalling is done using the Marshaller and Unmarshaller type classes. **Scase** provides implementation for many popular serialization formats and libraries:
+Marshalling / unmarshalling is done using the `Marshaller` and Unmarshaller type classes. **Scase** provides implementation for many popular serialization formats and libraries:
 
 * Circe (JSON) ([Example](scase-pulsar-example/src/main/scala/io/jobial/scase/example/greeting/pulsar))
 * Java serialization
@@ -213,18 +214,18 @@ Marshalling / unmarshalling is done using the Marshaller and Unmarshaller type c
 * Spray JSON ([Example](scase-spray-json-example/src/main/scala/io/jobial/scase/example/greeting/sprayjson))
 
 The marshalling API is designed to be able to deal with both text and binary protocols (e.g. AWS Lambda encodes and passes messages as text, not bytes).
-Support for custom formats can be added by implementing the Marshaller and unmarshaller type classes.
+Support for custom formats can be added by implementing the `Marshaller` and `Unmarshaller` type classes.
 
 ### Request-response type mapping
 
 Mapping a request type to a response type is implemented through the `RequestResponseMapping` multi-parameter type class. For example,
-if someone wants a service to respond with `FooResponse` for `FooRequest`, they need to have an instance of 
+if someone wants a service to respond with `FooResponse` to `FooRequest`, they need to have an instance of 
 
 ```scala
 RequestResponseMapping[FooRequest, FooResponse]{}
 ```
 
-Scase provides a default implementation of this type class for requests
+available. Scase provides a default implementation of this type class for requests
 that extend the `Request[RESPONSE]` trait, allowing the following pattern:
 
 ```scala
@@ -235,10 +236,10 @@ sealed trait GreetingResponse
 case class Hello(person: String) extends GreetingRequest[HelloResponse]
 
 case class HelloResponse(sayingHello: String) extends GreetingResponse
-...
 ```
 
 ### Lower level messaging API
+...
 
 ## Comparison with an Akka actor
 
@@ -249,7 +250,7 @@ An Akka actor is a low-level concurrency primitive. In this sense, it serves a v
 **Purpose** | Low level concurrency construct | A high level, platform independent, serverless function that can run on any messaging middleware, runtime or protocol (including Akka actors). It does not make any assumptions about concurrency or the runtime.
 **When should you use?** | As an application developer, almost never. Actors are very low level, don't compose easily and do not map well to cloud runtimes. Akka actors are building blocks for higher level constructs, like Reactive Streams or Akka HTTP routes, for example. You should always consider using those high level APIs unless there is a good reason to drop down to the actor level. | When you write high level application code with serverless and microservices in mind, you should consider **Scase**: it will give you more type safety, flexibility in deployment, testing, and seamless transitioning between runtimes and cloud providers. Your code will be simpler, more portable and future proof.
 **Handler** | Receive is a partial function in an Akka actor. This is mainly because the actor API was originally untyped. Because of that, it was not possible to decide if a message was actually handled by the actor without implementing it as a partial function. | Handle is **not** a partial function: **Scase** aims to achieve maximum type safety, which means if a service contractually declares to handle a certain type of message, it can be checked at compile time. Conversely, if a service receives a type of message it cannot handle, the **Scase** library can tell this fact based on the type alone, before passing it to the service code. This design makes code much safer in general by reducing the possibility of accidentally unhandled requests or responses.
-**Request-response type mapping** | Responses are mapped based on a special field in the request message in typed actors. In untyped actors, there is no relationship (or compile time check) between requests and responses at the type level. | Request-response mapping is type-safe and checked at compile time. The mapping is represented as a type class, which means any mapping convention can be implemented easily (including Akka's). 
+**Request-response type mapping** | Responses are mapped based on a special field in the request message in typed actors, or using an OO-style JDK proxy which is not checked at compile time. In untyped actors, there is no relationship (or compile time check) between requests and responses at the type level. | Request-response mapping is type-safe and checked at compile time. The mapping is represented as a type class, which means any mapping convention can be implemented easily (including Akka's). 
 **Concurrency** | Akka actors are by design single-threaded, mutable constructs. They automatically synchronize over the actor instance to allow safe mutations. | A Scase service is a pure Scala function that is agnostic to the actual runtime or the concurrency model used in the message handler. The effect type in the service is pluggable, which allows easy and complete control over concurrency in the service.
 **Runtime** | Akka actors run on the runtime provided by the library | Scase is just a thin layer on the runtime provided by the underlying messaging infrastructure: the same service can run locally or on a serverless cloud runtime, for example. The main purpose of **Scase** is to provide a portable API and decouple business logic from the underlying details. You can easily expose an existing actor as a Scase service or vice versa, run a Scase service as an Actor:
 
