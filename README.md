@@ -75,6 +75,23 @@ It comes with sensible defaults, with pluggable support for custom styles.
 
 ## An example
 
+```
+import cats.effect.IO
+import io.jobial.scase.core._
+
+trait GreetingService extends RequestHandler[IO, GreetingRequest[_ <: GreetingResponse], GreetingResponse] {
+
+  def handleRequest(implicit context: RequestContext[IO]) = {
+    case m: Hello =>
+      m ! HelloResponse(s"Hello, ${m.person}!")
+    case m: Hi =>
+      for {
+        _ <- IO(println(s"processing request $m..."))
+      } yield m ! HiResponse(s"Hi ${m.person}!") 
+  }
+}
+```
+
 A few things to highlight in the example:
 
 * The service must handle every message, it is a compile time error if a request is not replied appropriately
@@ -122,15 +139,22 @@ ZIO is supported seamlessly through ZIO cats-interop:
 
 ### AWS Lambda
 
+[Example](../tree/master/scase-lambda-example/src/main/scala/io/jobial/scase/example/greeting/lambda)
+
 ### AWS SQS
 
-### AWS SNS
+[Example](../tree/master/scase-sqs-example/src/main/scala/io/jobial/scase/example/greeting/sqs)
 
+### AWS SNS
 ...
 
 ### AWS CloudFormation
 
+[Example](../tree/master/scase-lambda-example/src/main/scala/io/jobial/scase/example/greeting/lambda)
+
 ### Apache Pulsar
+
+[Example](../tree/master/scase-pulsar-example/src/main/scala/io/jobial/scase/example/greeting/pulsar)
 
 ### Kafka
 ...
