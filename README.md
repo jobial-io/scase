@@ -75,6 +75,8 @@ It comes with sensible defaults, with pluggable support for custom styles.
 
 ## An example
 
+A simple greeting service:
+
 ```scala
 import cats.effect.IO
 import io.jobial.scase.core._
@@ -203,7 +205,7 @@ Of course, nothing prevents anyone from deploying a **Scase** service as an HTTP
 
 ### Marshalling
 
-Marshalling / unmarshalling is done using the Marshaller and Unmarshaller type classes. **Scase** provides implementation of these type classes for many popular serialization formats and libraries:
+Marshalling / unmarshalling is done using the Marshaller and Unmarshaller type classes. **Scase** provides implementation for many popular serialization formats and libraries:
 
 * Circe (JSON)
 * Java serialization
@@ -211,6 +213,7 @@ Marshalling / unmarshalling is done using the Marshaller and Unmarshaller type c
 * Spray JSON (for backcompat)
 
 The marshalling API is designed to be able to deal with both text and binary protocols (e.g. AWS Lambda encodes and passes messages as text, not bytes).
+Support for custom formats can be added by implementing the Marshaller and unmarshaller type classes.
 
 ### Request-response type mapping
 
