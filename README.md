@@ -139,22 +139,22 @@ ZIO is supported seamlessly through ZIO cats-interop:
 
 ### AWS Lambda
 
-[Example](../tree/master/scase-lambda-example/src/main/scala/io/jobial/scase/example/greeting/lambda)
+[Example](scase-lambda-example/src/main/scala/io/jobial/scase/example/greeting/lambda)
 
 ### AWS SQS
 
-[Example](../tree/master/scase-sqs-example/src/main/scala/io/jobial/scase/example/greeting/sqs)
+[Example](scase-sqs-example/src/main/scala/io/jobial/scase/example/greeting/sqs)
 
 ### AWS SNS
 ...
 
 ### AWS CloudFormation
 
-[Example](../tree/master/scase-lambda-example/src/main/scala/io/jobial/scase/example/greeting/lambda)
+[Example](scase-lambda-example/src/main/scala/io/jobial/scase/example/greeting/lambda)
 
 ### Apache Pulsar
 
-[Example](../tree/master/scase-pulsar-example/src/main/scala/io/jobial/scase/example/greeting/pulsar)
+[Example](scase-pulsar-example/src/main/scala/io/jobial/scase/example/greeting/pulsar)
 
 ### Kafka
 ...
