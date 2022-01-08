@@ -4,12 +4,14 @@ import cats.effect.IO
 import org.scalatest.compatible.Assertion
 import org.scalatest.flatspec.AsyncFlatSpec
 
+import java.util.concurrent.Executors.newCachedThreadPool
 import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContext.fromExecutor
 
 trait ScaseTestHelper {
   this: AsyncFlatSpec =>
 
-  implicit val cs = IO.contextShift(ExecutionContext.global)
+  implicit val cs = IO.contextShift(fromExecutor(newCachedThreadPool))
 
   implicit val timer = IO.timer(ExecutionContext.global)
 
