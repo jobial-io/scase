@@ -1,6 +1,5 @@
 package io.jobial.scase.example.greeting.zio
 
-import io.jobial.scase.example.greeting.Hello
 import zio._
 import zio.interop.catz._
 import zio.interop.catz.taskEffectInstance

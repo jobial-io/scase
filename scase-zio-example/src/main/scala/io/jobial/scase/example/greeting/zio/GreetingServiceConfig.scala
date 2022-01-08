@@ -1,6 +1,5 @@
 package io.jobial.scase.example.greeting.zio
 
-import io.jobial.scase.example.greeting.{GreetingRequest, GreetingResponse}
 import io.jobial.scase.local.LocalRequestResponseServiceConfiguration
 
 trait GreetingServiceConfig {

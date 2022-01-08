@@ -67,8 +67,8 @@ lazy val root: Project = project
     assemblyPackageScala / assembleArtifact := false,
     assemblyPackageDependency / assembleArtifact := false
   )
-  .aggregate(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-examples`, `sbt-scase-cloudformation`)
-  .dependsOn(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-examples`, `sbt-scase-cloudformation`)
+  .aggregate(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-lambda-example`, `scase-pulsar-example`, `sbt-scase-cloudformation`)
+  .dependsOn(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-lambda-example`, `scase-pulsar-example`, `sbt-scase-cloudformation`)
 
 lazy val `scase-core` = project
   .in(file("scase-core"))
@@ -175,8 +175,8 @@ lazy val `scase-pulsar` = project
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "test->test")
 
-lazy val `scase-examples` = project
-  .in(file("scase-examples"))
+lazy val `scase-pulsar-example` = project
+  .in(file("scase-pulsar-example"))
   .settings(commonSettings)
   //.enablePlugins(SbtScaseCloudformationPlugin)
   .settings(
@@ -186,10 +186,24 @@ lazy val `scase-examples` = project
     )
    // cloudformationStackClass := "io.jobial.scase.example.greeting.GreetingServiceStack"
   )
-  .dependsOn(`scase-aws` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "compile->compile;test->test")
   .dependsOn(`scase-cloudformation` % "compile->compile;test->test")
   .dependsOn(`scase-pulsar`)
+
+lazy val `scase-lambda-example` = project
+  .in(file("scase-lambda-example"))
+  .settings(commonSettings)
+  //.enablePlugins(SbtScaseCloudformationPlugin)
+  .settings(
+    //assembly / assemblyJarName := "utils.jar",
+    assemblyShadeRules := Seq(
+      ShadeRule.keep("io.jobial.scase.aws.lambda.example.HelloExample").inAll,
+    )
+    // cloudformationStackClass := "io.jobial.scase.example.greeting.GreetingServiceStack"
+  )
+  .dependsOn(`scase-aws` % "compile->compile;test->test")
+  .dependsOn(`scase-circe` % "compile->compile;test->test")
+  .dependsOn(`scase-cloudformation` % "compile->compile;test->test")
 
 lazy val `scase-spray-json-example` = project
   .in(file("scase-spray-json-example"))
@@ -210,4 +224,5 @@ lazy val `scase-zio-example` = project
       "io.jobial" %% "sclap-zio" % SclapVersion
     )
   )
-  .dependsOn(`scase-examples`)
+  .dependsOn(`scase-circe` % "compile->compile;test->test")
+  .dependsOn(`scase-core` % "compile->compile;test->test")
