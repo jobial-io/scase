@@ -13,7 +13,7 @@
 package io.jobial.scase.example.greeting
 
 import io.jobial.scase.core._
-import io.jobial.scase.example.greeting.sprayjson.GreetingServicePulsarConfig
+import io.jobial.scase.example.greeting.sprayjson.{GreetingService, GreetingServicePulsarConfig, Hello, Hi}
 import io.jobial.scase.local.localServiceAndClient
 import org.scalatest.flatspec.AsyncFlatSpec
 

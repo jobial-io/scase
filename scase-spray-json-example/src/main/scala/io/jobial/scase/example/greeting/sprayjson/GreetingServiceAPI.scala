@@ -10,19 +10,23 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package io.jobial.scase.example.greeting
+package io.jobial.scase.example.greeting.sprayjson
 
-import cats.effect.IO
 import io.jobial.scase.core._
 
-trait GreetingService extends RequestHandler[IO, GreetingRequest[_ <: GreetingResponse], GreetingResponse] {
+sealed trait GreetingRequest[RESPONSE] extends Request[RESPONSE]
 
-  def handleRequest(implicit context: RequestContext[IO]) = {
-    case m: Hello =>
-      m ! HelloResponse(s"Hello, ${m.person}!")
-    case m: Hi =>
-      for {
-        _ <- IO(println(s"processing request $m..."))
-      } yield m ! HiResponse(s"Hi ${m.person}!") 
-  }
-}
+sealed trait GreetingResponse
+
+case class Hello(person: String) extends GreetingRequest[HelloResponse]
+
+case class HelloResponse(sayingHello: String) extends GreetingResponse
+
+case class Hi(person: String) extends GreetingRequest[HiResponse]
+
+case class HiResponse(sayingHi: String) extends GreetingResponse
+
+
+
+
+
