@@ -6,13 +6,13 @@ Scase helps you achieve boring concepts like:
 
  * Clean separation of service API, implementation and client side
  * Portability: deployment on multiple platforms without rewriting application logic
- * Messaging patterns that typically arise in enterprise applications.
+ * Messaging patterns that frequently arise in enterprise applications.
 
 Scase is a lightweight functional library that bridges the gap between microservice platforms / APIs and functional Scala code.
 
-## Introduction
+## Motivation
 
-When we think of implementing a microservice or a serverless function, we typically want to do something like:
+When thinking of implementing a microservice or a serverless function, we typically want to do something like:
 
 ```scala
 // Service code:
@@ -31,46 +31,47 @@ and on the client side:
 myClient ? MyRequest("hello") // : F[MyResponse]
 ```
 
-As a developer, we want this to be **as type-safe as possible**, with no possibility of replying with the "wrong"
+We want the code to be **as type-safe as possible**, with no possibility of replying with the "wrong"
 type or forgetting to send a reply entirely.
+
+Application developers like to focus on the business logic, implemented on top of a **safe, concise and platform independent API**.
 
 It is usually not important if the service is eventually **deployed as an AWS Lambda or an Apache Pulsar function or a standalone app in a container, or maybe run in an Akka Cluster, or in a test locally**.
 
-As an application developer, we want to focus on the business logic, and implement it on top of a **safe, concise and platform independent API**. We would like to be able to run the code in different environments with as little changes as possible.
-
 In addition, we would like to:
 
-* Be able to access the service from anywhere in a type-safe way
+* Be able to access the service from anywhere, in a type-safe way
 
 * Decouple the business logic from frameworks like **Akka** or **AWS Lambda**
 
-* Be able to write immutable, idiomatic Scala code for the service logic, completely decoupled from the underlying implementation
+* Be able to write idiomatic, functional Scala code for the service logic, completely decoupled from the underlying implementation
 
 * Use concurrency seamlessly and safely
 
 * Still be able to access common features of messaging and serverless runtimes if needed (e.g. message attributes, commit / rollback).
 
-**Scase** gives you exactly that, with the additional benefit of:
+**Scase** makes these available through a concise, platform independent API, with the benefit of:
 
-* Maximum type safety, with zero boilerplate
-* Portable code between deployment and runtime environments, no rewriting needed
+* Maximum type safety and no boilerplate
+* Portable code between deployment and runtime environments, without rewriting
 * Out-of-the-box support for deployment on a range of runtime environments, like **AWS Lambda**, **SQS**, **SNS**, **
   Akka**,
   **Apache Pulsar**, **Kafka** or standalone app
 * Simple, future proof, platform independent code for your application logic
 * Out-of-the-box integration with Cloudformation
 * Easily extendable support for serialization and network protocols, with built-in support for Circe, Spray Json, Java serialization and others
-* Integrated with effect systems like **Cats Effect**, **ZIO**, **Monix** (can be used seamlessly with Scala / Java Futures)
+* Integrated with effect systems like **Cats Effect**, **ZIO**, **Monix** (can also be used seamlessly with Scala / Java Futures)
 * Lightweight, modular, extendable design that provides a simple layer between runtime and application code - not a "
   framework"
 * Additional Java-friendly client API to allow easy interop with Java and other JVM languages
 * Test support
 * Well defined error handling
-* Purely functional, from top to bottom, but without the need to understand any complicated FP constructs
+* Purely functional, from top to bottom, but without the need to understand complex FP constructs
 
-Additionally, **Scase** does not force you to use a specific "convention" when it comes to modelling your messages or correlating request and response types. It comes with sensible defaults and support for common styles, but all of these are pluggable and easy to customize.
+Additionally, **Scase** does not force you to use a specific "convention" when it comes to modelling your messages or correlating request and response types. 
+It comes with sensible defaults, with pluggable support for custom styles.
 
-Scase can also be used as an easy-to-use, universal, functional alternative to native messaging APIs (e.g. for Apache Pulsar, Kafka, SQS and so on). 
+Scase can also be used as a simple, functional alternative to native messaging APIs (e.g. for Apache Pulsar, Kafka, SQS and so on). 
 
 ## An example
 
