@@ -207,17 +207,34 @@ Of course, nothing prevents anyone from deploying a **Scase** service as an HTTP
 
 Marshalling / unmarshalling is done using the Marshaller and Unmarshaller type classes. **Scase** provides implementation for many popular serialization formats and libraries:
 
-* Circe (JSON)
+* Circe (JSON) ([Example](scase-pulsar-example/src/main/scala/io/jobial/scase/example/greeting/pulsar))
 * Java serialization
 * Raw bytes
-* Spray JSON (for backcompat)
+* Spray JSON ([Example](scase-spray-json-example/src/main/scala/io/jobial/scase/example/greeting/sprayjson))
 
 The marshalling API is designed to be able to deal with both text and binary protocols (e.g. AWS Lambda encodes and passes messages as text, not bytes).
 Support for custom formats can be added by implementing the Marshaller and unmarshaller type classes.
 
 ### Request-response type mapping
 
+Mapping a request type to a response type is implemented through the `RequestResponseMapping` multi-parameter type class. For example,
+if someone wants a service to respond with `FooResponse` for `FooRequest`, they need to have an instance of 
+
+```scala
+RequestResponseMapping[FooRequest, FooResponse]{}
+```
+
+Scase provides a default implementation of this type class for requests
+that extend the `Request[RESPONSE]` trait, allowing the following pattern:
+
+```scala
+sealed trait GreetingRequest[RESPONSE] extends Request[RESPONSE]
+
+sealed trait GreetingResponse
+
+case class Hello(person: String) extends GreetingRequest[HelloResponse]
 ...
+```
 
 ### Lower level messaging API
 
