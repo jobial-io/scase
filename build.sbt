@@ -15,7 +15,7 @@ name := "scase"
 ThisBuild / organization := "io.jobial"
 ThisBuild / scalaVersion := "2.12.13"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.13", "2.13.6")
-ThisBuild / version := "0.1.0"
+ThisBuild / version := "0.1.1"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
 ThisBuild / publishArtifact in(Test, packageBin) := true
 ThisBuild / publishArtifact in(Test, packageSrc) := true
@@ -146,6 +146,7 @@ lazy val `scase-circe` = project
 
 // check https://stackoverflow.com/questions/37525980/sbt-exclude-module-from-aggregates-or-compilation-based-on-scala-version
 lazy val `sbt-scase-cloudformation` = project
+  .settings(commonSettings)
   .settings(
     name := "sbt-scase-cloudformation",
     publish := scalaBinaryVersion.value == "2.12",

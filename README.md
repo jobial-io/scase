@@ -75,7 +75,7 @@ It comes with sensible defaults, with pluggable support for custom styles.
 
 ## An example
 
-```
+```scala
 import cats.effect.IO
 import io.jobial.scase.core._
 
@@ -106,7 +106,7 @@ To use Scase, you need to add
 
 ```scala
 libraryDependencies ++= Seq(
-  "io.jobial" %% "scase" % "0.1.0"
+  "io.jobial" %% "scase" % "0.1.1"
 )
 ```
 
@@ -117,7 +117,7 @@ to your `build.sbt` or
 <dependency>
     <groupId>io.jobial</groupId>
     <artifactId>scase_${scala.version}</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 
