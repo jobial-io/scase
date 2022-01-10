@@ -56,12 +56,14 @@ class LocalRequestResponseServiceTest
       (service, client) = t
       _ <- service.start
       r1 <- client.sendRequest(request1)
+      r1 <- r1.response
       r11 <- client ? request1
       r2 <- client.sendRequest(request2)
+      r2 <- r2.response
       r21 <- client ? request2
     } yield assert(
-      response1 === r1 && response1 === r11 &&
-        response2 === r2 && response2 === r21
+      response1 === r1.message && response1 === r11 &&
+        response2 === r2.message && response2 === r21
     )
   }
 
@@ -71,8 +73,9 @@ class LocalRequestResponseServiceTest
       (service, client) = t
       _ <- service.start
       r <- client.sendRequest(Req1())
+      r <- r.response
       r1 <- client ? Req1()
-    } yield assert(Resp1() == r)
+    } yield assert(Resp1() == r.message && Resp1() == r1)
   }
 
   "request" should "time out if service is not started" in {

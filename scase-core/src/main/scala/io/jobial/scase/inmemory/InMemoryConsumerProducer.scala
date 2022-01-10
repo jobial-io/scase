@@ -6,7 +6,7 @@ import cats.effect.concurrent.{Deferred, Ref}
 import cats.implicits._
 import cats.effect.implicits._
 import io.jobial.scase.core.impl.DefaultMessageConsumer
-import io.jobial.scase.core.{MessageConsumer, MessageProducer, MessageReceiveResult, MessageSendResult, MessageSubscription}
+import io.jobial.scase.core.{DefaultMessageReceiveResult, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSendResult, MessageSubscription}
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
@@ -14,9 +14,9 @@ import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 class InMemoryConsumerProducer[F[_], M](
   val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]],
   deliverToAllSubscribers: Boolean,
-  allowMultipleSubscribers: Boolean 
+  allowMultipleSubscribers: Boolean
 ) extends DefaultMessageConsumer[F, M] with MessageProducer[F, M] with Logging {
-  
+
   def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]) =
   // Noop as send handles the subscribers
     Concurrent[F].unit
@@ -32,9 +32,9 @@ class InMemoryConsumerProducer[F[_], M](
    *
    * Warning: Marshaller (and the Unmarshaller in subscribe) is not used here, the message is delivered directly to the consumer.
    */
-  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M], concurrent: Concurrent[F]): F[MessageSendResult[M]] = {
+  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M], concurrent: Concurrent[F]): F[MessageSendResult[F, M]] = {
 
-    val messageReceiveResult = MessageReceiveResult(message, attributes, { () => Monad[F].unit }, { () => Monad[F].unit })
+    val messageReceiveResult = DefaultMessageReceiveResult[F, M](message, attributes, Monad[F].unit, Monad[F].unit)
 
     for {
       r <- subscriptions.get
@@ -44,7 +44,9 @@ class InMemoryConsumerProducer[F[_], M](
         logger.info(s"calling subscription on queue with $messageReceiveResult")
         subscription(messageReceiveResult)
       })
-    } yield MessageSendResult[M]()
+    } yield new MessageSendResult[F, M]{
+      override def commit: F[Unit] = Monad[F].unit
+    }
 
 
   }

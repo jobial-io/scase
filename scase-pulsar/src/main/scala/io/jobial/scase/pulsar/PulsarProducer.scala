@@ -1,5 +1,6 @@
 package io.jobial.scase.pulsar
 
+import cats.Monad
 import cats.effect.{Concurrent, ContextShift, IO}
 import cats.implicits._
 import io.jobial.scase.core.{MessageProducer, MessageSendResult}
@@ -25,7 +26,7 @@ class PulsarProducer[F[_], M](topic: String)(implicit context: PulsarContext, cs
       .enableBatching(true)
       .create
 
-  override def send(message: M, attributes: Map[String, String])(implicit m: Marshaller[M], concurrent: Concurrent[F]): F[MessageSendResult[M]] =
+  override def send(message: M, attributes: Map[String, String])(implicit m: Marshaller[M], concurrent: Concurrent[F]): F[MessageSendResult[F, M]] =
     for {
       r <- Concurrent[F].liftIO(IO.fromFuture(IO(toScala(producer
         .newMessage
@@ -34,7 +35,9 @@ class PulsarProducer[F[_], M](topic: String)(implicit context: PulsarContext, cs
         .sendAsync()
       ))))
       _ = logger.info(s"sent message ${message.toString.take(200)}")
-    } yield MessageSendResult[M]()
+    } yield new MessageSendResult[F, M]{
+      def commit = Monad[F].unit
+    }
 
 }
 

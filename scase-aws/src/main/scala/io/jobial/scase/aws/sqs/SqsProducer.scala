@@ -1,6 +1,6 @@
 package io.jobial.scase.aws.sqs
 
-import cats.Traverse
+import cats.{Monad, Traverse}
 import cats.effect.{Concurrent, IO}
 import cats.effect.concurrent.Ref
 import cats.implicits._
@@ -47,11 +47,13 @@ class SqsProducer[F[_], M](
 
   def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M], c: Concurrent[F]) = {
     logger.info(s"sending to queue $queueUrl ${message.toString.take(200)}")
-    val r: F[MessageSendResult[M]] = for {
+    val r: F[MessageSendResult[F, M]] = for {
       r <- sendMessage(queueUrl, Marshaller[M].marshalToText(message), attributes).to[F]
     } yield {
       logger.info(s"successfully sent to queue $queueUrl ${message.toString.take(200)}")
-      MessageSendResult[M]()
+      new MessageSendResult[F, M]{
+        def commit = Monad[F].unit
+      }
     }
 
     r handleErrorWith { t =>

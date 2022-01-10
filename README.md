@@ -65,7 +65,7 @@ In addition, we would like to:
 * Additional Java-friendly client API to allow easy interop with Java and other JVM languages
 * Test support
 * Well defined error handling
-* Purely functional, from top to bottom, but without the need to understand complex FP constructs
+* Purely functional, from top to bottom, but without the need to understand complex FP constructs.
 
 Additionally, **Scase** does not enforce any specific convention of modelling messages or correlating request and response types. 
 It comes with sensible defaults, with pluggable support for custom styles.
@@ -93,6 +93,8 @@ trait GreetingService extends RequestHandler[IO, GreetingRequest[_ <: GreetingRe
 }
 ```
 
+Full example can be found at:...
+
 A few things to highlight in the example:
 
 * The service must handle every message, it is a compile time error if a request is not replied appropriately
@@ -104,7 +106,7 @@ your code in an `IO`.
 
 ## How to use
 
-To use Scase, you need to add
+You need to add
 
 ```scala
 libraryDependencies ++= Seq(
@@ -142,6 +144,8 @@ ZIO is supported seamlessly through ZIO cats-interop:
 ## Integrations
 
 ### AWS Lambda
+
+TODO: add explanation on AWS env
 
 [Example](scase-lambda-example/src/main/scala/io/jobial/scase/example/greeting/lambda)
 
@@ -253,7 +257,7 @@ An Akka actor is a low-level concurrency primitive. In this sense, it serves a v
 **Request-response type mapping** | Responses are mapped based on a special field in the request message in typed actors, or using an OO-style JDK proxy which is not checked at compile time. In untyped actors, there is no relationship (or compile time check) between requests and responses at the type level. | Request-response mapping is type-safe and checked at compile time. The mapping is represented as a type class, which means any mapping convention can be implemented easily (including Akka's). 
 **Concurrency** | Akka actors are by design single-threaded, mutable constructs. They automatically synchronize over the actor instance to allow safe mutations. | A Scase service is a pure Scala function that is agnostic to the actual runtime or the concurrency model used in the message handler. The effect type in the service is pluggable, which allows easy and complete control over concurrency in the service.
 **Runtime** | Akka actors always run on the runtime provided by the library, an actor cannot be mapped to a cloud runtime. | Scase is just a thin layer on the runtime provided by the underlying messaging infrastructure: the same service can run locally or on a serverless cloud runtime, for example. The main purpose of **Scase** is to provide a portable API and decouple business logic from the underlying details. You can easily expose an existing actor as a Scase service or vice versa, run a Scase service as an Actor:
-**Library** | Akka has grown from a simple library to a huge framework, with all its implications. Akka is fundamentally object-oriented. | Scase is a lightweight, purely functional library, implemented on Cats and Cats Effect, with a pluggable effect type ("tagless final" style). 
+**Library** | Akka has grown from a simple library to a huge framework, with all its implications. Akka is fundamentally object-oriented. | Scase is a lightweight, modular, purely functional library, implemented on Cats and Cats Effect, with a pluggable effect type ("tagless final" style). 
 ...
 
 ## Performance

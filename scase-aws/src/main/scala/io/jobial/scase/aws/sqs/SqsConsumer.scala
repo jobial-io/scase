@@ -48,7 +48,6 @@ class SqsConsumer[F[_], M](
       _ <- visibilityTimeout.map(setVisibilityTimeout(queueUrl, _)).getOrElse(IO())
     } yield ())
   
-  //  _ <- concurrent.liftIO(initialize)
   def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]) = {
     logger.debug(s"subscribed with callback $callback to queue $queueUrl")
 
@@ -67,24 +66,23 @@ class SqsConsumer[F[_], M](
             unmarshalledMessage <- Concurrent[F].fromEither(u.unmarshalFromText(sqsMessage.getBody))
             _ <- outstandingMessagesRef.update(_ + ((unmarshalledMessage, sqsMessage.getReceiptHandle)))
             r <- callback(
-              MessageReceiveResult(
+              DefaultMessageReceiveResult[F, M](
                 message = unmarshalledMessage,
                 // TODO: add standard attributes returned by getAttributes...
                 attributes = sqsMessage.getMessageAttributes.asScala.toMap.filter(e => Option(e._2.getStringValue).isDefined).mapValues(_.getStringValue).toMap,
-                commit = { () =>
+                commit = 
                   for {
                     o <- outstandingMessagesRef.get
                     r <- o.get(unmarshalledMessage) match {
                       case Some(receiptHandle) =>
-                        println(s"deleted message $unmarshalledMessage")
+                        logger.debug(s"deleted message $unmarshalledMessage")
                         Concurrent[F].delay(deleteMessage(queueUrl, receiptHandle))
                       case _ =>
                         Concurrent[F].raiseError(CouldNotFindMessageToCommit(unmarshalledMessage))
                     }
                     _ <- outstandingMessagesRef.update(_ - unmarshalledMessage)
-                  } yield ()
-                },
-                rollback = { () =>
+                  } yield (),
+                rollback = 
                   ???
                   //                                outstandingMessages.remove(unmarshalledMessage) match {
                   //                                  case Some(receiptHandle) =>
@@ -93,7 +91,6 @@ class SqsConsumer[F[_], M](
                   //                                  case _ =>
                   //                                    IO.raiseError(CouldNotFindMessageToCommit(unmarshalledMessage))
                   //                                }
-                }
               )
             )
             //                        } catch {

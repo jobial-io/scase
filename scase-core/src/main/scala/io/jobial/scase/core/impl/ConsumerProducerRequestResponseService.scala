@@ -26,7 +26,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshalle
 
   private def handleRequest(request: MessageReceiveResult[F, REQ]) = {
     logger.debug(s"received request in service: ${request.toString.take(500)}")
-    val r: F[MessageSendResult[Either[Throwable, RESP]]] =
+    val r: F[MessageSendResult[F, Either[Throwable, RESP]]] =
       request.responseProducerId match {
         case Some(responseProducerId) =>
           logger.debug(s"found response producer id $responseProducerId in request")
@@ -97,7 +97,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshalle
                       // commit request after result is written
                       _ <- if (autoCommitRequest) {
                         logger.debug(s"service committing request: ${request.toString.take(500)} on $producer")
-                        request.commit()
+                        request.commit
                       } else Monad[F].unit
                     } yield sendResult
                   case Left(t) =>
@@ -106,7 +106,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshalle
                       sendResult <- producer.send(Left(t), responseAttributes)
                       _ <- if (autoCommitFailedRequest) {
                         logger.debug(s"service committing request: ${request.toString.take(500)}")
-                        request.commit()
+                        request.commit
                       } else Monad[F].unit
                     } yield sendResult
                 }

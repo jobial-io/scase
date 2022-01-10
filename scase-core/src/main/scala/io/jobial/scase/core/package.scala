@@ -36,22 +36,28 @@ package object core extends Logging {
 
   implicit class requestResponseClientExtension[F[_], REQ, RESP](client: RequestResponseClient[F, REQ, RESP])(implicit x: <:<[REQ, Request[_ <: RESP]]) {
 
-    def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST with Request[RESPONSE])(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext = SendRequestContext()): RequestResult[F, RESPONSE] =
+    def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST with Request[RESPONSE])(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext = SendRequestContext()): F[RequestResult[F, RESPONSE]] =
       client.sendRequestWithResponseMapping(request, requestResponseMapping)
 
     def ?[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST with Request[RESPONSE])
       (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext = SendRequestContext(), m: Monad[F]) =
-      Monad[F].map(sendRequest(request).response)(_.message)
+      for {
+        sendResult <- sendRequest(request)
+        response <- sendResult.response
+      } yield response.message
   }
 
   implicit class requestTagBasedRequestResponseClientExtension[F[_], REQ, RESP](client: RequestResponseClient[F, REQ, RESP])(implicit x: <:!<[REQ, Request[_ <: RESP]]) {
 
-    def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST)(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext = SendRequestContext()): RequestResult[F, RESPONSE] =
+    def sendRequest[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST)(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext = SendRequestContext()): F[RequestResult[F, RESPONSE]] =
       client.sendRequestWithResponseMapping(request, requestResponseMapping)
 
     def ?[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST)
       (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendRequestContext: SendRequestContext = SendRequestContext(), m: Monad[F]) =
-      Monad[F].map(sendRequest(request).response)(_.message)
+      for {
+        sendResult <- sendRequest(request)
+        response <- sendResult.response
+      } yield response.message
   }
 
   implicit def sendResponseResultToIO[T](result: SendResponseResult[T]): IO[SendResponseResult[T]] = IO(result)
@@ -61,5 +67,5 @@ package object core extends Logging {
   val ResponseProducerIdKey = "ResponseProducerId"
 
   val RequestTimeoutKey = "RequestTimeout"
-  
+
 }

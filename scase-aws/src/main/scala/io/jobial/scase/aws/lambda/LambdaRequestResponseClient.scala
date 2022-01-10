@@ -16,7 +16,7 @@ import cats.Monad
 import cats.effect.Concurrent
 import cats.implicits._
 import io.jobial.scase.aws.client.AwsContext
-import io.jobial.scase.core.{MessageReceiveResult, RequestResponseClient, RequestResponseMapping, RequestResult, SendRequestContext}
+import io.jobial.scase.core.{DefaultMessageReceiveResult, MessageReceiveResult, RequestResponseClient, RequestResponseMapping, RequestResult, SendRequestContext}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 import java.nio.charset.StandardCharsets
@@ -37,7 +37,7 @@ case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP:
     requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]
   )(
     implicit sendRequestContext: SendRequestContext
-  ): RequestResult[F, RESPONSE] = LambdaRequestResult(
+  ): F[RequestResult[F, RESPONSE]] = Monad[F].pure(LambdaRequestResult(
     Concurrent[F].async { ready =>
       (for {
         result <- invoke(functionName, Marshaller[REQ].marshalToText(request))
@@ -48,7 +48,7 @@ case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP:
       }
 
     }
-  )
+  ))
 }
 
 case class LambdaRequestResult[F[_], RESPONSE](resp: F[RESPONSE])(implicit m: Monad[F]) extends RequestResult[F, RESPONSE] {
@@ -56,11 +56,11 @@ case class LambdaRequestResult[F[_], RESPONSE](resp: F[RESPONSE])(implicit m: Mo
   def response =
     for {
       resp <- resp
-    } yield MessageReceiveResult[F, RESPONSE](
+    } yield DefaultMessageReceiveResult[F, RESPONSE](
       resp,
       Map(), // TODO: propagate attributes here
-      commit = () => Monad[F].unit,
-      rollback = () => Monad[F].unit
+      Monad[F].unit,
+      Monad[F].unit
     )
 
   def commit = Monad[F].unit

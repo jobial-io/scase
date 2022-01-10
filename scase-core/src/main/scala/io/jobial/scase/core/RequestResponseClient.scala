@@ -18,5 +18,5 @@ case class SendRequestContext(
 trait RequestResponseClient[F[_], REQ, RESP] {
   
   def sendRequestWithResponseMapping[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST, requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE])
-    (implicit sendRequestContext: SendRequestContext): RequestResult[F, RESPONSE]
+    (implicit sendRequestContext: SendRequestContext): F[RequestResult[F, RESPONSE]]
 }

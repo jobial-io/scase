@@ -1,14 +1,9 @@
 package io.jobial.scase.core
 
-trait SendResult[F[_]] {
-
-  def commit: F[Unit]
-}
-
 trait SenderClient[F[_], REQ] {
 
   def send[REQUEST <: REQ](request: REQUEST)
-    (implicit sendRequestContext: SendRequestContext): SendResult[F]
+    (implicit sendRequestContext: SendRequestContext): F[MessageSendResult[F, REQUEST]]
 
   def ![REQUEST <: REQ](request: REQUEST)
     (implicit sendRequestContext: SendRequestContext) =

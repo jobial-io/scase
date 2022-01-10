@@ -4,7 +4,7 @@ import cats.Monad
 import cats.effect.concurrent.{Deferred, Ref}
 import cats.effect.{Concurrent, ContextShift, IO, Sync}
 import cats.implicits._
-import io.jobial.scase.core.MessageReceiveResult
+import io.jobial.scase.core.{DefaultMessageReceiveResult, MessageReceiveResult}
 import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
@@ -41,7 +41,7 @@ class PulsarConsumer[F[_], M](topic: String, val subscriptions: Ref[F, List[Mess
       _ <- x match {
         case Right(message) =>
           val attributes = pulsarMessage.getProperties.asScala.toMap
-          val messageReceiveResult = MessageReceiveResult(message, attributes, { () => Monad[F].unit }, { () => Monad[F].unit })
+          val messageReceiveResult = DefaultMessageReceiveResult(message, attributes, Monad[F].unit, Monad[F].unit)
           callback(messageReceiveResult)
         case Left(error) =>
           // TODO: add logging

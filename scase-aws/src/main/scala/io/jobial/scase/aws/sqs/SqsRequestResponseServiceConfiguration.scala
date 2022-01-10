@@ -4,8 +4,8 @@ import cats.effect.{Concurrent, ContextShift, IO, Timer}
 import cats.implicits._
 import io.jobial.scase.aws.client.AwsContext
 import io.jobial.scase.aws.client.Hash.uuid
-import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService}
-import io.jobial.scase.core.{MessageProducer, RequestHandler, RequestResponseClient, ServiceConfiguration}
+import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService, ProducerSenderClient}
+import io.jobial.scase.core.{MessageProducer, RequestHandler, RequestResponseClient, SenderClient, ServiceConfiguration}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
@@ -29,13 +29,16 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
     cs: ContextShift[IO]
   ) = for {
     requestConsumer <- SqsConsumer[F, REQ](requestQueueUrl, cleanup = false)
-    responseProducer <- SqsProducer[F, Either[Throwable, RESP]](responseQueueUrl, cleanup = true)
     service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
-      requestConsumer, { _ => Concurrent[F].delay(responseProducer) }: String => F[MessageProducer[F, Either[Throwable, RESP]]],
+      requestConsumer, { responseQueueUrl =>
+        for {
+          responseProducer <- SqsProducer[F, Either[Throwable, RESP]](responseQueueUrl, cleanup = true)
+        } yield responseProducer
+      }: String => F[MessageProducer[F, Either[Throwable, RESP]]],
       requestHandler
     )
   } yield service
-  
+
 
   //https://cb372.github.io/scalacache/
   def client[F[_] : Concurrent : Timer](
@@ -53,6 +56,15 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
     } yield client
   }
 
+  def senderClient[F[_] : Concurrent : Timer](
+    implicit awsContext: AwsContext = AwsContext(),
+    cs: ContextShift[IO]
+  ): F[SenderClient[F, REQ]] = {
+    for {
+      producer <- SqsProducer[F, REQ](requestQueueUrl)
+      client = ProducerSenderClient[F, REQ](producer)
+    } yield client
+  }
 
 }
 

@@ -5,7 +5,7 @@ import cats.effect.implicits.catsEffectSyntaxConcurrent
 import cats.effect.{Concurrent, Timer}
 import cats.implicits._
 import cats.{Monad, MonadError}
-import io.jobial.scase.core.{CorrelationIdKey, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSubscription, RequestResponseClient, RequestResponseMapping, RequestResult, RequestTimeoutKey, ResponseProducerIdKey, SendRequestContext}
+import io.jobial.scase.core.{CorrelationIdKey, DefaultMessageReceiveResult, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSubscription, RequestResponseClient, RequestResponseMapping, RequestResult, RequestTimeoutKey, ResponseProducerIdKey, SendRequestContext}
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
@@ -41,58 +41,57 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
         logger.warn(s"Outstanding correlations: ${correlations} on ${this}")
 
   case class ConsumerProducerRequestResult[RESPONSE <: RESP](response: F[MessageReceiveResult[F, RESPONSE]]) extends RequestResult[F, RESPONSE] {
-    def commit = Monad[F].flatMap[MessageReceiveResult[F, RESPONSE], Unit](response)(x => x.commit())
+    def commit = response.map(_.commit)
   }
 
   def sendRequestWithResponseMapping[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST, requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE])
-    (implicit sendRequestContext: SendRequestContext) =
-    ConsumerProducerRequestResult {
+    (implicit sendRequestContext: SendRequestContext) = {
 
-      val producer = messageProducer()
-      val correlationId = randomUUID.toString
+    val producer = messageProducer()
+    val correlationId = randomUUID.toString
 
-      //monitoringPublisher.increment(request.getClass.getName)
-      logger.info(s"sending ${request.toString.take(500)} with $correlationId using $this")
+    //monitoringPublisher.increment(request.getClass.getName)
+    logger.info(s"sending ${request.toString.take(500)} with $correlationId using $this")
 
-      for {
-        receiveResultDeferred <- Deferred[F, Either[Throwable, MessageReceiveResult[F, RESP]]]
-        _ <- correlationsRef.update { correlations =>
-          correlations + ((correlationId, CorrelationInfo(
-            receiveResultDeferred,
-            System.currentTimeMillis,
-            if (holdOntoOutstandingRequest)
-              Some(request)
-            else
-              None
-          )))
-        }
-        _ = logger.info(s"sending request with correlation id $correlationId")
-        sendResult <- producer.send(
-          request,
-          Map(
-            CorrelationIdKey -> correlationId,
-            ResponseProducerIdKey -> responseProducerId
-          ) ++ sendRequestContext.requestTimeout.map(t => RequestTimeoutKey -> t.toMillis.toString)
-        )
-        receiveResult <- sendRequestContext.requestTimeout match {
-          case Some(requestTimeout) =>
-            requestTimeout match {
-              case requestTimeout: FiniteDuration =>
-                receiveResultDeferred.get.timeout(requestTimeout)
-              case _ =>
-                receiveResultDeferred.get
-            }
-          case None =>
-            receiveResultDeferred.get
-        }
-        r <- receiveResult.asInstanceOf[Either[Throwable, MessageReceiveResult[F, RESPONSE]]] match {
-          case Right(r) =>
-            Monad[F].pure(r)
-          case Left(t) =>
-            MonadError[F, Throwable].raiseError(t)
-        }
-      } yield r
-    }
+    for {
+      receiveResultDeferred <- Deferred[F, Either[Throwable, MessageReceiveResult[F, RESP]]]
+      _ <- correlationsRef.update { correlations =>
+        correlations + ((correlationId, CorrelationInfo(
+          receiveResultDeferred,
+          System.currentTimeMillis,
+          if (holdOntoOutstandingRequest)
+            Some(request)
+          else
+            None
+        )))
+      }
+      _ = logger.info(s"sending request with correlation id $correlationId")
+      sendResult <- producer.send(
+        request,
+        Map(
+          CorrelationIdKey -> correlationId,
+          ResponseProducerIdKey -> responseProducerId
+        ) ++ sendRequestContext.requestTimeout.map(t => RequestTimeoutKey -> t.toMillis.toString)
+      )
+      receiveResult <- sendRequestContext.requestTimeout match {
+        case Some(requestTimeout) =>
+          requestTimeout match {
+            case requestTimeout: FiniteDuration =>
+              receiveResultDeferred.get.timeout(requestTimeout)
+            case _ =>
+              receiveResultDeferred.get
+          }
+        case None =>
+          receiveResultDeferred.get
+      }
+      r <- receiveResult.asInstanceOf[Either[Throwable, MessageReceiveResult[F, RESPONSE]]] match {
+        case Right(r) =>
+          Monad[F].pure(r)
+        case Left(t) =>
+          MonadError[F, Throwable].raiseError(t)
+      }
+    } yield ConsumerProducerRequestResult(Monad[F].pure(r))
+  }
 
 }
 
@@ -123,20 +122,7 @@ object ConsumerProducerRequestResponseClient extends Logging {
                     case Right(payload) =>
                       logger.info(s"client received success: ${response.toString.take(500)}")
                       correlationInfo.responseDeferred.complete(
-                        Right(
-                          MessageReceiveResult(
-                            payload,
-                            response.attributes,
-                            {
-                              response.commit
-                              // TODO: add removal
-                            },
-                            {
-                              response.rollback
-                              // TODO: add removal
-                            }
-                          )
-                        )
+                        Right(DefaultMessageReceiveResult(payload, response.attributes, response.commit, response.rollback))
                       )
 
                     case Left(t) =>
@@ -150,7 +136,7 @@ object ConsumerProducerRequestResponseClient extends Logging {
               }
               _ <- correlationsRef.update(_ - correlationId)
               _ <- if (autoCommitResponse) {
-                val r = response.commit()
+                val r = response.commit
                 logger.info(s"client committed response ${response.toString.take(500)}")
                 r
               } else Monad[F].unit

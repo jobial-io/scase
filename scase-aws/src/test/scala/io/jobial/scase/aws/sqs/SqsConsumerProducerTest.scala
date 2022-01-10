@@ -83,7 +83,7 @@ class SqsConsumerProducerTest extends AsyncFlatSpec with ScaseTestHelper {
       testConsumer <- testConsumer
       subscription <- testConsumer.subscribe { result =>
         for {
-          _ <- result.commit()
+          _ <- result.commit
           _ <- messages.put(result.message)
         } yield ()
       }

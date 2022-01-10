@@ -14,7 +14,6 @@ package io.jobial.scase.example.greeting.sprayjson
 
 
 import io.circe.generic.auto._
-import io.jobial.scase.example.greeting.GreetingResponse
 import io.jobial.scase.marshalling.sprayjson._
 import io.jobial.scase.pulsar.{PulsarContext, PulsarRequestResponseServiceConfiguration}
 import spray.json._

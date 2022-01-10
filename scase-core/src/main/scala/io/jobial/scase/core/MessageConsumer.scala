@@ -5,19 +5,29 @@ import io.jobial.scase.marshalling.Unmarshaller
 
 import scala.concurrent.duration._
 
-case class MessageReceiveResult[F[_], M](
-  message: M,
-  attributes: Map[String, String],
-  commit: () => F[Unit], // commit the message
-  rollback: () => F[Unit]
-) {
+trait MessageReceiveResult[F[_], M] {
+
+  def message: M
+
+  def attributes: Map[String, String]
 
   def correlationId = attributes.get(CorrelationIdKey)
 
   def requestTimeout = attributes.get(RequestTimeoutKey).map(_.toLong.millis)
 
   def responseProducerId = attributes.get(ResponseProducerIdKey)
+
+  def commit: F[Unit]
+
+  def rollback: F[Unit]
 }
+
+case class DefaultMessageReceiveResult[F[_], M](
+  message: M,
+  attributes: Map[String, String],
+  commit: F[Unit],
+  rollback: F[Unit]
+) extends MessageReceiveResult[F, M]
 
 trait MessageSubscription[F[_], M] {
 
