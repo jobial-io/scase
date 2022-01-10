@@ -245,9 +245,9 @@ case class HelloResponse(sayingHello: String) extends GreetingResponse
 ### Lower level messaging API
 ...
 
-## Comparison with an Akka actor
+## Comparison with Akka actors
 
-An Akka actor is a low-level concurrency primitive. In this sense, it serves a very different purpose to a higher level service. However, since both Akka actors and **Scase** services are built around the concept of message passing and handling messages, there are some similarities in the APIs which make an interesting comparison:
+An Akka actor is a low-level concurrency primitive. In this sense, it serves a very different purpose to a high-level service. However, since both **Akka** actors and **Scase** services are built around the concept of message passing and handling messages, there are some similarities in the APIs which make an interesting comparison:
 
 &nbsp; | Akka Actor | Scase Service
  --- | --- | --- 

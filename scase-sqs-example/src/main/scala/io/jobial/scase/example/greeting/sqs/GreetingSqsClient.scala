@@ -15,7 +15,6 @@ package io.jobial.scase.example.greeting.sqs
 import cats.effect.IO
 import io.jobial.sclap.CommandLineApp
 
-//TODO: make this exit
 object GreetingSqsClient extends CommandLineApp with GreetingServiceSqsConfig {
 
   def run =
