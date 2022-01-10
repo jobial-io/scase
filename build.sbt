@@ -15,7 +15,7 @@ name := "scase"
 ThisBuild / organization := "io.jobial"
 ThisBuild / scalaVersion := "2.12.13"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.13", "2.13.6")
-ThisBuild / version := "0.2.0"
+ThisBuild / version := "0.2.1"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
 ThisBuild / publishArtifact in(Test, packageBin) := true
 ThisBuild / publishArtifact in(Test, packageSrc) := true
@@ -69,8 +69,12 @@ lazy val root: Project = project
     assemblyPackageScala / assembleArtifact := false,
     assemblyPackageDependency / assembleArtifact := false
   )
-  .aggregate(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-lambda-example`, `scase-pulsar-example`, `sbt-scase-cloudformation`)
-  .dependsOn(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-spray-json`, `scase-lambda-example`, `scase-pulsar-example`, `sbt-scase-cloudformation`)
+  .aggregate(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-circe`, `scase-spray-json`, `scase-spray-json-example`,
+    `scase-lambda-example`, `scase-sqs-example`, `scase-pulsar`, `scase-pulsar-example`, `scase-zio-example`,
+    `sbt-scase-cloudformation`)
+  .dependsOn(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-circe`, `scase-spray-json`, `scase-spray-json-example`,
+    `scase-lambda-example`, `scase-sqs-example`, `scase-pulsar`, `scase-pulsar-example`, `scase-zio-example`,
+    `sbt-scase-cloudformation`)
 
 lazy val `scase-core` = project
   .settings(commonSettings)
