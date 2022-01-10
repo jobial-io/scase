@@ -22,8 +22,7 @@ object GreetingZIOAppExample extends ZIOCommandLineApp with GreetingServiceConfi
 
   def run =
     for {
-      t <- greetingServiceConfig.serviceAndClient[Task](new GreetingService {})
-      (service, client) = t
+      (service, client) <- greetingServiceConfig.serviceAndClient[Task](new GreetingService {})
       _ <- service.start
       helloResponse <- client ? Hello("world")
       _ <- putStr(helloResponse.sayingHello)

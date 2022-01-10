@@ -27,8 +27,7 @@ class GreetingServiceTest
 
   "request-response service" should "reply successfully" in {
     for {
-      t <- localServiceAndClient("greeting", new GreetingService {})
-      (service, client) = t
+      (service, client) <- localServiceAndClient("greeting", new GreetingService {})
       _ <- service.start
       helloResponse <- client ? Hello("everyone")
       hiResponse <- client ? Hi("everyone")
@@ -40,11 +39,10 @@ class GreetingServiceTest
 
   "request" should "time out if service is not started" in {
     implicit val context = SendRequestContext(requestTimeout = Some(1.second))
-    
+
     recoverToSucceededIf[TimeoutException] {
       for {
-        t <- localServiceAndClient("greeting", new GreetingService {})
-        (service, client) = t
+        (service, client) <- localServiceAndClient("greeting", new GreetingService {})
         helloResponse <- client ? Hello("everyone")
       } yield succeed
     }

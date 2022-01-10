@@ -27,6 +27,7 @@ ThisBuild / assembly / assemblyMergeStrategy := {
 }
 
 import sbt.Keys.{description, libraryDependencies, publishConfiguration}
+import sbt.addCompilerPlugin
 import sbtassembly.AssemblyPlugin.autoImport.{ShadeRule, assemblyPackageScala}
 import xerial.sbt.Sonatype._
 
@@ -38,7 +39,8 @@ lazy val commonSettings = Seq(
   organizationName := "Jobial OÜ",
   licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
   description := "Run functional Scala code as a portable serverless function or microservice",
-  addCompilerPlugin("org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full)
+  addCompilerPlugin("org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full),
+  addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
 )
 
 lazy val CatsVersion = "2.0.0"

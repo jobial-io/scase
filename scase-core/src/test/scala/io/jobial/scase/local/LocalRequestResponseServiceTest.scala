@@ -23,8 +23,7 @@ class LocalRequestResponseServiceTest
   
   "request-response service" should "reply successfully" in {
     for {
-      t <- LocalRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello").serviceAndClient(requestHandler)
-      (service, client) = t
+      (service, client) <- LocalRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello").serviceAndClient(requestHandler)
       _ <- service.start
       r1 <- client.sendRequest(request1)
       r1 <- r1.response
@@ -40,8 +39,7 @@ class LocalRequestResponseServiceTest
 
   "another request-response service" should "reply successfully" in {
     for {
-      t <- LocalRequestResponseServiceConfiguration[Req, Resp]("hello").serviceAndClient(anotherRequestProcessor)
-      (service, client) = t
+      (service, client) <- LocalRequestResponseServiceConfiguration[Req, Resp]("hello").serviceAndClient(anotherRequestProcessor)
       _ <- service.start
       r <- client.sendRequest(Req1())
       r <- r.response
