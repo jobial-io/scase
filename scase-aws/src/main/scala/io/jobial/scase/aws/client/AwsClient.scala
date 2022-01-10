@@ -12,11 +12,11 @@
  */
 package io.jobial.scase.aws.client
 
-import java.util.concurrent.ExecutionException
-
+import java.util.concurrent.{ExecutionException, ExecutorService, Executors}
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSStaticCredentialsProvider
-import com.amazonaws.client.builder.{AwsAsyncClientBuilder, AwsSyncClientBuilder}
+import com.amazonaws.client.builder.{AwsAsyncClientBuilder, AwsSyncClientBuilder, ExecutorFactory}
+import com.amazonaws.endpointdiscovery.DaemonThreadFactory
 
 import scala.concurrent.Future.failed
 import scala.concurrent.{ExecutionContext, Future}
@@ -64,6 +64,9 @@ trait AwsClient {
     }
 
     val b3 = b2.withClientConfiguration(new ClientConfiguration().withMaxConnections(100))
+      .withExecutorFactory(new ExecutorFactory {
+        def newExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory) 
+      })
 
     b3.build
   }

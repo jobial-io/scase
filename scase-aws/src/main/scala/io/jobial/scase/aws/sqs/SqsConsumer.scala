@@ -1,6 +1,6 @@
 package io.jobial.scase.aws.sqs
 
-import cats.Traverse
+import cats.{Monad, Traverse}
 import cats.effect.concurrent.{Deferred, Ref}
 import cats.effect.{Concurrent, IO, Sync}
 import cats.implicits._
@@ -47,7 +47,7 @@ class SqsConsumer[F[_], M](
       _ <- messageRetentionPeriod.map(setMessageRetentionPeriod(queueUrl, _)).getOrElse(IO())
       _ <- visibilityTimeout.map(setVisibilityTimeout(queueUrl, _)).getOrElse(IO())
     } yield ())
-  
+
   def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]) = {
     logger.debug(s"subscribed with callback $callback to queue $queueUrl")
 
@@ -65,12 +65,13 @@ class SqsConsumer[F[_], M](
           for {
             unmarshalledMessage <- Concurrent[F].fromEither(u.unmarshalFromText(sqsMessage.getBody))
             _ <- outstandingMessagesRef.update(_ + ((unmarshalledMessage, sqsMessage.getReceiptHandle)))
+            _ = println("calling " + callback)
             r <- callback(
               DefaultMessageReceiveResult[F, M](
                 message = unmarshalledMessage,
                 // TODO: add standard attributes returned by getAttributes...
                 attributes = sqsMessage.getMessageAttributes.asScala.toMap.filter(e => Option(e._2.getStringValue).isDefined).mapValues(_.getStringValue).toMap,
-                commit = 
+                commit =
                   for {
                     o <- outstandingMessagesRef.get
                     r <- o.get(unmarshalledMessage) match {
@@ -82,15 +83,14 @@ class SqsConsumer[F[_], M](
                     }
                     _ <- outstandingMessagesRef.update(_ - unmarshalledMessage)
                   } yield (),
-                rollback = 
-                  ???
-                  //                                outstandingMessages.remove(unmarshalledMessage) match {
-                  //                                  case Some(receiptHandle) =>
-                  //                                    // if the process fails at this point it will still roll back after the visibility timeout
-                  //                                    IO(changeMessageVisibility(queueUrl, receiptHandle, 0))
-                  //                                  case _ =>
-                  //                                    IO.raiseError(CouldNotFindMessageToCommit(unmarshalledMessage))
-                  //                                }
+                rollback = Monad[F].unit
+                //                                outstandingMessages.remove(unmarshalledMessage) match {
+                //                                  case Some(receiptHandle) =>
+                //                                    // if the process fails at this point it will still roll back after the visibility timeout
+                //                                    IO(changeMessageVisibility(queueUrl, receiptHandle, 0))
+                //                                  case _ =>
+                //                                    IO.raiseError(CouldNotFindMessageToCommit(unmarshalledMessage))
+                //                                }
               )
             )
             //                        } catch {
