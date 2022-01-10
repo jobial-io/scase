@@ -65,7 +65,6 @@ class SqsConsumer[F[_], M](
           for {
             unmarshalledMessage <- Concurrent[F].fromEither(u.unmarshalFromText(sqsMessage.getBody))
             _ <- outstandingMessagesRef.update(_ + ((unmarshalledMessage, sqsMessage.getReceiptHandle)))
-            _ = println("calling " + callback)
             r <- callback(
               DefaultMessageReceiveResult[F, M](
                 message = unmarshalledMessage,

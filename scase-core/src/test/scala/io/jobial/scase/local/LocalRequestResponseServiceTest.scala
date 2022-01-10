@@ -20,36 +20,7 @@ import scala.concurrent.duration.DurationInt
 
 class LocalRequestResponseServiceTest
   extends RequestResponseTestSupport {
-
-  val requestHandler = new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
-    override def handleRequest(implicit context: RequestContext[IO]) = {
-      case r: TestRequest1 =>
-        println("replying...")
-        r ! response1
-      case r: TestRequest2 =>
-        println("replying...")
-        r ! response2
-    }
-  }
-
-  trait Req
-
-  trait Resp
-
-  case class Req1() extends Req
-
-  case class Resp1() extends Resp
-
-  implicit def m = new RequestResponseMapping[Req1, Resp1] {}
-
-  val anotherRequestProcessor = new RequestHandler[IO, Req, Resp] {
-    override def handleRequest(implicit context: RequestContext[IO]): Handler = {
-      case r: Req1 =>
-        println("replying...")
-        r.reply(Resp1())
-    }
-  }
-
+  
   "request-response service" should "reply successfully" in {
     for {
       t <- LocalRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello").serviceAndClient(requestHandler)
@@ -79,7 +50,7 @@ class LocalRequestResponseServiceTest
   }
 
   "request" should "time out if service is not started" in {
-    implicit val context = SendRequestContext(requestTimeout = Some(1.second))
+    implicit val sendRequestContext = SendRequestContext(requestTimeout = Some(1.second))
 
     recoverToSucceededIf[TimeoutException] {
       for {
