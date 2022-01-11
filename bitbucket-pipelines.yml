@@ -13,7 +13,7 @@ definitions:
   services:
     pulsar:
       image: apachepulsar/pulsar-standalone:2.7.4
-      memory: 2500
+      memory: 2000
 
 options:
   max-time: 30
