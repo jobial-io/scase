@@ -7,13 +7,14 @@ pipelines:
        script:
          - build-with-sbt
        services:
-         - pulsar 
+         - pulsar
+       size: 2x
 
 definitions:
   services:
     pulsar:
       image: apachepulsar/pulsar-standalone:2.7.4
-      memory: 2000
+      memory: 4000
 
 options:
   max-time: 30
