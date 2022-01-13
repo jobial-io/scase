@@ -5,7 +5,7 @@ import cats.effect.concurrent.{Deferred, Ref}
 import cats.effect.{Concurrent, IO, Sync}
 import cats.implicits._
 import io.jobial.scase.aws.client.AwsContext
-import io.jobial.scase.aws.client.identitymap.identityTrieMap
+import io.jobial.scase.aws.client.IdentityMap.identityTrieMap
 import io.jobial.scase.core._
 import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.logging.Logging

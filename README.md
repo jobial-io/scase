@@ -114,7 +114,7 @@ libraryDependencies ++= Seq(
 )
 ```
 
-to your `build.sbt` or
+to `build.sbt` or
 
 ```xml
 

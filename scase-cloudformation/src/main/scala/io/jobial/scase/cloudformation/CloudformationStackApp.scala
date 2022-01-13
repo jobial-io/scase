@@ -32,7 +32,7 @@ trait CloudformationStackApp extends CommandLineApp with CloudformationClient wi
   def run =
     command
       .header("Scase AWS Tool")
-      .description("Tool for managing Cloudtemp AWS resources and generating Cloudformation templates.") {
+      .description("Tool for managing AWS resources and generating Cloudformation templates.") {
         for {
           stackName <- opt[String]("stack")
             .description("The name of the stack")
