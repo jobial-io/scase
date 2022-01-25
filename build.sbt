@@ -21,15 +21,9 @@ ThisBuild / publishArtifact in(Test, packageBin) := true
 ThisBuild / publishArtifact in(Test, packageSrc) := true
 ThisBuild / publishArtifact in(Test, packageDoc) := true
 
-ThisBuild / assembly / assemblyMergeStrategy := {
-  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-  case x => MergeStrategy.first
-}
-
 import sbt.Defaults.sbtPluginExtra
 import sbt.Keys.{description, libraryDependencies, publishConfiguration}
-import sbt.{addCompilerPlugin, addSbtPlugin}
-import sbtassembly.AssemblyPlugin.autoImport.{ShadeRule, assemblyPackageScala}
+import sbt.addCompilerPlugin
 import xerial.sbt.Sonatype._
 
 lazy val commonSettings = Seq(
@@ -69,9 +63,7 @@ lazy val root: Project = project
   .settings(commonSettings)
   .settings(
     publishArtifact := false,
-    makePom / publishArtifact := true,
-    assemblyPackageScala / assembleArtifact := false,
-    assemblyPackageDependency / assembleArtifact := false
+    makePom / publishArtifact := true
   )
   .aggregate(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-circe`, `scase-spray-json`, `scase-spray-json-example`,
     `scase-sqs-example`, `scase-pulsar`, `scase-pulsar-example`, `scase-zio-example`,
@@ -109,9 +101,7 @@ lazy val `scase-aws` = project
       "com.amazonaws" % "aws-java-sdk-cloudformation" % AwsVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-lambda-java-core" % AwsLambdaJavaCoreVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-java-sdk-sts" % AwsVersion excludeAll ("commons-logging")
-    ),
-    assemblyPackageScala / assembleArtifact := false,
-    assemblyPackageDependency / assembleArtifact := false
+    )
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "test->test")
@@ -122,9 +112,7 @@ lazy val `scase-cloudformation` = project
     libraryDependencies ++= Seq(
       "io.jobial" %% "cloud-formation-template-generator" % CloudformationTemplateGeneratorVersion,
       "io.jobial" %% "sclap" % SclapVersion
-    ),
-    assemblyPackageScala / assembleArtifact := false,
-    assemblyPackageDependency / assembleArtifact := false
+    )
   )
   .dependsOn(`scase-aws` % "compile->compile;test->test")
 
@@ -172,7 +160,7 @@ lazy val `sbt-scase-cloudformation` = project
       val scalaV = (scalaBinaryVersion in update).value
 
       if (scalaBinaryVersion.value == "2.12")
-        Seq(sbtPluginExtra("com.eed3si9n" % "sbt-assembly" % "1.1.0", sbtV, scalaV))
+        Seq(sbtPluginExtra("com.github.sbt" % "sbt-proguard" % "0.5.0", sbtV, scalaV))
       else
         Seq()
     }
