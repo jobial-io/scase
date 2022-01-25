@@ -10,12 +10,12 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package io.jobial.scase.cloudformation
+package io.jobial.condense
 
 import cats.effect.IO
 import com.amazonaws.services.cloudformation.model.{AlreadyExistsException, DeleteStackResult}
 import com.monsanto.arch.cloudformation.model.Template
-import io.jobial.scase.aws.client.{AwsContext, CloudformationClient, ConfigurationUtils, Hash, S3Client, StsClient}
+import io.jobial.condense.aws.client.{AwsContext, CloudformationClient, ConfigurationUtils, Hash, S3Client, StsClient}
 import org.apache.commons.io.IOUtils
 
 import java.io.{File, FileInputStream}
@@ -26,7 +26,7 @@ import scala.io.StdIn.readLine
 import scala.util.{Failure, Success, Try}
 import collection.JavaConverters._
 
-object CloudformationStackApp extends CommandLineApp with CloudformationClient with S3Client with ConfigurationUtils {
+object Condense extends CommandLineApp with CloudformationClient with S3Client with ConfigurationUtils {
 
   val awsContext = AwsContext()
   
@@ -34,8 +34,8 @@ object CloudformationStackApp extends CommandLineApp with CloudformationClient w
   
   def run =
     command
-      .header("Scase AWS Tool")
-      .description("Tool for managing AWS resources and generating Cloudformation templates.") {
+      .header("Condense")
+      .description("Tool for managing AWS resources through Cloudformation templates.") {
         for {
           stackClassName <- param[String].required.label("stack_class")
             .description("The fully qualified stack class name")
@@ -93,16 +93,7 @@ object CloudformationStackApp extends CommandLineApp with CloudformationClient w
           )
         } yield subcommandResult
       }
-
-  //  def uploadTemplateToS3(stackName: String, template: String)(implicit context: StackContext) = {
-  //    println(s"uploading template for $stackName to s3")
-  //    val templateBucket = context.s3Bucket
-  //    val templateFileName = s"$stackName-stack.json"
-  //    val templatePath = s"cloudtemp-aws/$templateFileName"
-  //    s3PutText(templateBucket, s"$templatePath", template)
-  //    httpsUrl(templateBucket, templatePath)
-  //  }
-
+  
   def uploadLambdaFile(context: StackContext) =
     context.lambdaFile match {
       case Some(lambdaFile) =>
@@ -126,7 +117,6 @@ object CloudformationStackApp extends CommandLineApp with CloudformationClient w
           context <- context
           context <- uploadLambdaFile(context)
           template <- context.template
-          _ = println("template!")
           stack <-
             if (context.printOnly)
               IO(println(template.toJson.prettyPrint))

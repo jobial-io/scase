@@ -65,12 +65,12 @@ lazy val root: Project = project
     publishArtifact := false,
     makePom / publishArtifact := true
   )
-  .aggregate(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-circe`, `scase-spray-json`, `scase-spray-json-example`,
+  .aggregate(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`, `scase-spray-json-example`,
     `scase-sqs-example`, `scase-pulsar`, `scase-pulsar-example`, `scase-zio-example`,
-    `sbt-scase-cloudformation`)
-  .dependsOn(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-circe`, `scase-spray-json`, `scase-spray-json-example`,
+    `sbt-condense`, `condense`)
+  .dependsOn(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`, `scase-spray-json-example`,
     `scase-sqs-example`, `scase-pulsar`, `scase-pulsar-example`, `scase-zio-example`,
-    `sbt-scase-cloudformation`)
+    `sbt-condense`, `condense`)
 
 lazy val `scase-core` = project
   .settings(commonSettings)
@@ -78,7 +78,6 @@ lazy val `scase-core` = project
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % CatsVersion,
       "org.typelevel" %% "cats-effect" % CatsVersion,
-      "org.typelevel" %% "cats-free" % CatsVersion,
       "com.typesafe.scala-logging" %% "scala-logging" % ScalaLoggingVersion,
       "com.lihaoyi" %% "sourcecode" % SourcecodeVersion,
       "org.scalatest" %% "scalatest" % ScalatestVersion % "test",
@@ -89,7 +88,7 @@ lazy val `scase-core` = project
     )
   )
 
-lazy val `scase-aws` = project
+lazy val `condense-aws` = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
@@ -100,13 +99,20 @@ lazy val `scase-aws` = project
       "com.amazonaws" % "aws-java-sdk-lambda" % AwsVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-java-sdk-cloudformation" % AwsVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-lambda-java-core" % AwsLambdaJavaCoreVersion excludeAll ("commons-logging"),
-      "com.amazonaws" % "aws-java-sdk-sts" % AwsVersion excludeAll ("commons-logging")
+      "com.amazonaws" % "aws-java-sdk-sts" % AwsVersion excludeAll ("commons-logging"),
+      "org.typelevel" %% "cats-core" % CatsVersion,
+      "org.typelevel" %% "cats-effect" % CatsVersion,
+      "com.typesafe.scala-logging" %% "scala-logging" % ScalaLoggingVersion
     )
   )
+
+lazy val `scase-aws` = project
+  .settings(commonSettings)
+  .dependsOn(`condense-aws`)
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "test->test")
 
-lazy val `scase-cloudformation` = project
+lazy val `condense` = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
@@ -142,11 +148,11 @@ lazy val `scase-circe` = project
 
 
 // check https://stackoverflow.com/questions/37525980/sbt-exclude-module-from-aggregates-or-compilation-based-on-scala-version
-lazy val `sbt-scase-cloudformation` = project
+lazy val `sbt-condense` = project
   .settings(commonSettings)
   //.enablePlugins(SbtPlugin)
   .settings(
-    name := "sbt-scase-cloudformation",
+    name := "sbt-condense",
     publish := scalaBinaryVersion.value == "2.12",
     //      unmanagedSources / excludeFilter := AllPassFilter,
     //      managedSources / excludeFilter := AllPassFilter,

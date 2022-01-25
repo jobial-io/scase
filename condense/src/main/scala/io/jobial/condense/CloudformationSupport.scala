@@ -10,7 +10,7 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package io.jobial.scase.cloudformation
+package io.jobial.condense
 
 import cats.effect.{ContextShift, IO}
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler
@@ -19,7 +19,7 @@ import com.monsanto.arch.cloudformation.model.Token._
 import com.monsanto.arch.cloudformation.model.resource._
 import com.monsanto.arch.cloudformation.model.resource.`AWS::EC2::Volume`._
 import com.monsanto.arch.cloudformation.model.simple.Builders._
-import io.jobial.scase.aws.client.{ConfigurationUtils, S3Client, StsClient}
+import io.jobial.condense.aws.client.{ConfigurationUtils, S3Client, StsClient}
 import io.jobial.scase.aws.lambda.{LambdaRequestHandler, LambdaRequestResponseServiceConfiguration}
 import io.jobial.scase.core.RequestHandler
 import io.jobial.scase.logging.Logging
@@ -1400,7 +1400,7 @@ trait CloudformationSupport extends ConfigurationUtils with DefaultJsonProtocol 
     ComparisonOperator = `AWS::CloudWatch::Alarm::ComparisonOperator`.GreaterThanThreshold,
     EvaluationPeriods = "3",
     MetricName = metricName,
-    Namespace = "Cloudtemp",
+    Namespace = "Condense",
     Period = "60",
     Statistic = `AWS::CloudWatch::Alarm::Statistic`.Sum,
     Threshold = "2",

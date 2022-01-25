@@ -10,7 +10,7 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package io.jobial.scase.cloudformation
+package io.jobial.condense
 
 import java.io.File
 import scala.util.Try
@@ -34,7 +34,6 @@ case class StackContext(
     for {
       dockerImageTags <- dockerImageTags
       tag: String <- dockerImageTags.find(_._1.endsWith(s"/$image")).map(_._2) orElse
-        dockerImageTags.find(_._1.endsWith(s"cloudtemp/$image")).map(_._2) orElse
         dockerImageTags.find(_._1.endsWith(image)).map(_._2)
     } yield tag
 

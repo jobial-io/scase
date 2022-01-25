@@ -10,12 +10,11 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package io.jobial.scase.cloudformation
+package io.jobial.condense
 
 import cats.effect.{ContextShift, IO}
 import com.monsanto.arch.cloudformation.model.Template
-import io.jobial.scase.aws.client.{AwsContext, S3Client}
-import spray.json.DefaultJsonProtocol
+import io.jobial.condense.aws.client.AwsContext
 
 import scala.concurrent.ExecutionContext
 

@@ -10,18 +10,15 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package io.jobial.scase.cloudformation.sbt
+package io.jobial.condense.sbt
 
-
-import sbt.{Runtime, io, _}
-import Keys._
 import com.lightbend.sbt.SbtProguard
 import com.lightbend.sbt.SbtProguard.autoImport.Proguard
-import sbt.State.stateOps
+import sbt.Keys._
+import sbt.{Runtime, _}
 import complete.DefaultParsers._
 
 import scala.collection.JavaConverters._
-import scala.io.Source
 
 /**
  * Loosely based on
@@ -35,12 +32,12 @@ import scala.io.Source
  * sbt compile publishLocal
  * sbt "scaseCloudformation 1 2 3"
  */
-object SbtScaseCloudformationPlugin extends AutoPlugin {
+object SbtCondensePlugin extends AutoPlugin {
   override def trigger = allRequirements
   //override lazy val buildSettings = Seq(commands += helloCommand)
 
   object autoImport {
-    val scaseCloudformation = inputKey[Unit]("Scase Cloudformation Plugin")
+    val condense = inputKey[Unit]("Condense Plugin")
     val cloudformationStackClass = settingKey[String]("cloudformationStackClass")
     //    val helloTask = taskKey[Unit]("say hello")
   }
@@ -54,7 +51,7 @@ object SbtScaseCloudformationPlugin extends AutoPlugin {
   override def requires = super.requires && SbtProguard
 
   override lazy val projectSettings = Seq(
-    scaseCloudformation := {
+    condense := {
       val args = spaceDelimited("").parsed
 
       //println("cloudformationStackClass: " + cloudformationStackClass.value)
@@ -65,11 +62,10 @@ object SbtScaseCloudformationPlugin extends AutoPlugin {
         println(sys.props("java.class.path"))
         val processBuilder = new ProcessBuilder
         val commandLine = List("java", "-cp", (Runtime / fullClasspath).value.map(_.data.toString).mkString(":"),
-          "io.jobial.scase.cloudformation.CloudformationStackApp", s"--lambda-file=${(artifactPath in Proguard).value}", cloudformationStackClass.value, "create-or-update")
+          "io.jobial.condense.Condense", s"--lambda-file=${(artifactPath in Proguard).value}", cloudformationStackClass.value, "create-or-update")
         println(commandLine)
         val c = processBuilder.inheritIO.command(commandLine.asJava)
         val process = c.start()
-        import java.io.BufferedReader
         //val reader = new BufferedReader(new Nothing(process.getInputStream))
 
         //Source.fromInputStream(process.getInputStream).getLines.foreach(println)
