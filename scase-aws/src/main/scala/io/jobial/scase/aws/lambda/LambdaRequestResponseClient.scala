@@ -26,12 +26,12 @@ import scala.concurrent.ExecutionContext
 case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP: Unmarshaller](
   functionName: String
 )(
-  implicit val awsContext: AwsContext, 
+  implicit val awsContext: AwsContext,
   ec: ExecutionContext
 ) extends RequestResponseClient[F, REQ, RESP] {
 
   import awsContext.lambdaClient._
-  
+
   override def sendRequestWithResponseMapping[REQUEST <: REQ, RESPONSE <: RESP](
     request: REQUEST,
     requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]
@@ -41,8 +41,14 @@ case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP:
     Concurrent[F].async { ready =>
       (for {
         result <- invoke(functionName, Marshaller[REQ].marshalToText(request))
-      } yield
-        ready(Right(Unmarshaller[RESP].unmarshalFromText(new String(result.getPayload.array, StandardCharsets.UTF_8)).asInstanceOf[RESPONSE]))) recover {
+      } yield {
+        Unmarshaller[RESP].unmarshalFromText(new String(result.getPayload.array, StandardCharsets.UTF_8)) match {
+          case Right(r) =>
+            ready(Right(r.asInstanceOf[RESPONSE]))
+          case Left(t) =>
+            ready(Left(t))
+        }
+      }) recover {
         case t =>
           ready(Left(t))
       }

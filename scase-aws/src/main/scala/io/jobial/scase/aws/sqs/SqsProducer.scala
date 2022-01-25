@@ -4,7 +4,6 @@ import cats.{Monad, Traverse}
 import cats.effect.{Concurrent, IO}
 import cats.effect.concurrent.Ref
 import cats.implicits._
-import io.jobial.scase.aws.client.identitymap.identityTrieMap
 import io.jobial.scase.aws.client.{AwsContext, SqsClient}
 import io.jobial.scase.core._
 import io.jobial.scase.logging.Logging

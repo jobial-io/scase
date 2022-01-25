@@ -13,9 +13,12 @@
 package io.jobial.scase.cloudformation
 
 import cats.effect.IO
-import com.amazonaws.services.cloudformation.model.DeleteStackResult
+import com.amazonaws.services.cloudformation.model.{AlreadyExistsException, DeleteStackResult}
 import com.monsanto.arch.cloudformation.model.Template
-import io.jobial.scase.aws.client.{AwsContext, CloudformationClient, StsClient}
+import io.jobial.scase.aws.client.{AwsContext, CloudformationClient, ConfigurationUtils, Hash, S3Client, StsClient}
+import org.apache.commons.io.IOUtils
+
+import java.io.{File, FileInputStream}
 //import io.jobial.scase.cloudformation.ScaseCloudformation.{command, createChangeSetAndWaitForComplete, createStack, deleteStack, fromTry, httpsUrl, opt, param, s3PutText, subcommand, subcommands, updateStack}
 import io.jobial.sclap.CommandLineApp
 import spray.json._
@@ -23,9 +26,9 @@ import scala.io.StdIn.readLine
 import scala.util.{Failure, Success, Try}
 import collection.JavaConverters._
 
-trait CloudformationStackApp extends CommandLineApp with CloudformationClient with CloudformationStack {
+object CloudformationStackApp extends CommandLineApp with CloudformationClient with S3Client with ConfigurationUtils {
 
-  implicit val awsContext = AwsContext()
+  val awsContext = AwsContext()
   
   import awsContext.stsClient._
   
@@ -34,179 +37,186 @@ trait CloudformationStackApp extends CommandLineApp with CloudformationClient wi
       .header("Scase AWS Tool")
       .description("Tool for managing AWS resources and generating Cloudformation templates.") {
         for {
-          stackName <- opt[String]("stack")
-            .description("The name of the stack")
+          stackClassName <- param[String].required.label("stack_class")
+            .description("The fully qualified stack class name")
+          stackName <- opt[String]("stack-name")
+            .description("Optional stack name")
           region <- opt[String]("region")
             .description("The AWS region where the stack and its resources are created, unless specified otherwise")
             .default(getDefaultRegion.getOrElse("eu-west-1"))
           label <- opt[String]("label")
             .description("An additional discriminator label for the stack where applicable")
-          stackS3Bucket <- opt[String]("stack-s3-bucket")
+          s3Bucket <- opt[String]("s3-bucket")
             .description("The s3 bucket to use for the stack template and other resources")
-          stackS3Prefix <- opt[String]("stack-s3-prefix")
+          s3Prefix <- opt[String]("s3-prefix")
             .description("The s3 key prefix to use for the stack template and other resources")
-          // TODO: add implicit for this
-          accountId <- noSpec(getAccount)
+          //accountId <- noSpec(getAccountId)
           dockerImageTags <- opt[String]("docker-image-tags")
             .description("Mapping of docker images to tags, in the format <image_name>:<tag>,... . " +
               "By default, the stack will use the latest tag for images. This option allows to override this.")
           printOnly <- opt[Boolean]("print-only")
             .description("Print the generated template and operations, do not make any changes")
             .default(false)
-          context = StackContext(
-            stackName.getOrElse(getClass.getSimpleName.replaceAll("\\$", "")),
-            region,
-            stackS3Bucket,
-            stackS3Prefix,
-            label,
-            dockerImageTags.map {
-              _.split(",").map { p =>
-                val l = p.split(":")
-                (l(0), l(1))
-              }.toMap
-            },
-            printOnly
-          )
-          stack = this
+          lambdaFile <- opt[File]("lambda-file")
+          context =
+            for {
+              accountId <- getAccountId
+              bucketName = s3Bucket.getOrElse(s"cloudformation-$accountId")
+              _ <- s3CreateBucket(bucketName, region).map { _ =>
+                println(s"created bucket $bucketName")
+              }.handleErrorWith { _ =>
+                IO(println(s"bucket $bucketName already exists"))
+              }
+              prefix = s3Prefix.getOrElse("")
+            } yield StackContext(
+              stackName.getOrElse(stackClassName.substring(stackClassName.lastIndexOf(".") + 1).replaceAll("\\$", "")),
+              stackClassName,
+              region,
+              bucketName,
+              prefix,
+              lambdaFile,
+              None,
+              label,
+              dockerImageTags.map {
+                _.split(",").map { p =>
+                  val l = p.split(":")
+                  (l(0), l(1))
+                }.toMap
+              },
+              printOnly
+            )
           subcommandResult <- subcommands(
-            createStackSubcommand(stack)(context),
-            updateStackSubcommand(stack)(context),
-            deleteStackSubcommand(stack)(context)
+            createOrUpdateStackSubcommand(context),
+            createStackSubcommand(context),
+            updateStackSubcommand(context),
+            deleteStackSubcommand(context)
           )
         } yield subcommandResult
       }
 
-  //  def stack(implicit context: ScaseAwsContext) =
-  //    for {
-  //      stack <- if (context.stack == "cloudtemp")
-  //        (for {
-  //          level <- context.level
-  //        } yield
-  //          Success(CloudtempMainStack(level))
-  //          ).getOrElse(Failure(LevelMustBeSpecified))
-  //      else if (context.stack == "cloudtemp-admin")
-  //        Success(CloudtempAdminStack())
-  //      else
-  //        Failure(UnknownStack())
-  //    } yield stack
-  //
-  //  def templateForStack(implicit context: ScaseAwsContext) =
-  //    for {
-  //      stack <- stack
-  //      template <- stack.createStackTemplate
-  //    } yield {
-  //      println("generating template")
-  //      template.toJson.prettyPrint
-  //    }
+  //  def uploadTemplateToS3(stackName: String, template: String)(implicit context: StackContext) = {
+  //    println(s"uploading template for $stackName to s3")
+  //    val templateBucket = context.s3Bucket
+  //    val templateFileName = s"$stackName-stack.json"
+  //    val templatePath = s"cloudtemp-aws/$templateFileName"
+  //    s3PutText(templateBucket, s"$templatePath", template)
+  //    httpsUrl(templateBucket, templatePath)
+  //  }
 
-  def uploadTemplateToS3(stackName: String, template: String)(implicit context: StackContext) = {
-    println(s"uploading template for $stackName to s3")
-    val templateBucket = context.s3Bucket.getOrElse(???)
-    val templateFileName = s"$stackName-stack.json"
-    val templatePath = s"cloudtemp-aws/$templateFileName"
-    s3PutText(templateBucket, s"$templatePath", template)
-    httpsUrl(templateBucket, templatePath)
-  }
+  def uploadLambdaFile(context: StackContext) =
+    context.lambdaFile match {
+      case Some(lambdaFile) =>
+        val separator = if (context.s3Prefix.isEmpty || context.s3Prefix.endsWith("/")) "" else "/"
+        println(s"uploading lambda file $lambdaFile")
+        val bytes = IOUtils.toByteArray(new FileInputStream(lambdaFile))
+        val hash = Hash.hash(bytes.mkString)
+        val s3Key = s"${context.s3Prefix}${separator}${lambdaFile.getName}.$hash"
+        for {
+          _ <- s3PutObject(context.s3Bucket, s3Key, bytes)
+        } yield context.copy(lambdaFileS3Key = Some(s3Key))
+      case None =>
+        IO(context)
+    }
 
-  def nameStack[T](implicit context: StackContext) = {
-    val stackName = s"${context.stackName}${context.label.map("-" + _).getOrElse("")}"
+  def createOrUpdateStackSubcommand(context: IO[StackContext]) =
+    subcommand("create-or-update")
+      .header("Create a new stack or update if exists.")
+      .description("This command creates a new stack based on the specified stack name, level and optional label.") {
+        (for {
+          context <- context
+          context <- uploadLambdaFile(context)
+          template <- context.template
+          _ = println("template!")
+          stack <-
+            if (context.printOnly)
+              IO(println(template.toJson.prettyPrint))
+            else
+              createStack(context.stackName, None, templateBody = Some(template.toJson.prettyPrint)).handleErrorWith {
+                case t: AlreadyExistsException =>
+                  updateStack(context.stackName, None, templateBody = Some(template.toJson.prettyPrint))
+              }
+          _ <- IO(println(s"creating or updating stack ${context.stackName} from $template"))
+        } yield stack) handleErrorWith { t =>
+          t.printStackTrace
+          IO()
+        }
+      }
 
-    (stackName, context.label)
-  }
-
-  def nameAndUploadTemplate[T](template: Template)(f: (String, String) => Try[T])(implicit context: StackContext) = {
-    val templateSource = template.toJson.prettyPrint
-    val (stackName, _) = nameStack
-
-    println(template)
-    f(stackName, uploadTemplateToS3(stackName, templateSource))
-  }
-
-  def createStackSubcommand(stack: CloudformationStack)(implicit context: StackContext) =
-    subcommand("create-stack")
+  def createStackSubcommand(context: IO[StackContext]) =
+    subcommand("create")
       .header("Create a new stack.")
       .description("This command creates a new stack based on the specified stack name, level and optional label.") {
         for {
-          accountId <- getAccount
-          s3Bucket = context.s3Bucket.getOrElse(s"scase-$accountId")
-          _ <- s3CreateBucket(s3Bucket, context.defaultRegion) handleErrorWith { _ =>
-            IO(logger.info(s"bucket $s3Bucket already exists"))
-          }
-          contextWithBucket = context.copy(s3Bucket = Some(s3Bucket))
-          template <- stack.template(contextWithBucket)
+          context <- context
+          template <- context.template
           stack <-
             if (context.printOnly)
-              Try(println(template.toJson.prettyPrint))
-            else
-              nameAndUploadTemplate(template) { (stackName, templateUrl) =>
-                println(s"creating stack $stackName from $templateUrl")
-                Try(createStack(stackName, templateUrl))
-              }(contextWithBucket)
+              IO(println(template.toJson.prettyPrint))
+            else {
+              println(s"creating stack ${context.stackName} from $template")
+              createStack(context.stackName, None, templateBody = Some(template.toJson.prettyPrint))
+            }
         } yield stack
       }
 
   case class NotUpdatingStack(stackName: String) extends RuntimeException(s"updates to stack $stackName will not be applied")
 
-  def updateStackSubcommand(stack: CloudformationStack)(implicit context: StackContext) =
-    subcommand("update-stack")
+  def updateStackSubcommand(context: IO[StackContext]) =
+    subcommand("update")
       .header("Update an existing stack.")
       .description("This command updates an existing stack based on the specified stack name, level and optional label.") {
         for {
-          template <- stack.template
+          context <- context
+          template <- context.template
           stack <-
             if (context.printOnly)
-              Try(println(template))
-            else
-              nameAndUploadTemplate(template) { (stackName, templateUrl) =>
+              IO(println(template.toJson.prettyPrint))
+            else {
+              println(s"generating changeset for stack ${context.stackName}")
+              for {
+                changeSet <- createChangeSetAndWaitForComplete(context.stackName, None, templateBody = Some(template.toJson.prettyPrint))
+                result <- {
+                  println(changeSet)
+                  val changes = changeSet.getChanges.asScala
+                  if (changes.isEmpty)
+                    IO(println("nothing to change"))
+                  else {
+                    println("\nThe following changes will be applied:\n")
+                    for {
+                      c <- changes
+                    } println(s"${c.getResourceChange.getAction} ${c.getResourceChange.getLogicalResourceId} ${c.getResourceChange.getResourceType} ${c.getResourceChange.getReplacement}")
+                    println
 
-                println(s"generating changeset for stack $stackName from $templateUrl")
-
-                for {
-                  changeSet <- createChangeSetAndWaitForComplete(stackName, templateUrl)
-                  result <- {
-                    println(changeSet)
-                    val changes = changeSet.getChanges.asScala
-                    if (changes.isEmpty)
-                      Success(println("nothing to change"))
-                    else
-                      Try {
-                        println("\nThe following changes will be applied:\n")
-                        for {
-                          c <- changes
-                        } println(s"${c.getResourceChange.getAction} ${c.getResourceChange.getLogicalResourceId} ${c.getResourceChange.getResourceType} ${c.getResourceChange.getReplacement}")
-                        println
-
-                        if (readLine("Proceed with the update? ").equalsIgnoreCase("y")) {
-                          println(s"updating stack $stackName from $templateUrl")
-                          Try(updateStack(stackName, templateUrl))
-                        } else {
-                          Failure(NotUpdatingStack(stackName))
-                        }
-                      }
+                    if (readLine("Proceed with the update? ").equalsIgnoreCase("y")) {
+                      println(s"updating stack ${context.stackName}")
+                      updateStack(context.stackName, None, templateBody = Some(template.toJson.prettyPrint))
+                    } else {
+                      IO.raiseError(NotUpdatingStack(context.stackName))
+                    }
                   }
-                } yield result
-              }
+                }
+              } yield result
+            }
         } yield stack
       }
 
-  def deleteStackWithCleanup[T](stackName: String, levelAndLabel: Option[String], cleanupResources: (String, Option[String]) => Try[_] = { (_, _) => Success(()) }): Try[DeleteStackResult] = for {
-    _ <- cleanupResources(stackName, levelAndLabel)
-  } yield {
-    println(s"deleting stack $stackName")
-    deleteStack(stackName)
-  }
+  def deleteStackWithCleanup(context: StackContext) =
+    for {
+      // TODO: add resource cleanup
+      _ <- IO(println(s"deleting stack ${context.stackName}"))
+      r <- deleteStack(context.stackName)
+    } yield r
 
   case object CannotDeleteProdStack extends IllegalStateException(s"cannot delete prod stack")
 
-  def deleteStackSubcommand(stack: CloudformationStack)(implicit context: StackContext) =
-    subcommand("delete-stack")
+  def deleteStackSubcommand(context: IO[StackContext]) =
+    subcommand("delete")
       .header("Delete an existing stack.")
       .description("This command deletes an existing stack based on the specified stack name, level and optional label.") {
-        fromTry {
-          val (stackName, levelAndLabel) = nameStack
-
-          deleteStackWithCleanup(stackName, levelAndLabel)
-        }
+        for {
+          context <- context
+          r <- deleteStackWithCleanup(context)
+        } yield r
       }
 
   case object LevelMustBeSpecified extends IllegalStateException(s"level must be specified for this stack")

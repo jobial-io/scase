@@ -12,13 +12,19 @@
  */
 package io.jobial.scase.cloudformation
 
-import cats.effect.IO
+import cats.effect.{ContextShift, IO}
 import com.monsanto.arch.cloudformation.model.Template
-import io.jobial.scase.aws.client.S3Client
+import io.jobial.scase.aws.client.{AwsContext, S3Client}
 import spray.json.DefaultJsonProtocol
+
+import scala.concurrent.ExecutionContext
 
 trait CloudformationStack
   extends CloudformationSupport {
+
+  implicit val awsContext = AwsContext()
+
+  implicit val contextShift: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
 
   def template(implicit context: StackContext): IO[Template]
 

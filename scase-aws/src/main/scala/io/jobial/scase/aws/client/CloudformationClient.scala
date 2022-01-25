@@ -12,62 +12,77 @@
  */
 package io.jobial.scase.aws.client
 
+import cats.effect.{IO, Timer}
 import com.amazonaws.services.cloudformation.model._
 import com.amazonaws.services.cloudformation.{AmazonCloudFormation, AmazonCloudFormationClientBuilder}
 import io.jobial.scase.aws.client.Hash.uuid
 import cats.implicits._
+
+import scala.concurrent.duration.DurationInt
 import scala.util.{Success, Try}
 
 trait CloudformationClient extends AwsClient {
   lazy val cloudformation = buildAwsClient[AmazonCloudFormationClientBuilder, AmazonCloudFormation](AmazonCloudFormationClientBuilder.standard)
 
 
-  def createStack(stackName: String, templateUrl: String): CreateStackResult = {
-    val request = new CreateStackRequest().withStackName(stackName).withTemplateURL(templateUrl)
+  def createStack(stackName: String, templateUrl: Option[String], templateBody: Option[String]) = IO {
+    val request = new CreateStackRequest().withStackName(stackName)
       .withCapabilities("CAPABILITY_NAMED_IAM")
+    
+    templateUrl.map(request.withTemplateURL)
+    templateBody.map(request.withTemplateBody)
     cloudformation.createStack(request)
   }
 
-  def updateStack(stackName: String, templateUrl: String) = {
-    val request = new UpdateStackRequest().withStackName(stackName).withTemplateURL(templateUrl)
+  def updateStack(stackName: String, templateUrl: Option[String], templateBody: Option[String]) = IO {
+    val request = new UpdateStackRequest().withStackName(stackName)
       .withCapabilities("CAPABILITY_NAMED_IAM")
+
+    templateUrl.map(request.withTemplateURL)
+    templateBody.map(request.withTemplateBody)
+
     cloudformation.updateStack(request)
   }
 
-  def deleteStack(stackName: String) =
+  def deleteStack(stackName: String) = IO {
     cloudformation.deleteStack(new DeleteStackRequest().withStackName(stackName))
+  }
 
   def describeStackResources(stackName: String) =
     cloudformation.describeStackResources(new DescribeStackResourcesRequest().withStackName(stackName)).getStackResources
 
-  def createChangeSet(stackName: String, templateUrl: String, changeSetName: Option[String] = None) = {
+  def createChangeSet(stackName: String, templateUrl: Option[String], templateBody: Option[String], changeSetName: Option[String] = None) = IO {
     val request = new CreateChangeSetRequest()
       .withStackName(stackName)
       .withChangeSetName(changeSetName.getOrElse(s"$stackName-${uuid()}"))
-      .withTemplateURL(templateUrl)
       .withCapabilities("CAPABILITY_NAMED_IAM")
+
+    templateUrl.map(request.withTemplateURL)
+    templateBody.map(request.withTemplateBody)
+      
     cloudformation.createChangeSet(request)
   }
 
-  def describeChangeSet(changeSetName: String) =
+  def describeChangeSet(changeSetName: String) = IO {
     cloudformation.describeChangeSet(new DescribeChangeSetRequest().withChangeSetName(changeSetName))
+  }
 
-  def createChangeSetAndWaitForComplete(stackName: String, templateUrl: String) = {
-    def waitForComplete(changeSetName: String): Try[DescribeChangeSetResult] =
+  def createChangeSetAndWaitForComplete(stackName: String, templateUrl: Option[String], templateBody: Option[String])(implicit timer: Timer[IO]) = {
+    def waitForComplete(changeSetName: String): IO[DescribeChangeSetResult] =
       for {
-        changeSet <- Try(describeChangeSet(changeSetName))
+        changeSet <- describeChangeSet(changeSetName)
         result <-
           if (changeSet.getStatus === "CREATE_COMPLETE" || changeSet.getStatus === "FAILED")
-            Success(changeSet)
-          else {
+            IO(changeSet)
+          else for {
             // Wait for change set to complete...
-            Thread.sleep(3000)
-            waitForComplete(changeSetName)
-          }
+            _ <- IO.sleep(3.seconds)
+            r <- waitForComplete(changeSetName)
+          } yield r
       } yield result
 
     for {
-      changeSet <- Try(createChangeSet(stackName, templateUrl))
+      changeSet <- createChangeSet(stackName, templateUrl, templateBody)
       describeResult <- waitForComplete(changeSet.getId)
     } yield describeResult
   }

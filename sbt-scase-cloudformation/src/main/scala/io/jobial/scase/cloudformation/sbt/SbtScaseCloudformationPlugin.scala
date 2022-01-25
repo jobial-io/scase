@@ -12,10 +12,16 @@
  */
 package io.jobial.scase.cloudformation.sbt
 
-import sbt._
+
+import sbt.{io, _}
 import Keys._
 import sbt.State.stateOps
 import complete.DefaultParsers._
+import sbtassembly.AssemblyKeys.{assembly, assemblyOutputPath}
+import sbtassembly.AssemblyPlugin.autoImport.assemblyJarName
+
+import scala.collection.JavaConverters._
+import scala.io.Source
 
 /**
  * Loosely based on
@@ -43,6 +49,10 @@ object SbtScaseCloudformationPlugin extends AutoPlugin {
   override lazy val buildSettings = Seq(
     cloudformationStackClass := ""
   )
+
+  override def requires = super.requires && sbtassembly.AssemblyPlugin
+
+  
   
   override lazy val projectSettings = Seq(
     scaseCloudformation := {
@@ -51,7 +61,20 @@ object SbtScaseCloudformationPlugin extends AutoPlugin {
       //println("cloudformationStackClass: " + cloudformationStackClass.value)
       if (cloudformationStackClass.value != "") {
         println(s"scaseCloudformation called with args ${args.toList} for " + cloudformationStackClass.value)
-        println(Class.forName(cloudformationStackClass.value))
+        //println(Class.forName(cloudformationStackClass.value))
+        println((assemblyJarName in assembly).value)
+        println((assemblyOutputPath in assembly).value)
+        println((fullClasspath in assembly).value)
+        println(sys.props("java.class.path"))
+        val processBuilder = new ProcessBuilder
+        val c = processBuilder.inheritIO.command((List("java", "-cp", (fullClasspath in assembly).value.map(_.data.toString).mkString(":"), cloudformationStackClass.value, "create-stack")).asJava)
+        val process = c.start()
+        import java.io.BufferedReader
+        //val reader = new BufferedReader(new Nothing(process.getInputStream))
+
+        //Source.fromInputStream(process.getInputStream).getLines.foreach(println)
+        val exitVal = process.waitFor
+        println(exitVal)
       }
     }
   )

@@ -31,39 +31,39 @@ trait S3Client extends AwsClient {
 
   lazy val s3 = buildAwsClient[AmazonS3ClientBuilder, AmazonS3](AmazonS3ClientBuilder.standard)
 
-  def s3PutText(bucketName: String, key: String, data: String, storageClass: StorageClass = StorageClass.IntelligentTiering): PutObjectResult =
+  def s3PutText(bucketName: String, key: String, data: String, storageClass: StorageClass = StorageClass.IntelligentTiering) =
     s3PutObject(bucketName, key, data.getBytes("utf-8"), storageClass)
 
-  def s3PutObject(bucketName: String, key: String, data: Array[Byte], storageClass: StorageClass = StorageClass.IntelligentTiering): PutObjectResult = {
+  def s3PutObject(bucketName: String, key: String, data: Array[Byte], storageClass: StorageClass = StorageClass.IntelligentTiering) = IO {
     val request = new PutObjectRequest(bucketName, key, new ByteArrayInputStream(data), new ObjectMetadata).withStorageClass(storageClass)
     s3.putObject(request)
   }
 
-  def s3GetObject(bucketName: String, key: String) = {
+  def s3GetObject(bucketName: String, key: String) = IO {
     val request = new GetObjectRequest(bucketName, key)
     s3.getObject(request)
   }
 
   def s3GetText(bucketName: String, key: String) =
-    IOUtils.toString(s3GetObject(bucketName, key).getObjectContent)
+    for {
+      o <- s3GetObject(bucketName, key)
+    } yield IOUtils.toString(o.getObjectContent)
 
-  def s3GetObjectIfExists(bucketName: String, key: String) = {
-    val request = new GetObjectRequest(bucketName, key)
-    Try(s3.getObject(request)) match {
-      case Failure(t: AmazonServiceException) =>
-        if (t.getErrorCode == "NoSuchKey") None
+  def s3GetObjectIfExists(bucketName: String, key: String) =
+    IO(s3.getObject(new GetObjectRequest(bucketName, key))).map(Some(_)).handleErrorWith {
+      case t: AmazonServiceException =>
+        if (t.getErrorCode == "NoSuchKey") IO(None)
         else throw t
-      case Failure(t) =>
+      case t: Throwable =>
         throw t
-      case Success(r) =>
-        Some(r)
     }
-  }
 
   def s3GetTextIfExists(bucketName: String, key: String) =
-    s3GetObjectIfExists(bucketName, key).map(o => IOUtils.toString(o.getObjectContent))
+    for {
+      r <- s3GetObjectIfExists(bucketName, key)
+    } yield r.map(o => IOUtils.toString(o.getObjectContent))
 
-  def s3DeleteObject(bucketName: String, key: String) = {
+  def s3DeleteObject(bucketName: String, key: String) = IO {
     val request = new DeleteObjectRequest(bucketName, key)
     s3.deleteObject(request)
   }

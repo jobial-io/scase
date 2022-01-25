@@ -24,18 +24,18 @@ case class LambdaRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshal
 ) extends ServiceConfiguration {
 
   // TODO: overload constructor for this
-  val serviceName = functionName
+  lazy val serviceName = functionName
 
   def client[F[_] : Concurrent](implicit awsContext: AwsContext = AwsContext(), ec: ExecutionContext) =
     Concurrent[F].delay(LambdaRequestResponseClient[F, REQ, RESP](functionName))
 
-  val requestMarshaller = Marshaller[REQ]
+  lazy val requestMarshaller = Marshaller[REQ]
   
-  val requestUnmarshaller = Unmarshaller[REQ]
+  lazy val requestUnmarshaller = Unmarshaller[REQ]
 
-  val responseMarshaller = Marshaller[RESP]
+  lazy val responseMarshaller = Marshaller[RESP]
 
-  val responseUnmarshaller = Unmarshaller[RESP]
+  lazy val responseUnmarshaller = Unmarshaller[RESP]
 }
 
 

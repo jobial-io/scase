@@ -15,7 +15,7 @@ name := "scase"
 ThisBuild / organization := "io.jobial"
 ThisBuild / scalaVersion := "2.12.13"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.13", "2.13.6")
-ThisBuild / version := "0.2.1"
+ThisBuild / version := "0.3.0"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
 ThisBuild / publishArtifact in(Test, packageBin) := true
 ThisBuild / publishArtifact in(Test, packageSrc) := true
@@ -26,8 +26,9 @@ ThisBuild / assembly / assemblyMergeStrategy := {
   case x => MergeStrategy.first
 }
 
+import sbt.Defaults.sbtPluginExtra
 import sbt.Keys.{description, libraryDependencies, publishConfiguration}
-import sbt.addCompilerPlugin
+import sbt.{addCompilerPlugin, addSbtPlugin}
 import sbtassembly.AssemblyPlugin.autoImport.{ShadeRule, assemblyPackageScala}
 import xerial.sbt.Sonatype._
 
@@ -40,7 +41,8 @@ lazy val commonSettings = Seq(
   licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
   description := "Run functional Scala code as a portable serverless function or microservice",
   addCompilerPlugin("org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full),
-  addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
+  addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
+  scalacOptions ++= (if (scalaBinaryVersion.value != "2.13") Seq("-Ypartial-unification") else Seq())
 )
 
 lazy val CatsVersion = "2.0.0"
@@ -53,7 +55,7 @@ lazy val AwsLambdaJavaCoreVersion = "1.2.1"
 lazy val CommonsIoVersion = "2.8.0"
 lazy val CommonsLangVersion = "3.12.0"
 lazy val CloudformationTemplateGeneratorVersion = "3.10.4"
-lazy val SclapVersion = "1.1.5"
+lazy val SclapVersion = "1.1.7"
 lazy val CirceVersion = "0.12.0-M3"
 lazy val SprayJsonVersion = "1.3.6"
 lazy val PulsarVersion = "2.9.0"
@@ -72,10 +74,10 @@ lazy val root: Project = project
     assemblyPackageDependency / assembleArtifact := false
   )
   .aggregate(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-circe`, `scase-spray-json`, `scase-spray-json-example`,
-    `scase-lambda-example`, `scase-sqs-example`, `scase-pulsar`, `scase-pulsar-example`, `scase-zio-example`,
+    `scase-sqs-example`, `scase-pulsar`, `scase-pulsar-example`, `scase-zio-example`,
     `sbt-scase-cloudformation`)
   .dependsOn(`scase-core`, `scase-aws`, `scase-cloudformation`, `scase-circe`, `scase-spray-json`, `scase-spray-json-example`,
-    `scase-lambda-example`, `scase-sqs-example`, `scase-pulsar`, `scase-pulsar-example`, `scase-zio-example`,
+    `scase-sqs-example`, `scase-pulsar`, `scase-pulsar-example`, `scase-zio-example`,
     `sbt-scase-cloudformation`)
 
 lazy val `scase-core` = project
@@ -154,6 +156,7 @@ lazy val `scase-circe` = project
 // check https://stackoverflow.com/questions/37525980/sbt-exclude-module-from-aggregates-or-compilation-based-on-scala-version
 lazy val `sbt-scase-cloudformation` = project
   .settings(commonSettings)
+  //.enablePlugins(SbtPlugin)
   .settings(
     name := "sbt-scase-cloudformation",
     publish := scalaBinaryVersion.value == "2.12",
@@ -163,7 +166,16 @@ lazy val `sbt-scase-cloudformation` = project
     //      Compile / managedSourceDirectories := Nil,
     publishMavenStyle := scalaBinaryVersion.value == "2.12",
     sbtPlugin := scalaBinaryVersion.value == "2.12",
-    pluginCrossBuild / sbtVersion := "1.2.8" // set minimum sbt version
+    pluginCrossBuild / sbtVersion := "1.2.8", // set minimum sbt version
+    libraryDependencies ++= {
+      val sbtV = (sbtBinaryVersion in pluginCrossBuild).value
+      val scalaV = (scalaBinaryVersion in update).value
+
+      if (scalaBinaryVersion.value == "2.12")
+        Seq(sbtPluginExtra("com.eed3si9n" % "sbt-assembly" % "1.1.0", sbtV, scalaV))
+      else
+        Seq()
+    }
   )
 
 lazy val `scase-pulsar` = project
@@ -187,19 +199,20 @@ lazy val `scase-pulsar-example` = project
   .dependsOn(`scase-circe` % "compile->compile;test->test")
   .dependsOn(`scase-pulsar`)
 
-lazy val `scase-lambda-example` = project
-  .settings(commonSettings)
-  //.enablePlugins(SbtScaseCloudformationPlugin)
-  .settings(
-    //assembly / assemblyJarName := "utils.jar",
-    assemblyShadeRules := Seq(
-      ShadeRule.keep("io.jobial.scase.aws.lambda.example.HelloExample").inAll,
-    )
-    // cloudformationStackClass := "io.jobial.scase.example.greeting.GreetingServiceStack"
-  )
-  .dependsOn(`scase-aws` % "compile->compile;test->test")
-  .dependsOn(`scase-circe` % "compile->compile;test->test")
-  .dependsOn(`scase-cloudformation` % "compile->compile;test->test")
+//lazy val `scase-lambda-example` = project
+//  .settings(commonSettings)
+//  //.enablePlugins(SbtScaseCloudformationPlugin)
+//  //.enablePlugins(AssemblyPlugin)
+//  .settings(
+//    //assembly / assemblyJarName := "utils.jar",
+//    assemblyShadeRules := Seq(
+//      ShadeRule.keep("io.jobial.scase.aws.lambda.example.HelloExample").inAll,
+//    ),
+//    //cloudformationStackClass := "io.jobial.scase.example.greeting.lambda.GreetingServiceStack"
+//  )
+//  .dependsOn(`scase-aws` % "compile->compile;test->test")
+//  .dependsOn(`scase-circe` % "compile->compile;test->test")
+//  .dependsOn(`scase-cloudformation` % "compile->compile;test->test")
 
 lazy val `scase-sqs-example` = project
   .settings(commonSettings)

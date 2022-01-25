@@ -2,13 +2,13 @@
 
 Run Scala code as a portable serverless function or microservice, with zero boilerplate and maximum type safety.
 
-Scase helps you achieve boring concepts like:
+**Scase** helps you achieve boring concepts like:
 
  * Clean separation of service API, implementation and client side
- * Portability: deployment on multiple platforms without rewriting application logic
+ * Portability: deployment on multiple platforms like **AWS Lambda** or **Apache Pulsar** without rewriting application logic
  * Support for messaging patterns frequently arising in enterprise applications.
 
-Scase is a lightweight functional library that bridges the gap between microservice platforms / APIs and functional Scala code.
+**Scase** is a lightweight functional library that bridges the gap between microservice platforms / APIs and functional Scala code.
 
 ## Motivation
 

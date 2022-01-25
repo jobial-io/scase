@@ -13,7 +13,7 @@
 package io.jobial.scase.aws.lambda
 
 import cats.MonadError
-import cats.effect.Concurrent
+import cats.effect.{Concurrent, IO}
 import cats.effect.concurrent.Deferred
 import cats.implicits._
 import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
@@ -27,8 +27,9 @@ import java.io.{InputStream, OutputStream}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.DurationInt
 
-abstract class LambdaRequestHandler[F[_], REQ, RESP](val serviceConfiguration: LambdaRequestResponseServiceConfiguration[REQ, RESP]) extends RequestStreamHandler with Logging {
-  this: RequestHandler[F, REQ, RESP] =>
+abstract class LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandler with RequestHandler[F, REQ, RESP] with Logging {
+  
+  def serviceConfiguration: LambdaRequestResponseServiceConfiguration[REQ, RESP]
 
   implicit def concurrent: Concurrent[F]
 
@@ -50,7 +51,6 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP](val serviceConfiguration: L
         for {
           request <- Concurrent[F].fromEither(serviceConfiguration.requestUnmarshaller.unmarshalFromText(requestString))
           responseDeferred <- Deferred[F, Either[Throwable, RESP]]
-          r <- responseDeferred.get
           processorResult: F[SendResponseResult[RESP]] =
             handleRequestOrFail(new RequestContext[F] {
 
@@ -64,13 +64,14 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP](val serviceConfiguration: L
             }, concurrent)(request)
           // TODO: use redeem when Cats is upgraded, 2.0.0 simply doesn't support mapping errors to an F[B]...
           _ <- processorResult
-            .map { result =>
+            .flatMap { result =>
               responseDeferred.complete(Right(result.response))
             }
             .handleError { t =>
               logger.error(s"request processing failed: $request", t)
               responseDeferred.complete(Left(t))
             }
+          r <- responseDeferred.get
         } yield
           // send response when ready
           r match {
@@ -89,9 +90,7 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP](val serviceConfiguration: L
     }
   }
 
-  def runResult(result: F[_]): Unit =
-  // TODO: result.unsafeRunTimed(15.minutes) for IO, for example
-    ???
+  def runResult(result: F[_]): Unit
 
 }
 

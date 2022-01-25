@@ -12,11 +12,17 @@
  */
 package io.jobial.scase.cloudformation
 
+import java.io.File
+import scala.util.Try
+
 case class StackContext(
-  stackName: String,
+  stackNamePrefix: String,
+  stackClassName: String,
   defaultRegion: String,
-  s3Bucket: Option[String],
-  s3Prefix: Option[String],
+  s3Bucket: String,
+  s3Prefix: String,
+  lambdaFile: Option[File],
+  lambdaFileS3Key: Option[String],
   label: Option[String],
   dockerImageTags: Option[Map[String, String]],
   printOnly: Boolean,
@@ -31,4 +37,17 @@ case class StackContext(
         dockerImageTags.find(_._1.endsWith(s"cloudtemp/$image")).map(_._2) orElse
         dockerImageTags.find(_._1.endsWith(image)).map(_._2)
     } yield tag
+
+  def stackName =
+    s"${stackNamePrefix}${label.map("-" + _).getOrElse("")}"
+    
+  lazy val stack = {
+    val c = Try(Class.forName(stackClassName)).getOrElse(Class.forName(stackClassName + "$"))
+    Try(c.newInstance).getOrElse(c.getField("MODULE$").get(c)).asInstanceOf[CloudformationStack]
+  }
+  
+  def template =
+    stack.template(this)
+    
+
 }

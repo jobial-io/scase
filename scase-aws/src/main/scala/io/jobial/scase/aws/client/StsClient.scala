@@ -21,6 +21,6 @@ trait StsClient extends AwsClient with Logging {
 
   lazy val sts = buildAwsClient[AWSSecurityTokenServiceClientBuilder, AWSSecurityTokenService](AWSSecurityTokenServiceClientBuilder.standard)
 
-  def getAccount =
+  def getAccountId =
     IO(sts.getCallerIdentity(new GetCallerIdentityRequest).getAccount)
 }
