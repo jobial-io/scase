@@ -88,7 +88,7 @@ lazy val `scase-core` = project
     )
   )
 
-lazy val `condense-aws` = project
+lazy val `scase-aws` = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
@@ -105,10 +105,6 @@ lazy val `condense-aws` = project
       "com.typesafe.scala-logging" %% "scala-logging" % ScalaLoggingVersion
     )
   )
-
-lazy val `scase-aws` = project
-  .settings(commonSettings)
-  .dependsOn(`condense-aws`)
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "test->test")
 
@@ -192,21 +188,6 @@ lazy val `scase-pulsar-example` = project
   )
   .dependsOn(`scase-circe` % "compile->compile;test->test")
   .dependsOn(`scase-pulsar`)
-
-//lazy val `scase-lambda-example` = project
-//  .settings(commonSettings)
-//  //.enablePlugins(SbtScaseCloudformationPlugin)
-//  //.enablePlugins(AssemblyPlugin)
-//  .settings(
-//    //assembly / assemblyJarName := "utils.jar",
-//    assemblyShadeRules := Seq(
-//      ShadeRule.keep("io.jobial.scase.aws.lambda.example.HelloExample").inAll,
-//    ),
-//    //cloudformationStackClass := "io.jobial.scase.example.greeting.lambda.GreetingServiceStack"
-//  )
-//  .dependsOn(`scase-aws` % "compile->compile;test->test")
-//  .dependsOn(`scase-circe` % "compile->compile;test->test")
-//  .dependsOn(`scase-cloudformation` % "compile->compile;test->test")
 
 lazy val `scase-sqs-example` = project
   .settings(commonSettings)

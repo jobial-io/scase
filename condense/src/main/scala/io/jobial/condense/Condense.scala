@@ -15,11 +15,10 @@ package io.jobial.condense
 import cats.effect.IO
 import com.amazonaws.services.cloudformation.model.{AlreadyExistsException, DeleteStackResult}
 import com.monsanto.arch.cloudformation.model.Template
-import io.jobial.condense.aws.client.{AwsContext, CloudformationClient, ConfigurationUtils, Hash, S3Client, StsClient}
+import io.jobial.scase.aws.client.{AwsContext, CloudformationClient, ConfigurationUtils, Hash, S3Client, StsClient}
 import org.apache.commons.io.IOUtils
 
 import java.io.{File, FileInputStream}
-//import io.jobial.scase.cloudformation.ScaseCloudformation.{command, createChangeSetAndWaitForComplete, createStack, deleteStack, fromTry, httpsUrl, opt, param, s3PutText, subcommand, subcommands, updateStack}
 import io.jobial.sclap.CommandLineApp
 import spray.json._
 import scala.io.StdIn.readLine

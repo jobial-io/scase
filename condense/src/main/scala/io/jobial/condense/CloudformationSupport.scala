@@ -19,7 +19,7 @@ import com.monsanto.arch.cloudformation.model.Token._
 import com.monsanto.arch.cloudformation.model.resource._
 import com.monsanto.arch.cloudformation.model.resource.`AWS::EC2::Volume`._
 import com.monsanto.arch.cloudformation.model.simple.Builders._
-import io.jobial.condense.aws.client.{ConfigurationUtils, S3Client, StsClient}
+import io.jobial.scase.aws.client.{ConfigurationUtils, S3Client, StsClient}
 import io.jobial.scase.aws.lambda.{LambdaRequestHandler, LambdaRequestResponseServiceConfiguration}
 import io.jobial.scase.core.RequestHandler
 import io.jobial.scase.logging.Logging

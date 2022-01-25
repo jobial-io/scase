@@ -14,7 +14,7 @@ package io.jobial.condense
 
 import cats.effect.{ContextShift, IO}
 import com.monsanto.arch.cloudformation.model.Template
-import io.jobial.condense.aws.client.AwsContext
+import io.jobial.scase.aws.client.AwsContext
 
 import scala.concurrent.ExecutionContext
 

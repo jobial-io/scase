@@ -30,16 +30,12 @@ import scala.collection.JavaConverters._
  * https://stackoverflow.com/questions/23409993/defining-sbt-task-that-invokes-method-from-project-code
  *
  * sbt compile publishLocal
- * sbt "scaseCloudformation 1 2 3"
+ * sbt "condense ..."
  */
 object SbtCondensePlugin extends AutoPlugin {
-  override def trigger = allRequirements
-  //override lazy val buildSettings = Seq(commands += helloCommand)
-
   object autoImport {
     val condense = inputKey[Unit]("Condense Plugin")
     val cloudformationStackClass = settingKey[String]("cloudformationStackClass")
-    //    val helloTask = taskKey[Unit]("say hello")
   }
 
   import autoImport._
@@ -48,16 +44,16 @@ object SbtCondensePlugin extends AutoPlugin {
     cloudformationStackClass := ""
   )
 
+  override def trigger = allRequirements
+
   override def requires = super.requires && SbtProguard
 
   override lazy val projectSettings = Seq(
     condense := {
       val args = spaceDelimited("").parsed
 
-      //println("cloudformationStackClass: " + cloudformationStackClass.value)
       if (cloudformationStackClass.value != "") {
-        println(s"scaseCloudformation called with args ${args.toList} for " + cloudformationStackClass.value)
-        //println(Class.forName(cloudformationStackClass.value))
+        println(s"Condense called with args ${args.toList} for " + cloudformationStackClass.value)
         println((artifactPath in Proguard).value)
         println(sys.props("java.class.path"))
         val processBuilder = new ProcessBuilder
@@ -66,9 +62,6 @@ object SbtCondensePlugin extends AutoPlugin {
         println(commandLine)
         val c = processBuilder.inheritIO.command(commandLine.asJava)
         val process = c.start()
-        //val reader = new BufferedReader(new Nothing(process.getInputStream))
-
-        //Source.fromInputStream(process.getInputStream).getLines.foreach(println)
         val exitVal = process.waitFor
         println(exitVal)
       }
