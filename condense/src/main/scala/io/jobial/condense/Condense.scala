@@ -29,35 +29,35 @@ import collection.JavaConverters._
 object Condense extends CommandLineApp with CloudformationClient with S3Client with ConfigurationUtils {
 
   val awsContext = AwsContext()
-  
+
   import awsContext.stsClient._
-  
+
   def run =
     command
       .header("Condense")
-      .description("Tool for managing AWS resources through Cloudformation templates.") {
+      .description("Scala tool for managing AWS resources through Cloudformation.") {
         for {
-          stackClassName <- param[String].required.label("stack_class")
-            .description("The fully qualified stack class name")
+          stackClassName <- param[String].required.label("<stack-class>")
+            .description("Fully qualified name of class implementing the CloudformationStack trait")
           stackName <- opt[String]("stack-name")
             .description("Optional stack name")
           region <- opt[String]("region")
             .description("The AWS region where the stack and its resources are created, unless specified otherwise")
             .default(getDefaultRegion.getOrElse("eu-west-1"))
           label <- opt[String]("label")
-            .description("An additional discriminator label for the stack where applicable")
+            .description("An optional discriminator label for the stack (e.g. prod or test)")
           s3Bucket <- opt[String]("s3-bucket")
-            .description("The s3 bucket to use for the stack template and other resources")
+            .description("S3 bucket to use for the stack template and other resources")
           s3Prefix <- opt[String]("s3-prefix")
-            .description("The s3 key prefix to use for the stack template and other resources")
-          //accountId <- noSpec(getAccountId)
+            .description("S3 key prefix to use for the stack template and other resources")
           dockerImageTags <- opt[String]("docker-image-tags")
             .description("Mapping of docker images to tags, in the format <image_name>:<tag>,... . " +
-              "By default, the stack will use the latest tag for images. This option allows to override this.")
+              "By default, the stack will use the latest tag for images. This option allows to override the default.")
           printOnly <- opt[Boolean]("print-only")
             .description("Print the generated template and operations, do not make any changes")
             .default(false)
           lambdaFile <- opt[File]("lambda-file")
+            .description("Local Zip or Jar file with code for lambda functions")
           context =
             for {
               accountId <- getAccountId
@@ -93,7 +93,7 @@ object Condense extends CommandLineApp with CloudformationClient with S3Client w
           )
         } yield subcommandResult
       }
-  
+
   def uploadLambdaFile(context: StackContext) =
     context.lambdaFile match {
       case Some(lambdaFile) =>
