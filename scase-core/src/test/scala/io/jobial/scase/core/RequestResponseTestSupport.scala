@@ -22,16 +22,7 @@ trait RequestResponseTestSupport extends AsyncFlatSpec
   with ScaseTestHelper
   with RequestResponseTestModel {
 
-  val requestHandler = new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
-    override def handleRequest(implicit context: RequestContext[IO]) = {
-      case r: TestRequest1 =>
-        println("replying...")
-        r ! response1
-      case r: TestRequest2 =>
-        println("replying...")
-        r ! response2
-    }
-  }
+  val requestHandler = new TestRequestHandler {}
 
   sealed trait Req
 
@@ -107,4 +98,15 @@ trait RequestResponseTestSupport extends AsyncFlatSpec
     }
   }
 
+}
+
+trait TestRequestHandler extends RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] with RequestResponseTestModel {
+  override def handleRequest(implicit context: RequestContext[IO]) = {
+    case r: TestRequest1 =>
+      println("replying...")
+      r ! response1
+    case r: TestRequest2 =>
+      println("replying...")
+      r ! response2
+  }
 }
