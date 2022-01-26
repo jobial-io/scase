@@ -1465,8 +1465,7 @@ trait CloudformationSupport extends ConfigurationUtils with DefaultJsonProtocol 
   //  
   // see: https://stackoverflow.com/questions/41452274/how-to-create-a-new-version-of-a-lambda-function-using-cloudformation
   // TODO: make this generic for any F[_]
-  def lambda(
-    requestStreamHandler: RequestStreamHandler,
+  def lambda[T: ClassTag](
     // using a higher default timeout because the scala library can be slow to load...
     timeout: Option[Duration] = Some(10.seconds),
     s3Bucket: Option[String] = None,
@@ -1480,10 +1479,10 @@ trait CloudformationSupport extends ConfigurationUtils with DefaultJsonProtocol 
     for {
       s3Bucket <- IO(s3Bucket.getOrElse(context.s3Bucket))
       s3Key <- IO(s3Key.orElse(context.lambdaFileS3Key).getOrElse(???))
-      c = requestStreamHandler.getClass
-      name = requestStreamHandler match {
-        case h: LambdaRequestHandler[_, _, _] =>
-          h.serviceConfiguration.functionName
+      c = implicitly[ClassTag[T]].runtimeClass
+      name = c match {
+        case c: Class[LambdaRequestHandler[_, _, _]] =>
+          c.newInstance.serviceConfiguration.functionName
         case _ =>
           c.getSimpleName.replaceAll("\\$", "")
       }
@@ -1548,7 +1547,7 @@ trait CloudformationSupport extends ConfigurationUtils with DefaultJsonProtocol 
           Role = `Fn::GetAtt`(Seq(roleName, "Arn")),
           Runtime = Java11,
           Timeout = timeout.map(_.toSeconds.toInt),
-          MemorySize = memorySize.map(i => i: Token[Int]) 
+          MemorySize = memorySize.map(i => i: Token[Int])
         )
 
   def lambdaRole(name: String, policies: Seq[JsObject]) = GenericResource(

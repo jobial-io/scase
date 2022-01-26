@@ -13,17 +13,15 @@
 package io.jobial.condense
 
 import cats.effect.IO
-import com.amazonaws.services.cloudformation.model.{AlreadyExistsException, DeleteStackResult}
-import com.monsanto.arch.cloudformation.model.Template
-import io.jobial.scase.aws.client.{AwsContext, CloudformationClient, ConfigurationUtils, Hash, S3Client, StsClient}
+import com.amazonaws.services.cloudformation.model.AlreadyExistsException
+import io.jobial.scase.aws.client._
+import io.jobial.sclap.CommandLineApp
 import org.apache.commons.io.IOUtils
+import spray.json._
 
 import java.io.{File, FileInputStream}
-import io.jobial.sclap.CommandLineApp
-import spray.json._
+import scala.collection.JavaConverters._
 import scala.io.StdIn.readLine
-import scala.util.{Failure, Success, Try}
-import collection.JavaConverters._
 
 object Condense extends CommandLineApp with CloudformationClient with S3Client with ConfigurationUtils {
 
