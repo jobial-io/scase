@@ -20,6 +20,7 @@ import org.apache.commons.io.IOUtils
 import spray.json._
 
 import java.io.{File, FileInputStream}
+import scala.Console._
 import scala.collection.JavaConverters._
 import scala.io.StdIn.readLine
 
@@ -59,10 +60,10 @@ object Condense extends CommandLineApp with CloudformationClient with S3Client w
             for {
               accountId <- getAccountId
               bucketName = s3Bucket.getOrElse(s"cloudformation-$accountId")
-              _ <- s3CreateBucket(bucketName, region).map { _ =>
-                println(s"created bucket $bucketName")
+              _ <- s3CreateBucket(bucketName, region).flatMap { _ =>
+                message(s"created bucket $bucketName")
               }.handleErrorWith { _ =>
-                IO(println(s"bucket $bucketName already exists"))
+                message(s"bucket $bucketName already exists")
               }
               prefix = s3Prefix.getOrElse("")
             } yield StackContext(
@@ -95,11 +96,11 @@ object Condense extends CommandLineApp with CloudformationClient with S3Client w
     context.lambdaFile match {
       case Some(lambdaFile) =>
         val separator = if (context.s3Prefix.isEmpty || context.s3Prefix.endsWith("/")) "" else "/"
-        println(s"uploading lambda file $lambdaFile")
         val bytes = IOUtils.toByteArray(new FileInputStream(lambdaFile))
         val hash = Hash.hash(bytes.mkString)
         val s3Key = s"${context.s3Prefix}${separator}${lambdaFile.getName}.$hash"
         for {
+          _ <- message(s"uploading lambda file $lambdaFile")
           _ <- s3PutObject(context.s3Bucket, s3Key, bytes)
         } yield context.copy(lambdaFileS3Key = Some(s3Key))
       case None =>
@@ -116,13 +117,13 @@ object Condense extends CommandLineApp with CloudformationClient with S3Client w
           template <- context.template
           stack <-
             if (context.printOnly)
-              IO(println(template.toJson.prettyPrint))
+              message(template.toJson.prettyPrint)
             else
               createStack(context.stackName, None, templateBody = Some(template.toJson.prettyPrint)).handleErrorWith {
                 case t: AlreadyExistsException =>
                   updateStack(context.stackName, None, templateBody = Some(template.toJson.prettyPrint))
               }
-          _ <- IO(println(s"creating or updating stack ${context.stackName} from $template"))
+          _ <- message(s"creating or updating stack ${context.stackName} from $template")
         } yield stack) handleErrorWith { t =>
           t.printStackTrace
           IO()
@@ -138,11 +139,12 @@ object Condense extends CommandLineApp with CloudformationClient with S3Client w
           template <- context.template
           stack <-
             if (context.printOnly)
-              IO(println(template.toJson.prettyPrint))
-            else {
-              println(s"creating stack ${context.stackName} from $template")
-              createStack(context.stackName, None, templateBody = Some(template.toJson.prettyPrint))
-            }
+              message(template.toJson.prettyPrint)
+            else
+              for {
+                _ <- message(s"creating stack ${context.stackName} from $template")
+                r <- createStack(context.stackName, None, templateBody = Some(template.toJson.prettyPrint))
+              } yield r
         } yield stack
       }
 
@@ -157,40 +159,46 @@ object Condense extends CommandLineApp with CloudformationClient with S3Client w
           template <- context.template
           stack <-
             if (context.printOnly)
-              IO(println(template.toJson.prettyPrint))
-            else {
-              println(s"generating changeset for stack ${context.stackName}")
+              message(template.toJson.prettyPrint)
+            else
               for {
+                _ <- message(s"generating changeset for stack ${context.stackName}")
                 changeSet <- createChangeSetAndWaitForComplete(context.stackName, None, templateBody = Some(template.toJson.prettyPrint))
+                _ <- message(changeSet.toString)
                 result <- {
-                  println(changeSet)
                   val changes = changeSet.getChanges.asScala
                   if (changes.isEmpty)
-                    IO(println("nothing to change"))
-                  else {
-                    println("\nThe following changes will be applied:\n")
-                    for {
-                      c <- changes
-                    } println(s"${c.getResourceChange.getAction} ${c.getResourceChange.getLogicalResourceId} ${c.getResourceChange.getResourceType} ${c.getResourceChange.getReplacement}")
-                    println
+                    message("nothing to change")
+                  else for {
+                    _ <- message("\nThe following changes will be applied:\n")
+                    r <- {
+                      for {
+                        c <- changes
+                      } println(s"${c.getResourceChange.getAction} ${c.getResourceChange.getLogicalResourceId} ${c.getResourceChange.getResourceType} ${c.getResourceChange.getReplacement}")
+                      println
 
-                    if (readLine("Proceed with the update? ").equalsIgnoreCase("y")) {
-                      println(s"updating stack ${context.stackName}")
-                      updateStack(context.stackName, None, templateBody = Some(template.toJson.prettyPrint))
-                    } else {
-                      IO.raiseError(NotUpdatingStack(context.stackName))
+                      if (readLine("Proceed with the update? ").equalsIgnoreCase("y"))
+                        for {
+                          _ <- message(s"updating stack ${context.stackName}")
+                          r <- updateStack(context.stackName, None, templateBody = Some(template.toJson.prettyPrint))
+                        } yield r
+                      else {
+                        IO.raiseError(NotUpdatingStack(context.stackName))
+                      }
                     }
-                  }
+                  } yield r
                 }
               } yield result
-            }
         } yield stack
       }
+
+  def message(s: String) =
+    IO(println(s"${BLUE}$s${RESET}"))
 
   def deleteStackWithCleanup(context: StackContext) =
     for {
       // TODO: add resource cleanup
-      _ <- IO(println(s"deleting stack ${context.stackName}"))
+      _ <- message(s"deleting stack ${context.stackName}")
       r <- deleteStack(context.stackName)
     } yield r
 

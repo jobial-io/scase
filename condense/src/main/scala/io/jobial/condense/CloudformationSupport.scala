@@ -1480,6 +1480,7 @@ trait CloudformationSupport extends ConfigurationUtils with DefaultJsonProtocol 
       s3Bucket <- IO(s3Bucket.getOrElse(context.s3Bucket))
       s3Key <- IO(s3Key.orElse(context.lambdaFileS3Key).getOrElse(???))
       c = implicitly[ClassTag[T]].runtimeClass
+      // TODO: check if class interface meets AWS Lambda requirements
       name = c match {
         case c: Class[LambdaRequestHandler[_, _, _]] =>
           c.newInstance.serviceConfiguration.functionName
