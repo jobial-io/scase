@@ -16,7 +16,7 @@ import io.circe.generic.auto._
 import io.jobial.scase.core._
 import io.jobial.scase.marshalling.circe._
 
-class LambdaRequestHandlerTest extends LambdaRequestHandlerTestSupport with TestHandlerLambdaConfig {
+class LambdaRequestHandlerTest extends LambdaRequestHandlerTestSupport {
 
   "calling lambda handler" should "work" in {
     testLambdaHandler(new LambdaTestHandler(), request1, response1)

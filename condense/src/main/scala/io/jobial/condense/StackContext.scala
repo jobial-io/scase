@@ -48,5 +48,4 @@ case class StackContext(
   def template =
     stack.template(this)
     
-
 }

@@ -44,6 +44,10 @@ trait S3Client extends AwsClient {
     s3.getObject(request)
   }
 
+  def s3Exists(bucketName: String, key: String) = IO {
+    s3.doesObjectExist(bucketName, key)
+  }
+
   def s3GetText(bucketName: String, key: String) =
     for {
       o <- s3GetObject(bucketName, key)

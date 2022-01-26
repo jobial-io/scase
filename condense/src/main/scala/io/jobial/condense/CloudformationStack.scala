@@ -21,10 +21,6 @@ import scala.concurrent.ExecutionContext
 trait CloudformationStack
   extends CloudformationSupport {
 
-  implicit val awsContext = AwsContext()
-
-  implicit val contextShift: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
-
   def template(implicit context: StackContext): IO[Template]
 
   def onCreate(implicit context: StackContext): IO[StackContext] = IO(context)
@@ -32,4 +28,8 @@ trait CloudformationStack
   def onDelete(implicit context: StackContext): IO[StackContext] = IO(context)
 
   def onUpdate(implicit context: StackContext): IO[StackContext] = IO(context)
+
+  implicit val awsContext = AwsContext()
+
+  implicit val contextShift: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
 }

@@ -12,8 +12,7 @@
  */
 package io.jobial.scase.aws.lambda
 
-import cats.MonadError
-import cats.effect.{Concurrent, IO}
+import cats.effect.Concurrent
 import cats.effect.concurrent.Deferred
 import cats.implicits._
 import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
@@ -71,21 +70,18 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandle
               logger.error(s"request processing failed: $request", t)
               responseDeferred.complete(Left(t))
             }
+          // send response when ready
           r <- responseDeferred.get
         } yield
-          // send response when ready
           r match {
             case Right(r) =>
               logger.debug(s"sending success to client for request: $request")
-              //          val sendResult = consumer.send(, request.message.correlationId))
               outputStream.write(serviceConfiguration.responseMarshaller.marshalToText(r).getBytes("utf-8"))
             case Left(t) =>
               logger.error(s"sending failure to client for request: $request", t)
-              //outputStream.write(implicitly[JsonWriter[Try[RESP]]].write(Failure(t)).compactPrint.getBytes("utf-8"))
               throw t
           }
-
-
+      
       runResult(result)
     }
   }

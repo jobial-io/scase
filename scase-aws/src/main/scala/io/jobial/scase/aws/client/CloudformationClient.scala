@@ -28,7 +28,7 @@ trait CloudformationClient extends AwsClient {
   def createStack(stackName: String, templateUrl: Option[String], templateBody: Option[String]) = IO {
     val request = new CreateStackRequest().withStackName(stackName)
       .withCapabilities("CAPABILITY_NAMED_IAM")
-    
+
     templateUrl.map(request.withTemplateURL)
     templateBody.map(request.withTemplateBody)
     cloudformation.createStack(request)
@@ -59,7 +59,7 @@ trait CloudformationClient extends AwsClient {
 
     templateUrl.map(request.withTemplateURL)
     templateBody.map(request.withTemplateBody)
-      
+
     cloudformation.createChangeSet(request)
   }
 

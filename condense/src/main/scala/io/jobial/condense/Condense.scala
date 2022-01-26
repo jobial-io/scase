@@ -99,10 +99,16 @@ object Condense extends CommandLineApp with CloudformationClient with S3Client w
         val bytes = IOUtils.toByteArray(new FileInputStream(lambdaFile))
         val hash = Hash.hash(bytes.mkString)
         val s3Key = s"${context.s3Prefix}${separator}${lambdaFile.getName}.$hash"
-        for {
-          _ <- message(s"uploading lambda file $lambdaFile")
-          _ <- s3PutObject(context.s3Bucket, s3Key, bytes)
-        } yield context.copy(lambdaFileS3Key = Some(s3Key))
+          for {
+            exists <- s3Exists(context.s3Bucket, s3Key)
+            _ <- if (exists)
+              message("lambda file already up to date")
+            else
+              for {
+                _ <- message(s"uploading lambda file $lambdaFile")
+                r <- s3PutObject(context.s3Bucket, s3Key, bytes)
+              } yield r
+          } yield context.copy(lambdaFileS3Key = Some(s3Key))
       case None =>
         IO(context)
     }
@@ -125,8 +131,7 @@ object Condense extends CommandLineApp with CloudformationClient with S3Client w
               }
           _ <- message(s"creating or updating stack ${context.stackName} from $template")
         } yield stack) handleErrorWith { t =>
-          t.printStackTrace
-          IO()
+          IO(t.printStackTrace)
         }
       }
 
