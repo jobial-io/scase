@@ -19,16 +19,13 @@ case class AwsContext(
   region: Option[String] = sys.env.get("AWS_DEFAULT_REGION"),
   sqsExtendedS3BucketName: Option[String] = None
 ) {
-  
-  lazy val sqsClient = new SqsClient {
-    def awsContext: AwsContext = AwsContext.this
-  }
 
-  lazy val lambdaClient = new LambdaClient {
-    def awsContext: AwsContext = AwsContext.this
-  }
+  // Amazon recommends sharing and reusing clients  
+  lazy val sqsClient = SqsClient(this)
+
+  lazy val lambdaClient = LambdaClient(this)
+
+  lazy val stsClient = StsClient(this)
   
-  lazy val stsClient = new StsClient {
-    override def awsContext: AwsContext = AwsContext.this
-  }
+  lazy val s3Client = S3Client(this)
 }

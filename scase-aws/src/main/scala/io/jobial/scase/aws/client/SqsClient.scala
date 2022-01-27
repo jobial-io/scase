@@ -132,3 +132,12 @@ trait SqsClient extends S3Client with Logging {
   }
 
 }
+
+object SqsClient {
+
+
+  def apply(implicit context: AwsContext) =
+    new SqsClient {
+      def awsContext = context
+    }
+}

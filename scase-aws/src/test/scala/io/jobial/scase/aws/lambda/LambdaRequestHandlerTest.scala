@@ -31,5 +31,4 @@ trait TestHandlerLambdaConfig {
 class LambdaTestHandler
   extends IOLambdaRequestHandler[TestRequest[_ <: TestResponse], TestResponse]
     with TestRequestHandler
-    with TestHandlerLambdaConfig {
-}
+    with TestHandlerLambdaConfig

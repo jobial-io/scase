@@ -12,19 +12,15 @@
  */
 package io.jobial.scase.aws.client
 
-import cats.effect.IO
-
-import java.io.ByteArrayInputStream
-import java.lang.Thread.sleep
+import cats.effect.{IO, Timer}
 import com.amazonaws.AmazonServiceException
-import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.services.s3.model._
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.amazonaws.util.IOUtils
 
+import java.io.ByteArrayInputStream
+import scala.collection.JavaConverters._
 import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
-import collection.JavaConverters._
 
 
 trait S3Client extends AwsClient {
@@ -72,12 +68,12 @@ trait S3Client extends AwsClient {
     s3.deleteObject(request)
   }
 
-  def s3ListAllObjects(s3Path: String): Seq[S3ObjectSummary] = {
+  def s3ListAllObjects(s3Path: String): IO[List[S3ObjectSummary]] = {
     val idx = s3Path.indexOf('/')
     s3ListAllObjects(s3Path.substring(0, idx), s3Path.substring(idx + 1))
   }
 
-  def s3ListAllObjects(bucketName: String, prefix: String, maxCount: Option[Int] = None) = {
+  def s3ListAllObjects(bucketName: String, prefix: String, maxCount: Option[Int] = None) = IO {
     def listRemaining(r: ObjectListing): List[S3ObjectSummary] = {
       if (r.isTruncated) {
         val l = s3.listNextBatchOfObjects(r)
@@ -89,20 +85,22 @@ trait S3Client extends AwsClient {
       } else List()
     }
 
-    var l = s3.listObjects(bucketName, prefix)
+    val l = s3.listObjects(bucketName, prefix)
 
     l.getObjectSummaries.iterator.asScala.toList ++ listRemaining(l)
   }
 
-  def waitForObjectExists(bucketName: String, key: String, repeat: Int = 10): Boolean =
-    if (repeat > 0) {
-      if (s3.doesObjectExist(bucketName, key))
-        true
-      else {
-        sleep(10000)
-        waitForObjectExists(bucketName, key, repeat - 1)
-      }
-    } else false
+  def waitForObjectExists(bucketName: String, key: String, repeat: Int = 10)(implicit timer: Timer[IO]): IO[Boolean] =
+    if (repeat > 0) for {
+      exists <- s3Exists(bucketName, key)
+      r <- if (exists)
+        IO(true)
+      else for {
+        _ <- IO.sleep(5.seconds)
+        r <- waitForObjectExists(bucketName, key, repeat - 1)
+      } yield r
+    } yield r
+    else IO(false)
 
   def httpsUrl(bucketName: String, key: String) =
     s"https://s3-${awsContext.region.getOrElse("eu-west-1")}.amazonaws.com/$bucketName/$key"
@@ -111,4 +109,12 @@ trait S3Client extends AwsClient {
     val request = new CreateBucketRequest(bucketName, region)
     s3.createBucket(request)
   }
+}
+
+object S3Client {
+
+  def apply(implicit context: AwsContext) =
+    new S3Client {
+      def awsContext = context
+    }
 }

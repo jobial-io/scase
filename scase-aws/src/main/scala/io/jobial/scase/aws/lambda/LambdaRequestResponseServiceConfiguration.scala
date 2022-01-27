@@ -22,7 +22,7 @@ import scala.concurrent.ExecutionContext
 case class LambdaRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
   functionName: String
 ) extends ServiceConfiguration {
-
+  
   // TODO: overload constructor for this
   lazy val serviceName = functionName
 

@@ -24,3 +24,11 @@ trait StsClient extends AwsClient with Logging {
   def getAccountId =
     IO(sts.getCallerIdentity(new GetCallerIdentityRequest).getAccount)
 }
+
+object StsClient {
+
+  def apply(implicit context: AwsContext) =
+    new StsClient {
+      def awsContext = context
+    }
+}

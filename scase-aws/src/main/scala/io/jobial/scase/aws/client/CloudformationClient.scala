@@ -48,8 +48,9 @@ trait CloudformationClient extends AwsClient {
     cloudformation.deleteStack(new DeleteStackRequest().withStackName(stackName))
   }
 
-  def describeStackResources(stackName: String) =
+  def describeStackResources(stackName: String) = IO {
     cloudformation.describeStackResources(new DescribeStackResourcesRequest().withStackName(stackName)).getStackResources
+  }
 
   def createChangeSet(stackName: String, templateUrl: Option[String], templateBody: Option[String], changeSetName: Option[String] = None) = IO {
     val request = new CreateChangeSetRequest()
