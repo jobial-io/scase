@@ -12,6 +12,7 @@
  */
 package io.jobial.condense.sbt
 
+import java.io.File
 import com.lightbend.sbt.SbtProguard
 import com.lightbend.sbt.SbtProguard.autoImport.Proguard
 import sbt.Keys._
@@ -19,6 +20,7 @@ import sbt.{Runtime, _}
 import complete.DefaultParsers._
 
 import scala.collection.JavaConverters._
+import scala.tools.nsc
 
 /**
  * Loosely based on
@@ -52,18 +54,20 @@ object SbtCondensePlugin extends AutoPlugin {
     condense := {
       val args = spaceDelimited("").parsed
 
-      if (cloudformationStackClass.value != "") {
+      if (!cloudformationStackClass.value.isEmpty) {
         println(s"Condense called with args ${args.toList} for " + cloudformationStackClass.value)
         println((artifactPath in Proguard).value)
         println(sys.props("java.class.path"))
         val processBuilder = new ProcessBuilder
-        val commandLine = List("java", "-cp", (Runtime / fullClasspath).value.map(_.data.toString).mkString(":"),
-          "io.jobial.condense.Condense", s"--lambda-file=${(artifactPath in Proguard).value}", cloudformationStackClass.value, "create-or-update")
+        val java = s"${sys.props("java.home")}${File.separator}bin${File.separator}java"
+        val commandLine = List(java, "-Xmx512m", "-cp", (Runtime / fullClasspath).value.map(_.data.toString).mkString(File.pathSeparator),
+          "io.jobial.condense.Condense", s"--lambda-file=${(artifactPath in Proguard).value}", cloudformationStackClass.value) ++ args ++ Some("create-or-update")
         println(commandLine)
         val c = processBuilder.inheritIO.command(commandLine.asJava)
         val process = c.start()
         val exitVal = process.waitFor
-        println(exitVal)
+        if (exitVal != 0)
+          throw new IllegalStateException("Condense plugin finished with a failure")
       }
     }
   )

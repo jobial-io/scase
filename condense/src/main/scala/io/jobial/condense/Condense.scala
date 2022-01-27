@@ -26,6 +26,7 @@ import scala.io.StdIn.readLine
 
 object Condense extends CommandLineApp with CloudformationClient with S3Client with StsClient with ConfigurationUtils {
 
+  // TODO: move common options under subcommands
   def run =
     command
       .header("Condense")
