@@ -24,11 +24,7 @@ import scala.Console._
 import scala.collection.JavaConverters._
 import scala.io.StdIn.readLine
 
-object Condense extends CommandLineApp with CloudformationClient with S3Client with ConfigurationUtils {
-
-  val awsContext = AwsContext()
-
-  import awsContext.stsClient._
+object Condense extends CommandLineApp with CloudformationClient with S3Client with StsClient with ConfigurationUtils {
 
   def run =
     command
@@ -92,6 +88,8 @@ object Condense extends CommandLineApp with CloudformationClient with S3Client w
         } yield subcommandResult
       }
 
+  val awsContext = AwsContext()
+
   def uploadLambdaFile(context: StackContext) =
     context.lambdaFile match {
       case Some(lambdaFile) =>
@@ -99,16 +97,16 @@ object Condense extends CommandLineApp with CloudformationClient with S3Client w
         val bytes = IOUtils.toByteArray(new FileInputStream(lambdaFile))
         val hash = Hash.hash(bytes.mkString)
         val s3Key = s"${context.s3Prefix}${separator}${lambdaFile.getName}.$hash"
-          for {
-            exists <- s3Exists(context.s3Bucket, s3Key)
-            _ <- if (exists)
-              message("lambda file already up to date")
-            else
-              for {
-                _ <- message(s"uploading lambda file $lambdaFile")
-                r <- s3PutObject(context.s3Bucket, s3Key, bytes)
-              } yield r
-          } yield context.copy(lambdaFileS3Key = Some(s3Key))
+        for {
+          exists <- s3Exists(context.s3Bucket, s3Key)
+          _ <- if (exists)
+            message("lambda file already up to date")
+          else
+            for {
+              _ <- message(s"uploading lambda file $lambdaFile")
+              r <- s3PutObject(context.s3Bucket, s3Key, bytes)
+            } yield r
+        } yield context.copy(lambdaFileS3Key = Some(s3Key))
       case None =>
         IO(context)
     }
