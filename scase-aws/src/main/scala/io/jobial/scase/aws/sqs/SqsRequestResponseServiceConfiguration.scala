@@ -11,6 +11,7 @@ import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
   serviceName: String,
   requestQueueName: String,
+  responseQueueName: Option[String],
   cleanup: Boolean
 )(
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher
@@ -18,11 +19,9 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
   responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
 ) extends ServiceConfiguration {
 
-  val responseProducerId = uuid(8)
-
   val requestQueueUrl = requestQueueName
 
-  val responseQueueUrl = s"$requestQueueName-response-$responseProducerId"
+  val responseQueueUrl = responseQueueName.getOrElse(s"$requestQueueName-response-${uuid(8)}")
 
   def service[F[_] : Concurrent](requestHandler: RequestHandler[F, REQ, RESP])(
     implicit awsContext: AwsContext = AwsContext(),
@@ -71,13 +70,21 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
 object SqsRequestResponseServiceConfiguration {
 
   def apply[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
-    requestQueueName: String,
-    cleanup: Boolean = false
+    requestQueueName: String
   )(
     //implicit monitoringPublisher: MonitoringPublisher = noPublisher
     implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
     responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
   ): SqsRequestResponseServiceConfiguration[REQ, RESP] =
-    SqsRequestResponseServiceConfiguration[REQ, RESP](requestQueueName, requestQueueName, cleanup)
+    SqsRequestResponseServiceConfiguration[REQ, RESP](requestQueueName, requestQueueName, None, false)
 
+  def apply[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
+    requestQueueName: String,
+    responseQueueName: String
+  )(
+    //implicit monitoringPublisher: MonitoringPublisher = noPublisher
+    implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
+    responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
+  ): SqsRequestResponseServiceConfiguration[REQ, RESP] =
+    SqsRequestResponseServiceConfiguration[REQ, RESP](requestQueueName, requestQueueName, Some(responseQueueName), false)
 }
