@@ -13,7 +13,7 @@
 package io.jobial.scase.aws.lambda
 
 import cats.Monad
-import cats.effect.Concurrent
+import cats.effect.{Concurrent, IO}
 import cats.implicits._
 import io.jobial.scase.aws.client.AwsContext
 import io.jobial.scase.core.{DefaultMessageReceiveResult, MessageReceiveResult, RequestResponseClient, RequestResponseMapping, RequestResult, SendRequestContext}
@@ -38,22 +38,22 @@ case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP:
   )(
     implicit sendRequestContext: SendRequestContext
   ): F[RequestResult[F, RESPONSE]] = Monad[F].pure(LambdaRequestResult(
-    Concurrent[F].async { ready =>
-      (for {
-        result <- invoke(functionName, Marshaller[REQ].marshalToText(request))
-      } yield {
-        Unmarshaller[RESP].unmarshalFromText(new String(result.getPayload.array, StandardCharsets.UTF_8)) match {
-          case Right(r) =>
-            ready(Right(r.asInstanceOf[RESPONSE]))
-          case Left(t) =>
-            ready(Left(t))
+    Concurrent[F].liftIO(
+      for {
+        response <- invoke(functionName, Marshaller[REQ].marshalToText(request))
+        r <- {
+          Unmarshaller[RESP].unmarshalFromText(new String(response.getPayload.array, StandardCharsets.UTF_8)) match {
+            case Right(r) =>
+              IO(r.asInstanceOf[RESPONSE])
+            case Left(t) =>
+              IO.raiseError(t)
+          }
+        } recoverWith {
+          case t =>
+            IO.raiseError(t)
         }
-      }) recover {
-        case t =>
-          ready(Left(t))
-      }
-
-    }
+      } yield r
+    )
   ))
 }
 
