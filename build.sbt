@@ -66,10 +66,10 @@ lazy val root: Project = project
     makePom / publishArtifact := true
   )
   .aggregate(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`, `scase-spray-json-example`,
-    `scase-sqs-example`, `scase-pulsar`, `scase-pulsar-example`, `scase-zio-example`,
+    `scase-sqs-example`, `scase-pulsar`, `scase-jms`, `scase-pulsar-example`, `scase-zio-example`,
     `sbt-condense`, `condense`)
   .dependsOn(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`, `scase-spray-json-example`,
-    `scase-sqs-example`, `scase-pulsar`, `scase-pulsar-example`, `scase-zio-example`,
+    `scase-sqs-example`, `scase-pulsar`, `scase-jms`, `scase-pulsar-example`, `scase-zio-example`,
     `sbt-condense`, `condense`)
 
 lazy val `scase-core` = project
@@ -174,6 +174,16 @@ lazy val `scase-pulsar` = project
     libraryDependencies ++= Seq(
       "org.apache.pulsar" % "pulsar-client" % PulsarVersion,
       "org.scala-lang.modules" %% "scala-java8-compat" % ScalaJava8CompatVersion
+    )
+  )
+  .dependsOn(`scase-core` % "compile->compile;test->test")
+  .dependsOn(`scase-circe` % "test->test")
+
+lazy val `scase-jms` = project
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "javax.jms" % "javax.jms-api" % "2.0.1"
     )
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
