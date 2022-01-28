@@ -6,6 +6,7 @@ import io.jobial.scase.core.{MessageConsumer, MessageContext, MessageHandler, Se
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
 
+// TODO: rename to OneWayService
 class ConsumerMessageHandlerService[F[_] : Concurrent, M: Unmarshaller](
   consumer: MessageConsumer[F, M],
   messageHandler: MessageHandler[F, M]

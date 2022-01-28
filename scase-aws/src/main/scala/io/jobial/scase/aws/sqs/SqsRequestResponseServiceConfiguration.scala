@@ -38,8 +38,6 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
     )
   } yield service
 
-
-  //https://cb372.github.io/scalacache/
   def client[F[_] : Concurrent : Timer](
     implicit awsContext: AwsContext = AwsContext(),
     cs: ContextShift[IO]
