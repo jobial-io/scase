@@ -34,7 +34,7 @@ class InMemoryConsumerProducer[F[_], M](
    */
   def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M], concurrent: Concurrent[F]): F[MessageSendResult[F, M]] = {
 
-    val messageReceiveResult = DefaultMessageReceiveResult[F, M](message, attributes, Monad[F].unit, Monad[F].unit)
+    val messageReceiveResult = DefaultMessageReceiveResult[F, M](Concurrent[F].pure(message), attributes, Monad[F].unit, Monad[F].unit)
 
     for {
       r <- subscriptions.get

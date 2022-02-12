@@ -41,7 +41,7 @@ class PulsarConsumer[F[_], M](topic: String, val subscriptions: Ref[F, List[Mess
       _ <- x match {
         case Right(message) =>
           val attributes = pulsarMessage.getProperties.asScala.toMap
-          val messageReceiveResult = DefaultMessageReceiveResult(message, attributes, Monad[F].unit, Monad[F].unit)
+          val messageReceiveResult = DefaultMessageReceiveResult(Monad[F].pure(message), attributes, Monad[F].unit, Monad[F].unit)
           callback(messageReceiveResult)
         case Left(error) =>
           // TODO: add logging

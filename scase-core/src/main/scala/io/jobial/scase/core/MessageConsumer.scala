@@ -7,7 +7,8 @@ import scala.concurrent.duration._
 
 trait MessageReceiveResult[F[_], M] {
 
-  def message: M
+  // This is in F to allow error handling
+  def message: F[M]
 
   def attributes: Map[String, String]
 
@@ -23,7 +24,7 @@ trait MessageReceiveResult[F[_], M] {
 }
 
 case class DefaultMessageReceiveResult[F[_], M](
-  message: M,
+  message: F[M],
   attributes: Map[String, String],
   commit: F[Unit],
   rollback: F[Unit]
@@ -42,6 +43,7 @@ trait MessageConsumer[F[_], M] {
 
   // Subscribes to the message source. In the background, subscribe might start async processing (e.g. a Fiber to poll messages in a source).
   // TODO: get rid of Concurrent
+  // TODO: add callback option for error result (e.g. unmarshalling error)?
   def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]): F[MessageSubscription[F, M]]
 }
 

@@ -53,6 +53,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshalle
                 messageProducer(responseProducerId)
             }
             response <- Deferred[F, Either[Throwable, RESP]]
+            message <- request.message
             processorResult <- {
               logger.debug(s"found response producer $producer for request in service: ${request.toString.take(500)}")
               // TODO: make this a Deferred
@@ -68,7 +69,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshalle
 
                   val requestTimeout = request.requestTimeout.getOrElse(Duration.Inf)
 
-                }, Concurrent[F])(request.message)
+                }, Concurrent[F])(message)
 
               val processResultWithErrorHandling = processorResult
                 .flatMap {

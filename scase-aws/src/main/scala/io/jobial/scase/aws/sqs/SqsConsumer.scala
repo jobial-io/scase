@@ -67,7 +67,7 @@ class SqsConsumer[F[_], M](
             _ <- outstandingMessagesRef.update(_ + ((unmarshalledMessage, sqsMessage.getReceiptHandle)))
             r <- callback(
               DefaultMessageReceiveResult[F, M](
-                message = unmarshalledMessage,
+                message = Monad[F].pure(unmarshalledMessage),
                 // TODO: add standard attributes returned by getAttributes...
                 attributes = sqsMessage.getMessageAttributes.asScala.toMap.filter(e => Option(e._2.getStringValue).isDefined).mapValues(_.getStringValue).toMap,
                 commit =

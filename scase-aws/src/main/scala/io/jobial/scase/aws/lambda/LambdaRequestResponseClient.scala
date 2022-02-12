@@ -57,16 +57,16 @@ case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP:
   ))
 }
 
-case class LambdaRequestResult[F[_], RESPONSE](resp: F[RESPONSE])(implicit m: Monad[F]) extends RequestResult[F, RESPONSE] {
+case class LambdaRequestResult[F[_] : Monad, RESPONSE](resp: F[RESPONSE]) extends RequestResult[F, RESPONSE] {
 
   def response =
-    for {
-      resp <- resp
-    } yield DefaultMessageReceiveResult[F, RESPONSE](
-      resp,
-      Map(), // TODO: propagate attributes here
-      Monad[F].unit,
-      Monad[F].unit
+    Monad[F].pure(
+      DefaultMessageReceiveResult[F, RESPONSE](
+        resp,
+        Map(), // TODO: propagate attributes here
+        Monad[F].unit,
+        Monad[F].unit
+      )
     )
 
   def commit = Monad[F].unit

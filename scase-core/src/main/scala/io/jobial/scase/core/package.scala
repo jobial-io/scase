@@ -44,7 +44,8 @@ package object core extends Logging {
       for {
         sendResult <- sendRequest(request)
         response <- sendResult.response
-      } yield response.message
+        message <- response.message
+      } yield message
   }
 
   implicit class requestTagBasedRequestResponseClientExtension[F[_], REQ, RESP](client: RequestResponseClient[F, REQ, RESP])(implicit x: <:!<[REQ, Request[_ <: RESP]]) {
@@ -57,7 +58,8 @@ package object core extends Logging {
       for {
         sendResult <- sendRequest(request)
         response <- sendResult.response
-      } yield response.message
+        message <- response.message
+      } yield message
   }
 
   implicit def sendResponseResultToIO[T](result: SendResponseResult[T]): IO[SendResponseResult[T]] = IO(result)

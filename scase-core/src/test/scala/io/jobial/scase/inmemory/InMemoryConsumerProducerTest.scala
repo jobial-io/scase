@@ -28,7 +28,10 @@ class InMemoryConsumerProducerTest extends AsyncFlatSpec with ScaseTestHelper {
       d <- Deferred[IO, TestRequest1]
       _ <- queue.subscribe({ m =>
         println(m)
-        d.complete(m.message)
+        for {
+          message <- m.message
+          r <- d.complete(message)
+        } yield r
       })
       _ <- queue.send(request)
       r <- d.get

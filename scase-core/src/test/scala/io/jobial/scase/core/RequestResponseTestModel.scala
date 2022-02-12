@@ -12,6 +12,8 @@
  */
 package io.jobial.scase.core
 
+import cats.Eq
+
 sealed trait TestRequest[RESP] extends Request[RESP]
 
 case class TestRequest1(id: String) extends TestRequest[TestResponse1]
@@ -26,6 +28,14 @@ case class TestResponse2(request: TestRequest2, greeting: String) extends TestRe
 
 case class TestException(message: String) extends Exception(message)
 
+sealed trait Req
+
+sealed trait Resp
+
+case class Req1() extends Req
+
+case class Resp1() extends Resp
+
 trait RequestResponseTestModel {
 
   val request1 = TestRequest1("1")
@@ -35,4 +45,18 @@ trait RequestResponseTestModel {
   val response1 = TestResponse1(request1, "1")
 
   val response2 = TestResponse2(request2, "2")
+
+  implicit val eqTestResponse: Eq[TestResponse] = Eq.fromUniversalEquals
+
+  implicit val eqTestResponse1: Eq[TestResponse1] = Eq.fromUniversalEquals
+
+  implicit val eqTestResponse2: Eq[TestResponse2] = Eq.fromUniversalEquals
+  
+  implicit val eqThrowable: Eq[Throwable] = Eq.fromUniversalEquals
+
+  implicit def req1Resp1Mapping = new RequestResponseMapping[Req1, Resp1] {}
+
+  implicit val eqTestResp: Eq[Resp] = Eq.fromUniversalEquals
+
+  implicit val eqTestResp1: Eq[Resp1] = Eq.fromUniversalEquals
 }

@@ -78,6 +78,7 @@ lazy val `scase-core` = project
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % CatsVersion,
       "org.typelevel" %% "cats-effect" % CatsVersion,
+      "org.typelevel" %% "cats-testkit-scalatest" % CatsVersion,
       "com.typesafe.scala-logging" %% "scala-logging" % ScalaLoggingVersion,
       "com.lihaoyi" %% "sourcecode" % SourcecodeVersion,
       "org.scalatest" %% "scalatest" % ScalatestVersion % "test",

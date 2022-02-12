@@ -4,7 +4,7 @@ import cats.effect.concurrent.{Deferred, Ref}
 import cats.effect.implicits.catsEffectSyntaxConcurrent
 import cats.effect.{Concurrent, Timer}
 import cats.implicits._
-import cats.{Monad, MonadError}
+import cats._
 import io.jobial.scase.core.{CorrelationIdKey, DefaultMessageReceiveResult, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSubscription, RequestResponseClient, RequestResponseMapping, RequestResult, RequestTimeoutKey, ResponseProducerIdKey, SendRequestContext}
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
@@ -73,17 +73,22 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
           ResponseProducerIdKey -> responseProducerId
         ) ++ sendRequestContext.requestTimeout.map(t => RequestTimeoutKey -> t.toMillis.toString)
       )
+      _ = logger.info(s"waiting for request with correlation id $correlationId")
       receiveResult <- sendRequestContext.requestTimeout match {
         case Some(requestTimeout) =>
           requestTimeout match {
             case requestTimeout: FiniteDuration =>
-              receiveResultDeferred.get.timeout(requestTimeout)
+              logger.info(s"waiting on $receiveResultDeferred")
+              val x = receiveResultDeferred.get.timeout(requestTimeout)
+              logger.info(s"got it on $receiveResultDeferred: $x")
+              x
             case _ =>
               receiveResultDeferred.get
           }
         case None =>
           receiveResultDeferred.get
       }
+      _ = logger.info(s"received result $receiveResult")
       r <- receiveResult.asInstanceOf[Either[Throwable, MessageReceiveResult[F, RESPONSE]]] match {
         case Right(r) =>
           Monad[F].pure(r)
@@ -118,18 +123,19 @@ object ConsumerProducerRequestResponseClient extends Logging {
               correlations <- correlationsRef.get
               _ <- correlations.get(correlationId) match {
                 case Some(correlationInfo) =>
-                  response.message match {
-                    case Right(payload) =>
-                      logger.info(s"client received success: ${response.toString.take(500)}")
-                      correlationInfo.responseDeferred.complete(
-                        Right(DefaultMessageReceiveResult(payload, response.attributes, response.commit, response.rollback))
-                      )
-
-                    case Left(t) =>
-                      logger.error(s"client received failure: ${response.toString.take(500)}", t)
-                      correlationInfo.responseDeferred.complete(Left(t))
-                  }
-
+                  for {
+                    message <- response.message
+                    completeResult <- message match {
+                      case Right(payload) =>
+                        logger.info(s"client received success: ${response.toString.take(500)}")
+                        correlationInfo.responseDeferred.complete(
+                          Right(DefaultMessageReceiveResult(Concurrent[F].pure(payload), response.attributes, response.commit, response.rollback))
+                        )
+                      case Left(t) =>
+                        logger.error(s"client received failure: ${response.toString.take(500)}", t)
+                        correlationInfo.responseDeferred.complete(Left(t))
+                    }
+                  } yield completeResult
                 case None =>
                   logger.error(s"${System.identityHashCode(this)} received message that cannot be correlated to a request: ${response.toString.take(500)}")
                   Monad[F].unit

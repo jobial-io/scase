@@ -13,6 +13,7 @@
 package io.jobial.scase.core
 
 import cats.effect.IO
+import cats.tests.StrictCatsEquality
 import org.scalatest.compatible.Assertion
 import org.scalatest.flatspec.AsyncFlatSpec
 

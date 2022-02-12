@@ -37,7 +37,10 @@ class ConsumerProducerRequestResponseServiceTest
       d <- Deferred[IO, Either[Throwable, RESP]]
       _ <- testMessageProducer.subscribe({ m =>
         println("complete")
-        d.complete(m.message)
+        for {
+          message <- m.message
+          r <- d.complete(message)
+        } yield r
       })
       _ <- testMessageConsumer.send(request, Map(ResponseProducerIdKey -> ""))
       r <- d.get
@@ -60,9 +63,9 @@ class ConsumerProducerRequestResponseServiceTest
         () => testMessageConsumer,
         ""
       )
+      r1 <- client ? request
       r <- {
         implicit val c = client
-
         // We do it this way to test if the implicit request sending is working, obviously we could also use client.sendRequest here 
         for {
           r <- request

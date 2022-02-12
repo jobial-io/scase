@@ -12,14 +12,17 @@
  */
 package io.jobial.scase.aws.lambda
 
+import cats.Eq
 import cats.effect.IO
 import com.amazonaws.services.lambda.runtime.{ClientContext, CognitoIdentity, Context, LambdaLogger, RequestStreamHandler}
 import io.circe.generic.auto._
 import io.jobial.scase.core._
 import io.jobial.scase.marshalling.circe._
 import org.apache.commons.io.output.ByteArrayOutputStream
+import cats.implicits.catsSyntaxParallelSequence_
 
 import java.io.ByteArrayInputStream
+import cats.implicits._
 
 trait LambdaRequestHandlerTestSupport extends RequestResponseTestSupport {
 
@@ -47,7 +50,7 @@ trait LambdaRequestHandlerTestSupport extends RequestResponseTestSupport {
     override def getLogger: LambdaLogger = ???
   }
   
-  def testLambdaHandler[F[_], REQ, RESP](handler: LambdaRequestHandler[F, REQ, RESP], request: REQ, response: RESP) =
+  def testLambdaHandler[F[_], REQ, RESP: Eq](handler: LambdaRequestHandler[F, REQ, RESP], request: REQ, response: RESP) =
     IO {
       val out = new ByteArrayOutputStream()
 
@@ -57,7 +60,7 @@ trait LambdaRequestHandlerTestSupport extends RequestResponseTestSupport {
         emptyContext
       )
       println(out.toString("utf-8"))
-      assert(handler.serviceConfiguration.responseUnmarshaller.unmarshal(out.toByteArray) === Right(response))
+      assert(handler.serviceConfiguration.responseUnmarshaller.unmarshal(out.toByteArray) === response.asRight[Throwable])
     }
 
 }

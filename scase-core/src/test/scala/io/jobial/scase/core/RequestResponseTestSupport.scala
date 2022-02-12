@@ -12,27 +12,21 @@
  */
 package io.jobial.scase.core
 
+import cats.Eq
 import cats.effect.IO
+import cats.tests.StrictCatsEquality
+import org.scalatest.Assertion
 import org.scalatest.flatspec.AsyncFlatSpec
 
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration._
 
 trait RequestResponseTestSupport extends AsyncFlatSpec
+  with StrictCatsEquality
   with ScaseTestHelper
   with RequestResponseTestModel {
 
   val requestHandler = new TestRequestHandler {}
-
-  sealed trait Req
-
-  sealed trait Resp
-
-  case class Req1() extends Req
-
-  case class Resp1() extends Resp
-
-  implicit def mapping = new RequestResponseMapping[Req1, Resp1] {}
 
   implicit val sendRequestContext = SendRequestContext(requestTimeout = Some(30.seconds))
 
@@ -54,28 +48,30 @@ trait RequestResponseTestSupport extends AsyncFlatSpec
     }
   }
 
-  def testSuccessfulReply(service: Service[IO], client: RequestResponseClient[IO, TestRequest[_ <: TestResponse], TestResponse]) = {
+  def testSuccessfulReply[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP : Eq](client: RequestResponseClient[IO, REQ, RESP],
+    request1: REQUEST, response1: RESPONSE)(implicit mapping: RequestResponseMapping[REQUEST, RESPONSE]): IO[Assertion] =
     for {
-      _ <- service.start
       r1 <- client.sendRequest(request1)
       r1 <- r1.response
+      m1 <- r1.message
       r11 <- client ? request1
-      r2 <- client.sendRequest(request2)
-      r2 <- r2.response
-      r21 <- client ? request2
     } yield assert(
-      response1 === r1.message && response1 === r11 &&
-        response2 === r2.message && response2 === r21
+      response1 === m1 && response1 === r11
     )
+
+  def testSuccessfulReply(service: Service[IO], client: RequestResponseClient[IO, TestRequest[_ <: TestResponse], TestResponse]): IO[Assertion] = {
+    for {
+      _ <- service.start
+      r1 <- testSuccessfulReply(client, request1, response1)
+      r2 <- testSuccessfulReply(client, request2, response2)
+    } yield r2
   }
 
   def testAnotherSuccessfulReply(service: Service[IO], client: RequestResponseClient[IO, Req, Resp]) = {
     for {
       _ <- service.start
-      r <- client.sendRequest(Req1())
-      r <- r.response
-      r1 <- client ? Req1()
-    } yield assert(Resp1() == r.message && Resp1() == r1)
+      r1 <- testSuccessfulReply(client, Req1(), Resp1())
+    } yield r1
   }
 
   def testTimeout(client: RequestResponseClient[IO, TestRequest[_ <: TestResponse], TestResponse]) = {
