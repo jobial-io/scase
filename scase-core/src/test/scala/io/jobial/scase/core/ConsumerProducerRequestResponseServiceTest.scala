@@ -12,6 +12,7 @@
  */
 package io.jobial.scase.core
 
+import cats.Eq
 import cats.effect.IO
 import cats.effect.concurrent.Deferred
 import cats.implicits._
@@ -46,7 +47,7 @@ class ConsumerProducerRequestResponseServiceTest
       r <- d.get
     } yield assert(r == response)
 
-  def testRequestResponseClient[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP](testRequestProcessor: RequestHandler[IO, REQ, RESP], request: REQUEST, response: Either[Throwable, RESPONSE])(
+  def testRequestResponseClient[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP : Eq](testRequestProcessor: RequestHandler[IO, REQ, RESP], request: REQUEST, response: Either[Throwable, RESPONSE])(
     implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]
   ) =
     for {
@@ -71,7 +72,7 @@ class ConsumerProducerRequestResponseServiceTest
           r <- request
         } yield r
       }
-    } yield assert(Right(r) == response)
+    } yield assert(Right(r) === response)
 
   "request-response service" should "reply successfully" in {
     testRequestResponse(

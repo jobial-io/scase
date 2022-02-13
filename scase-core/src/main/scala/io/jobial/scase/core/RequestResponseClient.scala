@@ -3,11 +3,11 @@ package io.jobial.scase.core
 import scala.concurrent.duration.Duration
 
 
-trait RequestResult[F[_], RESPONSE] {
+trait RequestResponseResult[F[_], REQUEST, RESPONSE] {
 
-  def response: F[MessageReceiveResult[F, RESPONSE]]
+  def request: MessageSendResult[F, REQUEST]
 
-  def commit: F[Unit]
+  def response: MessageReceiveResult[F, RESPONSE]
 }
 
 case class SendRequestContext(
@@ -18,5 +18,5 @@ case class SendRequestContext(
 trait RequestResponseClient[F[_], REQ, RESP] {
   
   def sendRequestWithResponseMapping[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST, requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE])
-    (implicit sendRequestContext: SendRequestContext): F[RequestResult[F, RESPONSE]]
+    (implicit sendRequestContext: SendRequestContext): F[RequestResponseResult[F, REQUEST, RESPONSE]]
 }

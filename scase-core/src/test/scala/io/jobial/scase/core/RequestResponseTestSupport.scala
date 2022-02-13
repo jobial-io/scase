@@ -52,8 +52,7 @@ trait RequestResponseTestSupport extends AsyncFlatSpec
     request1: REQUEST, response1: RESPONSE)(implicit mapping: RequestResponseMapping[REQUEST, RESPONSE]): IO[Assertion] =
     for {
       r1 <- client.sendRequest(request1)
-      r1 <- r1.response
-      m1 <- r1.message
+      m1 <- r1.response.message
       r11 <- client ? request1
     } yield assert(
       response1 === m1 && response1 === r11

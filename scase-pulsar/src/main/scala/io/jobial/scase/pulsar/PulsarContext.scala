@@ -26,7 +26,7 @@ case class PulsarContext(
       import scala.concurrent.ExecutionContext.Implicits.global
       Await.result(Future(createClient), 1.minute)
     } else createClient
-  
+
   val persistentScheme = "persistent:"
 
   val nonPersistentScheme = "non-persistent:"

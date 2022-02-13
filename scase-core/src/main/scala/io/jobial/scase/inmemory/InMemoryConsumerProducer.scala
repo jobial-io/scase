@@ -11,17 +11,17 @@ import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 
-class InMemoryConsumerProducer[F[_], M](
+class InMemoryConsumerProducer[F[_] : Concurrent, M](
   val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]],
   deliverToAllSubscribers: Boolean,
   allowMultipleSubscribers: Boolean
 ) extends DefaultMessageConsumer[F, M] with MessageProducer[F, M] with Logging {
 
-  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]) =
+  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M]) =
   // Noop as send handles the subscribers
     Concurrent[F].unit
 
-  override def receiveMessagesUntilCancelled[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]) =
+  override def receiveMessagesUntilCancelled[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M]) =
   // Noop as send handles the subscribers
     Concurrent[F].unit
 
@@ -32,7 +32,7 @@ class InMemoryConsumerProducer[F[_], M](
    *
    * Warning: Marshaller (and the Unmarshaller in subscribe) is not used here, the message is delivered directly to the consumer.
    */
-  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M], concurrent: Concurrent[F]): F[MessageSendResult[F, M]] = {
+  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M]): F[MessageSendResult[F, M]] = {
 
     val messageReceiveResult = DefaultMessageReceiveResult[F, M](Concurrent[F].pure(message), attributes, Monad[F].unit, Monad[F].unit)
 
@@ -44,8 +44,10 @@ class InMemoryConsumerProducer[F[_], M](
         logger.info(s"calling subscription on queue with $messageReceiveResult")
         subscription(messageReceiveResult)
       })
-    } yield new MessageSendResult[F, M]{
-      override def commit: F[Unit] = Monad[F].unit
+    } yield new MessageSendResult[F, M] {
+      def commit = Monad[F].unit
+
+      def rollback = Monad[F].unit
     }
 
 
@@ -54,7 +56,7 @@ class InMemoryConsumerProducer[F[_], M](
 
 object InMemoryConsumerProducer {
 
-  def apply[F[_] : Sync, M](
+  def apply[F[_] : Concurrent, M](
     deliverToAllSubscribers: Boolean = true,
     allowMultipleSubscribers: Boolean = true
   ): F[InMemoryConsumerProducer[F, M]] = for {

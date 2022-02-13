@@ -6,6 +6,7 @@ import cats.effect.concurrent.Ref
 import cats.implicits._
 import io.jobial.scase.aws.client.{AwsContext, SqsClient}
 import io.jobial.scase.core._
+import io.jobial.scase.core.impl.DefaultMessageSendResult
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
@@ -15,7 +16,7 @@ import scala.concurrent.duration._
 /**
  * Producer implementation for AWS SQS.
  */
-class SqsProducer[F[_], M](
+class SqsProducer[F[_] : Concurrent, M](
   queueUrl: String,
   messageRetentionPeriod: Option[Duration] = Some(1.hour),
   visibilityTimeout: Option[Duration] = Some(10.minutes),
@@ -44,15 +45,13 @@ class SqsProducer[F[_], M](
       _ <- visibilityTimeout.map(setVisibilityTimeout(queueUrl, _)).getOrElse(IO())
     } yield ())
 
-  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M], c: Concurrent[F]) = {
+  def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M]) = {
     logger.info(s"sending to queue $queueUrl ${message.toString.take(200)}")
     val r: F[MessageSendResult[F, M]] = for {
       r <- sendMessage(queueUrl, Marshaller[M].marshalToText(message), attributes).to[F]
     } yield {
       logger.info(s"successfully sent to queue $queueUrl ${message.toString.take(200)}")
-      new MessageSendResult[F, M]{
-        def commit = Monad[F].unit
-      }
+      DefaultMessageSendResult[F, M](Monad[F].unit, Monad[F].unit)
     }
 
     r handleErrorWith { t =>
@@ -66,8 +65,8 @@ class SqsProducer[F[_], M](
 }
 
 object SqsProducer {
-  
-  def apply[F[_]: Concurrent, M](
+
+  def apply[F[_] : Concurrent, M](
     queueUrl: String,
     messageRetentionPeriod: Option[Duration] = Some(1.hour),
     visibilityTimeout: Option[Duration] = Some(10.minutes),
@@ -75,11 +74,11 @@ object SqsProducer {
   )(
     implicit awsContext: AwsContext
   ) = {
-    val producer = new SqsProducer[F, M](queueUrl, messageRetentionPeriod,  visibilityTimeout, cleanup)
+    val producer = new SqsProducer[F, M](queueUrl, messageRetentionPeriod, visibilityTimeout, cleanup)
     for {
       _ <- producer.initialize
     } yield producer
   }
 
-  
+
 }

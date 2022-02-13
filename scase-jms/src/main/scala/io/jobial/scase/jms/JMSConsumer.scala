@@ -11,12 +11,12 @@ import io.jobial.scase.marshalling.Unmarshaller
 
 import javax.jms.{BytesMessage, Destination, JMSContext, Message, MessageListener, TextMessage}
 
-class JMSConsumer[F[_], M](destination: Destination, val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]])(implicit context: JMSContext)
+class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]])(implicit context: JMSContext)
   extends DefaultMessageConsumer[F, M] with Logging {
 
   val consumer = context.createConsumer(destination)
 
-  override def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]): F[Unit] =
+  override def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M]): F[Unit] =
     Concurrent[F].pure(consumer.setMessageListener(new MessageListener {
 
       def unmarshalMessage(message: Message) = message match {
@@ -54,7 +54,7 @@ class JMSConsumer[F[_], M](destination: Destination, val subscriptions: Ref[F, L
 
 object JMSConsumer {
 
-  def apply[F[_]: Sync, M](destination: Destination)(implicit context: JMSContext) =
+  def apply[F[_] : Concurrent, M](destination: Destination)(implicit context: JMSContext) =
     for {
       subscriptions <- Ref.of[F, List[MessageReceiveResult[F, M] => F[_]]](List())
     } yield new JMSConsumer[F, M](destination, subscriptions)

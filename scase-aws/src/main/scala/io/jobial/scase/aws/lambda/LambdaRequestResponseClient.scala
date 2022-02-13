@@ -16,7 +16,8 @@ import cats.Monad
 import cats.effect.{Concurrent, IO}
 import cats.implicits._
 import io.jobial.scase.aws.client.AwsContext
-import io.jobial.scase.core.{DefaultMessageReceiveResult, MessageReceiveResult, RequestResponseClient, RequestResponseMapping, RequestResult, SendRequestContext}
+import io.jobial.scase.core.impl.{DefaultMessageSendResult, DefaultRequestResponseResult, DefaultSendResponseResult}
+import io.jobial.scase.core.{DefaultMessageReceiveResult, MessageReceiveResult, RequestResponseClient, RequestResponseMapping, RequestResponseResult, SendRequestContext}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 import java.nio.charset.StandardCharsets
@@ -37,37 +38,27 @@ case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP:
     requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]
   )(
     implicit sendRequestContext: SendRequestContext
-  ): F[RequestResult[F, RESPONSE]] = Monad[F].pure(LambdaRequestResult(
-    Concurrent[F].liftIO(
-      for {
-        response <- invoke(functionName, Marshaller[REQ].marshalToText(request))
-        r <- {
-          Unmarshaller[RESP].unmarshalFromText(new String(response.getPayload.array, StandardCharsets.UTF_8)) match {
-            case Right(r) =>
-              IO(r.asInstanceOf[RESPONSE])
-            case Left(t) =>
-              IO.raiseError(t)
-          }
-        } recoverWith {
-          case t =>
-            IO.raiseError(t)
-        }
-      } yield r
-    )
-  ))
-}
-
-case class LambdaRequestResult[F[_] : Monad, RESPONSE](resp: F[RESPONSE]) extends RequestResult[F, RESPONSE] {
-
-  def response =
-    Monad[F].pure(
-      DefaultMessageReceiveResult[F, RESPONSE](
-        resp,
-        Map(), // TODO: propagate attributes here
-        Monad[F].unit,
-        Monad[F].unit
+  ): F[RequestResponseResult[F, REQUEST, RESPONSE]] =
+    Monad[F].pure {
+      DefaultRequestResponseResult(
+        DefaultMessageSendResult[F, REQUEST](Monad[F].unit, Monad[F].unit),
+        DefaultMessageReceiveResult[F, RESPONSE](
+          Concurrent[F].liftIO(
+            for {
+              response <- invoke(functionName, Marshaller[REQ].marshalToText(request))
+              m <- Unmarshaller[RESP].unmarshalFromText(new String(response.getPayload.array, StandardCharsets.UTF_8)) match {
+                case Right(r) =>
+                  IO(r.asInstanceOf[RESPONSE])
+                case Left(t) =>
+                  IO.raiseError(t)
+              }
+            } yield m),
+          Map(), // TODO: propagate attributes here
+          Monad[F].unit,
+          Monad[F].unit
+        )
       )
-    )
+    }
 
-  def commit = Monad[F].unit
 }
+

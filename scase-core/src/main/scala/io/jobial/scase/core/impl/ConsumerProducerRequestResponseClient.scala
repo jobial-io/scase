@@ -5,18 +5,12 @@ import cats.effect.implicits.catsEffectSyntaxConcurrent
 import cats.effect.{Concurrent, Timer}
 import cats.implicits._
 import cats._
-import io.jobial.scase.core.{CorrelationIdKey, DefaultMessageReceiveResult, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSubscription, RequestResponseClient, RequestResponseMapping, RequestResult, RequestTimeoutKey, ResponseProducerIdKey, SendRequestContext}
+import io.jobial.scase.core.{CorrelationIdKey, DefaultMessageReceiveResult, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSendResult, MessageSubscription, RequestResponseClient, RequestResponseMapping, RequestResponseResult, RequestTimeoutKey, ResponseProducerIdKey, SendRequestContext}
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 import java.util.UUID.randomUUID
 import scala.concurrent.duration.FiniteDuration
-
-case class CorrelationInfo[F[_], REQ, RESP](
-  responseDeferred: Deferred[F, Either[Throwable, MessageReceiveResult[F, RESP]]],
-  sendTime: Long,
-  request: Option[REQ]
-)
 
 class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Marshaller, RESP](
   correlationsRef: Ref[F, Map[String, CorrelationInfo[F, REQ, RESP]]],
@@ -40,10 +34,6 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
       if (correlations.size > 0)
         logger.warn(s"Outstanding correlations: ${correlations} on ${this}")
 
-  case class ConsumerProducerRequestResult[RESPONSE <: RESP](response: F[MessageReceiveResult[F, RESPONSE]]) extends RequestResult[F, RESPONSE] {
-    def commit = response.map(_.commit)
-  }
-
   def sendRequestWithResponseMapping[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST, requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE])
     (implicit sendRequestContext: SendRequestContext) = {
 
@@ -54,7 +44,7 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
     logger.info(s"sending ${request.toString.take(500)} with $correlationId using $this")
 
     for {
-      receiveResultDeferred <- Deferred[F, Either[Throwable, MessageReceiveResult[F, RESP]]]
+      receiveResultDeferred <- Deferred[F, MessageReceiveResult[F, Either[Throwable, RESP]]]
       _ <- correlationsRef.update { correlations =>
         correlations + ((correlationId, CorrelationInfo(
           receiveResultDeferred,
@@ -72,16 +62,14 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
           CorrelationIdKey -> correlationId,
           ResponseProducerIdKey -> responseProducerId
         ) ++ sendRequestContext.requestTimeout.map(t => RequestTimeoutKey -> t.toMillis.toString)
-      )
+      ).asInstanceOf[F[MessageSendResult[F, REQUEST]]]
       _ = logger.info(s"waiting for request with correlation id $correlationId")
       receiveResult <- sendRequestContext.requestTimeout match {
         case Some(requestTimeout) =>
           requestTimeout match {
             case requestTimeout: FiniteDuration =>
               logger.info(s"waiting on $receiveResultDeferred")
-              val x = receiveResultDeferred.get.timeout(requestTimeout)
-              logger.info(s"got it on $receiveResultDeferred: $x")
-              x
+              receiveResultDeferred.get.timeout(requestTimeout)
             case _ =>
               receiveResultDeferred.get
           }
@@ -89,16 +77,30 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
           receiveResultDeferred.get
       }
       _ = logger.info(s"received result $receiveResult")
-      r <- receiveResult.asInstanceOf[Either[Throwable, MessageReceiveResult[F, RESPONSE]]] match {
-        case Right(r) =>
-          Monad[F].pure(r)
+      message <- receiveResult.message
+      // The consumer returns Either[Throwable, RESP] because the service has to be able to send an error through the channel; however,
+      // the client API can just expose the more convenient F[RESP] and leave the error handling to F, which means we need 
+      // to turn the Either[Throwable, RESP] result into F[RESP] before returning
+      result = message match {
+        case Right(payload) =>
+          logger.info(s"client received success: ${receiveResult.toString.take(500)}")
+          DefaultMessageReceiveResult(Concurrent[F].pure(payload.asInstanceOf[RESPONSE]), receiveResult.attributes, receiveResult.commit, receiveResult.rollback)
         case Left(t) =>
-          MonadError[F, Throwable].raiseError(t)
+          logger.error(s"client received failure: ${receiveResult.toString.take(500)}", t)
+          DefaultMessageReceiveResult(Concurrent[F].raiseError[RESPONSE](t), receiveResult.attributes, receiveResult.commit, receiveResult.rollback)
       }
-    } yield ConsumerProducerRequestResult(Monad[F].pure(r))
+    } yield DefaultRequestResponseResult(sendResult, result)
   }
 
 }
+
+case class CorrelationInfo[F[_], REQ, RESP](
+  responseDeferred: Deferred[F, MessageReceiveResult[F, Either[Throwable, RESP]]],
+  sendTime: Long,
+  request: Option[REQ]
+)
+
+case class DefaultRequestResponseResult[F[_], REQUEST, RESPONSE](request: MessageSendResult[F, REQUEST], response: MessageReceiveResult[F, RESPONSE]) extends RequestResponseResult[F, REQUEST, RESPONSE]
 
 object ConsumerProducerRequestResponseClient extends Logging {
 
@@ -114,44 +116,33 @@ object ConsumerProducerRequestResponseClient extends Logging {
   ): F[ConsumerProducerRequestResponseClient[F, REQ, RESP]] =
     for {
       correlationsRef <- Ref.of[F, Map[String, CorrelationInfo[F, REQ, RESP]]](Map())
-      subscription <- messageConsumer.subscribe { response =>
-        logger.info(s"received response ${response.toString.take(500)}")
+      subscription <- messageConsumer.subscribe { receiveResult =>
+        logger.info(s"received response ${receiveResult.toString.take(500)}")
 
-        response.correlationId match {
+        receiveResult.correlationId match {
           case Some(correlationId) =>
             for {
               correlations <- correlationsRef.get
               _ <- correlations.get(correlationId) match {
                 case Some(correlationInfo) =>
-                  for {
-                    message <- response.message
-                    completeResult <- message match {
-                      case Right(payload) =>
-                        logger.info(s"client received success: ${response.toString.take(500)}")
-                        correlationInfo.responseDeferred.complete(
-                          Right(DefaultMessageReceiveResult(Concurrent[F].pure(payload), response.attributes, response.commit, response.rollback))
-                        )
-                      case Left(t) =>
-                        logger.error(s"client received failure: ${response.toString.take(500)}", t)
-                        correlationInfo.responseDeferred.complete(Left(t))
-                    }
-                  } yield completeResult
+                  correlationInfo.responseDeferred.complete(receiveResult)
                 case None =>
-                  logger.error(s"${System.identityHashCode(this)} received message that cannot be correlated to a request: ${response.toString.take(500)}")
+                  logger.error(s"${System.identityHashCode(this)} received message that cannot be correlated to a request: ${receiveResult.toString.take(500)}")
                   Monad[F].unit
               }
               _ <- correlationsRef.update(_ - correlationId)
               _ <- if (autoCommitResponse) {
-                val r = response.commit
-                logger.info(s"client committed response ${response.toString.take(500)}")
+                val r = receiveResult.commit
+                logger.info(s"client committed response ${receiveResult.toString.take(500)}")
                 r
               } else Monad[F].unit
             } yield ()
           case None =>
-            logger.error(s"${System.identityHashCode(this)} received message without correlation id: ${response.toString.take(500)}")
+            logger.error(s"${System.identityHashCode(this)} received message without correlation id: ${receiveResult.toString.take(500)}")
             Monad[F].unit
         }
       }
-    } yield new ConsumerProducerRequestResponseClient(correlationsRef, subscription, messageConsumer, messageProducer, responseProducerId, autoCommitResponse, name)
+    } yield
+      new ConsumerProducerRequestResponseClient(correlationsRef, subscription, messageConsumer, messageProducer, responseProducerId, autoCommitResponse, name)
 
 }

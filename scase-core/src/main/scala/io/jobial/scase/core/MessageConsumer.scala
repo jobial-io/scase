@@ -44,7 +44,7 @@ trait MessageConsumer[F[_], M] {
   // Subscribes to the message source. In the background, subscribe might start async processing (e.g. a Fiber to poll messages in a source).
   // TODO: get rid of Concurrent
   // TODO: add callback option for error result (e.g. unmarshalling error)?
-  def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]): F[MessageSubscription[F, M]]
+  def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M]): F[MessageSubscription[F, M]]
 }
 
 case class CouldNotFindMessageToCommit[M](

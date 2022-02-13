@@ -17,7 +17,7 @@ import scala.concurrent.duration._
 /**
  * Consumer implementation for AWS SQS.
  */
-class SqsConsumer[F[_], M](
+class SqsConsumer[F[_] : Concurrent, M](
   queueUrl: String,
   outstandingMessagesRef: Ref[F, collection.Map[M, String]],
   val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]],
@@ -31,8 +31,8 @@ class SqsConsumer[F[_], M](
 
   import awsContext.sqsClient._
 
-  override def initialize(implicit concurrent: Concurrent[F]) =
-    concurrent.liftIO(for {
+  override def initialize =
+    Concurrent[F].liftIO(for {
       _ <- createQueueIfNotExists(queueUrl)
       _ <- if (cleanup) IO(sys.addShutdownHook({ () =>
         try {
@@ -48,7 +48,7 @@ class SqsConsumer[F[_], M](
       _ <- visibilityTimeout.map(setVisibilityTimeout(queueUrl, _)).getOrElse(IO())
     } yield ())
 
-  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]) = {
+  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M]) = {
     logger.debug(s"subscribed with callback $callback to queue $queueUrl")
 
     for {
@@ -112,7 +112,7 @@ class SqsConsumer[F[_], M](
 
 object SqsConsumer {
 
-  def apply[F[_] : Sync, M](
+  def apply[F[_] : Concurrent, M](
     queueUrl: String,
     messageRetentionPeriod: Option[Duration] = Some(1.hour),
     visibilityTimeout: Option[Duration] = Some(10.minutes),

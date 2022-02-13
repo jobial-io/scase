@@ -1,5 +1,6 @@
 package io.jobial.scase.core.impl
 
+import cats.Monad
 import cats.effect.Concurrent
 import cats.implicits._
 import io.jobial.scase.core.{CorrelationIdKey, MessageProducer, MessageSendResult, RequestTimeoutKey, ResponseProducerIdKey, SendRequestContext, SenderClient}
@@ -29,6 +30,9 @@ class ProducerSenderClient[F[_] : Concurrent, REQ: Marshaller](
   }
 
 }
+
+case class DefaultMessageSendResult[F[_] : Monad, M](commit: F[Unit], rollback: F[Unit])
+  extends MessageSendResult[F, M]
 
 object ProducerSenderClient {
 

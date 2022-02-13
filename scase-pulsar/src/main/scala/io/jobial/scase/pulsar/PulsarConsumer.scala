@@ -15,7 +15,7 @@ import scala.collection.JavaConverters._
 import scala.compat.java8.FutureConverters.toScala
 
 
-class PulsarConsumer[F[_], M](topic: String, val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]])(implicit context: PulsarContext, cs: ContextShift[IO])
+class PulsarConsumer[F[_] : Concurrent, M](topic: String, val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]])(implicit context: PulsarContext, cs: ContextShift[IO])
   extends DefaultMessageConsumer[F, M] with Logging {
 
   val subscriptionName = s"$topic-subscription-${randomUUID}"
@@ -33,7 +33,7 @@ class PulsarConsumer[F[_], M](topic: String, val subscriptions: Ref[F, List[Mess
 
   implicit def toScalaFuture[T](f: CompletableFuture[T]) = toScala[T](f)
 
-  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]): F[Unit] =
+  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M]): F[Unit] =
     for {
       pulsarMessage <- Concurrent[F].liftIO(IO.fromFuture(IO(toScala(consumer.receiveAsync))))
       _ = logger.debug(s"received message ${new String(pulsarMessage.getData).take(200)} on $topic")
@@ -52,7 +52,7 @@ class PulsarConsumer[F[_], M](topic: String, val subscriptions: Ref[F, List[Mess
 
 object PulsarConsumer {
 
-  def apply[F[_] : Sync, M](topic: String)(implicit context: PulsarContext, cs: ContextShift[IO]): F[PulsarConsumer[F, M]] =
+  def apply[F[_] : Concurrent, M](topic: String)(implicit context: PulsarContext, cs: ContextShift[IO]): F[PulsarConsumer[F, M]] =
     for {
       subscriptions <- Ref.of[F, List[MessageReceiveResult[F, M] => F[_]]](List())
     } yield new PulsarConsumer[F, M](topic, subscriptions)

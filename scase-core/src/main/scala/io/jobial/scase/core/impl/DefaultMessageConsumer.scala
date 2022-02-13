@@ -10,13 +10,13 @@ import io.jobial.scase.marshalling.Unmarshaller
 /**
  * Adds cancellation, subscription state. 
  */
-trait DefaultMessageConsumer[F[_], M] extends MessageConsumer[F, M] with Logging {
+abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsumer[F, M] with Logging {
 
   val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]]
 
-  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]): F[Unit]
+  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M]): F[Unit]
 
-  def receiveMessagesUntilCancelled[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]): F[Unit] =
+  def receiveMessagesUntilCancelled[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M]): F[Unit] =
     for {
       _ <- receiveMessages(callback, cancelled)
       c <- cancelled.get
@@ -25,9 +25,9 @@ trait DefaultMessageConsumer[F[_], M] extends MessageConsumer[F, M] with Logging
       logger.info(s"finished receiving messages in $this")
     }
 
-  def initialize(implicit concurrent: Concurrent[F]) = Concurrent[F].unit
+  def initialize = Concurrent[F].unit
 
-  override def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M], concurrent: Concurrent[F]): F[MessageSubscription[F, M]] =
+  override def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M]): F[MessageSubscription[F, M]] =
     for {
       _ <- initialize
       _ <- subscriptions.modify(s => (callback :: s, ()))

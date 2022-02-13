@@ -40,6 +40,7 @@ lazy val commonSettings = Seq(
 )
 
 lazy val CatsVersion = "2.0.0"
+lazy val CatsTestkitScalatestVersion = "1.0.0-RC1"
 lazy val ScalaLoggingVersion = "3.9.2"
 lazy val ScalatestVersion = "3.2.3"
 lazy val SourcecodeVersion = "0.2.3"
@@ -78,13 +79,13 @@ lazy val `scase-core` = project
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % CatsVersion,
       "org.typelevel" %% "cats-effect" % CatsVersion,
-      "org.typelevel" %% "cats-testkit-scalatest" % CatsVersion,
+      "org.typelevel" %% "cats-testkit-scalatest" % CatsTestkitScalatestVersion % Test,
       "com.typesafe.scala-logging" %% "scala-logging" % ScalaLoggingVersion,
       "com.lihaoyi" %% "sourcecode" % SourcecodeVersion,
-      "org.scalatest" %% "scalatest" % ScalatestVersion % "test",
+      "org.scalatest" %% "scalatest" % ScalatestVersion % Test,
       "commons-io" % "commons-io" % CommonsIoVersion,
       "org.apache.commons" % "commons-lang3" % CommonsLangVersion,
-      "ch.qos.logback" % "logback-classic" % LogbackVersion % "test",
+      "ch.qos.logback" % "logback-classic" % LogbackVersion % Test,
       "com.chuusai" %% "shapeless" % ShapelessVersion
     )
   )
