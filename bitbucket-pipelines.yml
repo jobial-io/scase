@@ -17,7 +17,7 @@ definitions:
       image: apachepulsar/pulsar-standalone:2.7.4
       memory: 4000
     activemq:
-      image: rmohr/activemq:latest
+      image: symptoma/activemq:latest
       memory: 500
 
 options:
