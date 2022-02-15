@@ -185,7 +185,8 @@ lazy val `scase-jms` = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "javax.jms" % "javax.jms-api" % "2.0.1"
+      "javax.jms" % "javax.jms-api" % "2.0.1",
+      "org.apache.activemq" % "activemq-client" % "5.16.3" % Test
     )
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")

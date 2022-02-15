@@ -17,7 +17,7 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
   messageSubscription: MessageSubscription[F, Either[Throwable, RESP]],
   messageConsumer: MessageConsumer[F, Either[Throwable, RESP]],
   messageProducer: () => MessageProducer[F, REQ],
-  responseProducerId: String,
+  responseProducerId: Option[String],
   autoCommitResponse: Boolean,
   name: String
 )(
@@ -59,9 +59,8 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
       sendResult <- producer.send(
         request,
         Map(
-          CorrelationIdKey -> correlationId,
-          ResponseProducerIdKey -> responseProducerId
-        ) ++ sendRequestContext.requestTimeout.map(t => RequestTimeoutKey -> t.toMillis.toString)
+          CorrelationIdKey -> correlationId
+        ) ++ responseProducerId.map(responseProducerId => ResponseProducerIdKey -> responseProducerId) ++ sendRequestContext.requestTimeout.map(t => RequestTimeoutKey -> t.toMillis.toString)
       ).asInstanceOf[F[MessageSendResult[F, REQUEST]]]
       _ = logger.info(s"waiting for request with correlation id $correlationId")
       receiveResult <- sendRequestContext.requestTimeout match {
@@ -107,7 +106,7 @@ object ConsumerProducerRequestResponseClient extends Logging {
   def apply[F[_] : Concurrent : Timer, REQ: Marshaller, RESP](
     messageConsumer: MessageConsumer[F, Either[Throwable, RESP]],
     messageProducer: () => MessageProducer[F, REQ],
-    responseProducerId: String,
+    responseProducerId: Option[String],
     autoCommitResponse: Boolean = true,
     name: String = randomUUID.toString
   )(

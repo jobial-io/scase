@@ -18,7 +18,8 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshalle
   requestHandler: RequestHandler[F, REQ, RESP],
   messageProducerForErrors: Option[MessageProducer[F, REQ]], // TODO: implement this
   autoCommitRequest: Boolean,
-  autoCommitFailedRequest: Boolean
+  autoCommitFailedRequest: Boolean,
+  defaultProducerId: Option[String]
 )(
   implicit responseMarshaller: Marshaller[Either[Throwable, RESP]]
   //sourceContext: SourceContext
@@ -27,7 +28,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshalle
   private def handleRequest(request: MessageReceiveResult[F, REQ]) = {
     logger.debug(s"received request in service: ${request.toString.take(500)}")
     val r: F[MessageSendResult[F, Either[Throwable, RESP]]] =
-      request.responseProducerId match {
+      request.responseProducerId.orElse(defaultProducerId) match {
         case Some(responseProducerId) =>
           logger.debug(s"found response producer id $responseProducerId in request")
 
@@ -115,7 +116,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshalle
             }
           } yield processorResult
         case None =>
-          logger.error(s"response consumer id not found for request: ${request.toString.take(500)}")
+          logger.error(s"response producer id not found for request: ${request.toString.take(500)}")
           MonadError[F, Throwable].raiseError(ResponseProducerIdNotFound())
       }
 
@@ -170,7 +171,8 @@ object ConsumerProducerRequestResponseService {
     messageProducerForErrors: Option[MessageProducer[F, REQ]] = None, // TODO: implement this
     autoCommitRequest: Boolean = true,
     autoCommitFailedRequest: Boolean = true,
-    reuseProducers: Boolean = true
+    reuseProducers: Boolean = true,
+    defaultProducerId: Option[String] = None
   )(
     implicit responseMarshaller: Marshaller[Either[Throwable, RESP]]
     //sourceContext: SourceContext
@@ -188,7 +190,8 @@ object ConsumerProducerRequestResponseService {
       requestHandler,
       messageProducerForErrors,
       autoCommitRequest,
-      autoCommitFailedRequest
+      autoCommitFailedRequest,
+      defaultProducerId
     )
 }
 

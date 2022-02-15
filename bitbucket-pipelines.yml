@@ -8,6 +8,7 @@ pipelines:
          - build-with-sbt
        services:
          - pulsar
+         - activemq
        size: 2x
 
 definitions:
@@ -15,6 +16,9 @@ definitions:
     pulsar:
       image: apachepulsar/pulsar-standalone:2.7.4
       memory: 4000
+    activemq:
+      image: rmohr/activemq:latest
+      memory: 500
 
 options:
   max-time: 30

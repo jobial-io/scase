@@ -46,7 +46,7 @@ case class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshal
       client <- ConsumerProducerRequestResponseClient[F, REQ, RESP](
         consumer,
         () => producer,
-        responseTopic
+        Some(responseTopic)
       )
     } yield client
   }

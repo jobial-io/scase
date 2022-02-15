@@ -7,12 +7,12 @@ import io.jobial.scase.core.{MessageProducer, RequestHandler, RequestResponseCli
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 import io.jobial.scase.jms.JMSProducer
 
-import javax.jms.{Destination, JMSContext}
-import scala.concurrent.duration.Duration
+import javax.jms.{Destination, JMSContext, Session}
+import scala.concurrent.duration.{Duration, DurationInt}
 
 
-case class JMSRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
-  serviceName: String,
+class JMSRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
+  val serviceName: String,
   requestDestination: Destination,
   responseDestination: Destination,
   requestTimeout: Duration
@@ -23,20 +23,21 @@ case class JMSRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
 ) extends ServiceConfiguration {
 
   def service[F[_] : Concurrent](requestHandler: RequestHandler[F, REQ, RESP])(
-    implicit context: JMSContext,
+    implicit session: Session,
     cs: ContextShift[IO]
   ) =
     for {
-      consumer <- JMSConsumer[F, REQ](responseDestination)
+      consumer <- JMSConsumer[F, REQ](requestDestination)
       service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
         consumer,
         { responseTopic => Concurrent[F].delay(JMSProducer[F, Either[Throwable, RESP]](responseDestination)) }: String => F[MessageProducer[F, Either[Throwable, RESP]]],
-        requestHandler
+        requestHandler,
+        defaultProducerId = Some("")
       )
     } yield service
 
   def client[F[_] : Concurrent : Timer](
-    implicit context: JMSContext,
+    implicit session: Session,
     cs: ContextShift[IO]
   ): F[RequestResponseClient[F, REQ, RESP]] = {
     val producer = JMSProducer[F, REQ](requestDestination)
@@ -45,7 +46,7 @@ case class JMSRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
       client <- ConsumerProducerRequestResponseClient[F, REQ, RESP](
         consumer,
         () => producer,
-        ""
+        None
       )
     } yield client
   }
@@ -58,13 +59,13 @@ object JMSRequestResponseServiceConfiguration {
     serviceName: String,
     requestDestination: Destination,
     responseDestination: Destination,
-    requestTimeout: Duration
+    requestTimeout: Duration = 5.minutes
   )(
     //implicit monitoringPublisher: MonitoringPublisher = noPublisher
     implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
     responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
   ): JMSRequestResponseServiceConfiguration[REQ, RESP] =
-    JMSRequestResponseServiceConfiguration[REQ, RESP](
+    new JMSRequestResponseServiceConfiguration[REQ, RESP](
       serviceName,
       requestDestination,
       responseDestination,

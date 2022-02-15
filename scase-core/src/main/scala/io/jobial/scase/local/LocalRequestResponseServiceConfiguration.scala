@@ -30,7 +30,7 @@ case class LocalRequestResponseServiceConfiguration[REQ, RESP](
       client <- ConsumerProducerRequestResponseClient[F, REQ, RESP](
         responseQueue,
         () => requestQueue,
-        ""
+        Some("")
       )
     } yield (service, client)
 

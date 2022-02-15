@@ -48,7 +48,7 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
       client <- ConsumerProducerRequestResponseClient[F, REQ, RESP](
         consumer,
         () => producer,
-        responseQueueUrl
+        Some(responseQueueUrl)
       )
     } yield client
   }

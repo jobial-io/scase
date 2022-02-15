@@ -62,7 +62,7 @@ class ConsumerProducerRequestResponseServiceTest
       client <- ConsumerProducerRequestResponseClient[IO, REQ, RESP](
         testMessageProducer,
         () => testMessageConsumer,
-        ""
+        Some("")
       )
       r1 <- client ? request
       r <- {
