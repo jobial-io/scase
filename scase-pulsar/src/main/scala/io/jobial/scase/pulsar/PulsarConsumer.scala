@@ -35,6 +35,7 @@ class PulsarConsumer[F[_] : Concurrent, M](topic: String, val subscriptions: Ref
 
   def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M]): F[Unit] =
     for {
+      // TODO: could avoid IO here and just use Concurrent[F].async
       pulsarMessage <- Concurrent[F].liftIO(IO.fromFuture(IO(toScala(consumer.receiveAsync))))
       _ = logger.debug(s"received message ${new String(pulsarMessage.getData).take(200)} on $topic")
       x = Unmarshaller[M].unmarshal(pulsarMessage.getData)
@@ -44,8 +45,7 @@ class PulsarConsumer[F[_] : Concurrent, M](topic: String, val subscriptions: Ref
           val messageReceiveResult = DefaultMessageReceiveResult(Monad[F].pure(message), attributes, Monad[F].unit, Monad[F].unit)
           callback(messageReceiveResult)
         case Left(error) =>
-          // TODO: add logging
-          Monad[F].pure(error.printStackTrace)
+          Concurrent[F].delay(logger.error("failed to unmarshal message", error))
       }
     } yield ()
 }

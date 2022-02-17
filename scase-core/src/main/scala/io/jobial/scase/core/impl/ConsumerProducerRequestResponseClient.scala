@@ -83,7 +83,7 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
       result = message match {
         case Right(payload) =>
           logger.info(s"client received success: ${receiveResult.toString.take(500)}")
-          DefaultMessageReceiveResult(Concurrent[F].pure(payload.asInstanceOf[RESPONSE]), receiveResult.attributes, receiveResult.commit, receiveResult.rollback)
+          DefaultMessageReceiveResult(Monad[F].pure(payload.asInstanceOf[RESPONSE]), receiveResult.attributes, receiveResult.commit, receiveResult.rollback)
         case Left(t) =>
           logger.error(s"client received failure: ${receiveResult.toString.take(500)}", t)
           DefaultMessageReceiveResult(Concurrent[F].raiseError[RESPONSE](t), receiveResult.attributes, receiveResult.commit, receiveResult.rollback)

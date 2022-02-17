@@ -61,23 +61,17 @@ trait SqsClient extends S3Client with Logging {
 
   def sendMessage(queueUrl: String, message: String, attributes: Map[String, String] = Map())(implicit awsContext: AwsContext = AwsContext()) =
     IO {
-      try {
-        val request = new SendMessageRequest()
-          .withQueueUrl(queueUrl)
-          .withMessageBody(message)
-          // we need to explicitly convert to a mutable java map here because the extended client needs to add further attributes...
-          .withMessageAttributes(new util.Hashtable(attributes.mapValues { value =>
-            new MessageAttributeValue().withDataType("String").withStringValue(value)
-          }.toMap.asJava)
-          )
-        logger.debug(s"message attributes: ${request.getMessageAttributes.asScala}")
-        logger.debug(s"calling sendMessage on queue $queueUrl with ${request.toString.take(200)}")
-        sqsExtended.getOrElse(sqs).sendMessage(request)
-      } catch {
-        case t =>
-          t.printStackTrace
-          throw t
-      }
+      val request = new SendMessageRequest()
+        .withQueueUrl(queueUrl)
+        .withMessageBody(message)
+        // we need to explicitly convert to a mutable java map here because the extended client needs to add further attributes...
+        .withMessageAttributes(new util.Hashtable(attributes.mapValues { value =>
+          new MessageAttributeValue().withDataType("String").withStringValue(value)
+        }.toMap.asJava)
+        )
+      logger.debug(s"message attributes: ${request.getMessageAttributes.asScala}")
+      logger.debug(s"calling sendMessage on queue $queueUrl with ${request.toString.take(200)}")
+      sqsExtended.getOrElse(sqs).sendMessage(request)
     } handleErrorWith {
       case t =>
         logger.error(s"sendMessage failed on queue $queueUrl: ", t)

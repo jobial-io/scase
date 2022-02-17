@@ -16,17 +16,21 @@ class JMSProducer[F[_] : Concurrent, M](destination: Destination)(implicit sessi
 
   override def send(message: M, attributes: Map[String, String])(implicit m: Marshaller[M]): F[MessageSendResult[F, M]] =
     for {
-      r <- Concurrent[F].liftIO(IO {
+      r <- Concurrent[F].delay {
         val jmsMessage = session.createTextMessage(Marshaller[M].marshalToText(message))
         for {
           (name, value) <- attributes
         } yield jmsMessage.setStringProperty(name, value)
         producer.send(destination, jmsMessage)
-      })
+      }
     } yield new MessageSendResult[F, M] {
-      def commit = Monad[F].unit
+      def commit = Concurrent[F].delay {
+        session.commit()
+      }
 
-      def rollback = Monad[F].unit
+      def rollback = Concurrent[F].delay {
+        session.rollback()
+      }
     }
 
 }

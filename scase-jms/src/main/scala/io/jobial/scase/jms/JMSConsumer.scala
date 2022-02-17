@@ -13,7 +13,6 @@ import scala.collection.JavaConverters._
 import javax.jms._
 
 class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]])(implicit session: Session)
-
   extends DefaultMessageConsumer[F, M] with Logging {
 
   val consumer = session.createConsumer(destination)
@@ -37,20 +36,24 @@ class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscripti
     message.getPropertyNames.asScala.map(_.toString).map { name =>
       name -> message.getStringProperty(name)
     }.toMap
-  
+
   def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M]): F[Unit] =
     for {
-      jmsMessage <- Concurrent[F].liftIO(IO(consumer.receive(1000)))
+      jmsMessage <- Concurrent[F].delay(consumer.receive(1000))
       _ = logger.debug(s"received message ${jmsMessage.toString.take(200)} on $destination")
       x = unmarshalMessage(jmsMessage)
       _ <- x match {
         case Right(message) =>
           val attributes = extractAttributes(jmsMessage)
-          val messageReceiveResult = DefaultMessageReceiveResult(Monad[F].pure(message), attributes, Monad[F].unit, Monad[F].unit)
+          val messageReceiveResult = DefaultMessageReceiveResult(
+            Monad[F].pure(message),
+            attributes,
+            commit = Concurrent[F].delay(session.commit),
+            rollback = Concurrent[F].delay(session.rollback)
+          )
           callback(messageReceiveResult)
         case Left(error) =>
-          // TODO: add logging
-          Monad[F].pure(error.printStackTrace)
+          Concurrent[F].delay(logger.error("failed to unmarshal message", error))
       }
     } yield ()
 }

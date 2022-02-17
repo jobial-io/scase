@@ -182,7 +182,7 @@ object ConsumerProducerRequestResponseService {
         if (reuseProducers)
           Ref.of[F, Map[String, MessageProducer[F, Either[Throwable, RESP]]]](Map()).map(Some(_))
         else
-          Concurrent[F].pure(None)
+          Monad[F].pure(None)
     } yield new ConsumerProducerRequestResponseService(
       producersCacheRef,
       messageConsumer,

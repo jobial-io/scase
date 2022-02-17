@@ -28,6 +28,7 @@ class PulsarProducer[F[_] : Concurrent, M](topic: String)(implicit context: Puls
 
   override def send(message: M, attributes: Map[String, String])(implicit m: Marshaller[M]): F[MessageSendResult[F, M]] =
     for {
+      // TODO: could avoid IO here and just use Concurrent[F].async
       r <- Concurrent[F].liftIO(IO.fromFuture(IO(toScala(producer
         .newMessage
         .properties(attributes.asJava)
