@@ -18,7 +18,7 @@ definitions:
       memory: 4000
     activemq:
       image: symptoma/activemq:latest
-      memory: 500
+      memory: 1000
 
 options:
   max-time: 30
