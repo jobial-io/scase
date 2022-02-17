@@ -15,8 +15,8 @@ package io.jobial.scase.aws.client
 import cats.effect.{IO, Timer}
 import com.amazonaws.services.cloudformation.model._
 import com.amazonaws.services.cloudformation.{AmazonCloudFormation, AmazonCloudFormationClientBuilder}
-import io.jobial.scase.aws.client.Hash.uuid
 import cats.implicits._
+import io.jobial.scase.util.Hash.uuid
 
 import scala.concurrent.duration.DurationInt
 import scala.util.{Success, Try}

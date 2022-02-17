@@ -15,6 +15,7 @@ package io.jobial.condense
 import cats.effect.IO
 import com.amazonaws.services.cloudformation.model.AlreadyExistsException
 import io.jobial.scase.aws.client._
+import io.jobial.scase.util.Hash
 import io.jobial.sclap.CommandLineApp
 import org.apache.commons.io.IOUtils
 import spray.json._

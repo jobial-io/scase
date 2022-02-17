@@ -10,12 +10,11 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package io.jobial.scase.aws.client
+package io.jobial.scase.util
 
 import java.math.BigInteger
 import java.security.MessageDigest
 import java.util.{Arrays, UUID}
-
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 

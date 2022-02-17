@@ -3,10 +3,10 @@ package io.jobial.scase.aws.sqs
 import cats.effect.{Concurrent, ContextShift, IO, Timer}
 import cats.implicits._
 import io.jobial.scase.aws.client.AwsContext
-import io.jobial.scase.aws.client.Hash.uuid
 import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService, ProducerSenderClient}
 import io.jobial.scase.core.{MessageProducer, RequestHandler, RequestResponseClient, SenderClient, ServiceConfiguration}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
+import io.jobial.scase.util.Hash.uuid
 
 case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
   serviceName: String,

@@ -13,15 +13,10 @@
 package io.jobial.scase.aws.sqs
 
 import cats.effect.IO
-import io.jobial.scase.core._
-import cats.effect.IO
 import io.circe.generic.auto._
-import io.jobial.scase.aws.client.Hash.uuid
 import io.jobial.scase.core._
 import io.jobial.scase.marshalling.circe._
-
-import scala.concurrent.TimeoutException
-import scala.concurrent.duration._
+import io.jobial.scase.util.Hash.uuid
 
 
 class SqsRequestResponseServiceTest
