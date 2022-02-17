@@ -39,10 +39,12 @@ class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscripti
 
   def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M]): F[Unit] =
     for {
-      jmsMessage <- Concurrent[F].delay(consumer.receive(1000))
+      jmsMessage <- Concurrent[F].delay(Option(consumer.receive(1000)))
       _ = logger.debug(s"received message ${jmsMessage.toString.take(200)} on $destination")
-      x = unmarshalMessage(jmsMessage)
-      _ <- x match {
+      _ <- (for {
+        jmsMessage <- jmsMessage
+        message = unmarshalMessage(jmsMessage)
+      } yield message match {
         case Right(message) =>
           val attributes = extractAttributes(jmsMessage)
           val messageReceiveResult = DefaultMessageReceiveResult(
@@ -54,7 +56,8 @@ class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscripti
           callback(messageReceiveResult)
         case Left(error) =>
           Concurrent[F].delay(logger.error("failed to unmarshal message", error))
-      }
+
+      }).getOrElse(Monad[F].unit)
     } yield ()
 }
 
