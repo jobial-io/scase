@@ -4,6 +4,7 @@ import cats.effect.{Concurrent, IO, Timer}
 import io.jobial.scase.core._
 import io.circe.generic.auto._
 import io.jobial.scase.marshalling.circe._
+import org.scalacheck.Gen.uuid
 
 import javax.jms.Session
 
@@ -20,7 +21,7 @@ class JMSRequestResponseServiceTest
 
   "request-response service" should "reply successfully" in {
     val serviceConfig = JMSRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse](
-      "hello-test", session.createQueue("hello-test"), session.createQueue("hello-test-response"))
+      "hello-test", session.createQueue(s"hello-test-$uuid"), session.createQueue(s"hello-test-response-$uuid"))
 
     for {
       service <- serviceConfig.service(requestHandler)(Concurrent[IO], connection.createSession(false, Session.AUTO_ACKNOWLEDGE))
