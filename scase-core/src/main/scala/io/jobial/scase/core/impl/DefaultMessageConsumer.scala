@@ -17,12 +17,16 @@ abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsu
   def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M]): F[Unit]
 
   def receiveMessagesUntilCancelled[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M]): F[Unit] =
-    for {
+    (for {
       _ <- receiveMessages(callback, cancelled)
       c <- cancelled.get
       _ <- if (!c) receiveMessagesUntilCancelled(callback, cancelled) else Concurrent[F].unit
     } yield {
       logger.info(s"finished receiving messages in $this")
+    }) handleErrorWith {
+      case t =>
+        logger.error(s"stopped receiving messages on consumer $this", t)
+        Concurrent[F].unit
     }
 
   def initialize = Concurrent[F].unit

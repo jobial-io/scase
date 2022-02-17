@@ -9,7 +9,7 @@ import io.jobial.scase.marshalling.Marshaller
 
 import javax.jms.{BytesMessage, Destination, JMSContext, Session}
 
-class JMSProducer[F[_] : Concurrent, M](destination: Destination)(implicit session: Session, cs: ContextShift[IO])
+class JMSProducer[F[_] : Concurrent, M](destination: Destination)(implicit session: Session)
   extends MessageProducer[F, M] with Logging {
 
   val producer = session.createProducer(destination)
@@ -37,6 +37,6 @@ class JMSProducer[F[_] : Concurrent, M](destination: Destination)(implicit sessi
 
 object JMSProducer {
 
-  def apply[F[_] : Concurrent, M](destination: Destination)(implicit session: Session, cs: ContextShift[IO]): JMSProducer[F, M] =
+  def apply[F[_] : Concurrent, M](destination: Destination)(implicit session: Session): JMSProducer[F, M] =
     new JMSProducer(destination)
 }

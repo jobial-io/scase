@@ -23,22 +23,21 @@ class JMSRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RES
 ) extends ServiceConfiguration {
 
   def service[F[_] : Concurrent](requestHandler: RequestHandler[F, REQ, RESP])(
-    implicit session: Session,
-    cs: ContextShift[IO]
+    implicit session: Session
   ) =
     for {
       consumer <- JMSConsumer[F, REQ](requestDestination)
       service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
-        consumer,
-        { responseTopic => Concurrent[F].delay(JMSProducer[F, Either[Throwable, RESP]](responseDestination)) }: String => F[MessageProducer[F, Either[Throwable, RESP]]],
+        consumer, { responseTopic => Concurrent[F].delay(JMSProducer[F, Either[Throwable, RESP]](responseDestination)) }: String => F[MessageProducer[F, Either[Throwable, RESP]]],
         requestHandler,
-        defaultProducerId = Some("")
+        defaultProducerId = Some(""),
+        autoCommitRequest = false,
+        autoCommitFailedRequest = false
       )
     } yield service
 
   def client[F[_] : Concurrent : Timer](
-    implicit session: Session,
-    cs: ContextShift[IO]
+    implicit session: Session
   ): F[RequestResponseClient[F, REQ, RESP]] = {
     val producer = JMSProducer[F, REQ](requestDestination)
     for {
@@ -46,7 +45,8 @@ class JMSRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RES
       client <- ConsumerProducerRequestResponseClient[F, REQ, RESP](
         consumer,
         () => producer,
-        None
+        None,
+        autoCommitResponse = false
       )
     } yield client
   }
