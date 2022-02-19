@@ -126,7 +126,7 @@ object ConsumerProducerRequestResponseClient extends Logging {
                 case Some(correlationInfo) =>
                   correlationInfo.responseDeferred.complete(receiveResult)
                 case None =>
-                  logger.error(s"${System.identityHashCode(this)} received message that cannot be correlated to a request: ${receiveResult.toString.take(500)}")
+                  logger.error(s"$this received message that cannot be correlated to a request: ${receiveResult.toString.take(500)}")
                   Monad[F].unit
               }
               _ <- correlationsRef.update(_ - correlationId)

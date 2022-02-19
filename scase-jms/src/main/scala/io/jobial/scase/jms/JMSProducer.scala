@@ -37,6 +37,6 @@ class JMSProducer[F[_] : Concurrent, M](destination: Destination)(implicit sessi
 
 object JMSProducer {
 
-  def apply[F[_] : Concurrent, M](destination: Destination)(implicit session: Session): JMSProducer[F, M] =
-    new JMSProducer(destination)
+  def apply[F[_] : Concurrent, M](destination: Destination)(implicit session: Session) =
+    Concurrent[F].delay(new JMSProducer[F, M](destination))
 }

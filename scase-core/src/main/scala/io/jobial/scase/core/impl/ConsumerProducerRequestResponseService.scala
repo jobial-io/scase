@@ -117,7 +117,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshalle
           } yield processorResult
         case None =>
           logger.error(s"response producer id not found for request: ${request.toString.take(500)}")
-          MonadError[F, Throwable].raiseError(ResponseProducerIdNotFound())
+          MonadError[F, Throwable].raiseError(ResponseProducerIdNotFound(s"$this"))
       }
 
     r
@@ -195,4 +195,4 @@ object ConsumerProducerRequestResponseService {
     )
 }
 
-case class ResponseProducerIdNotFound() extends IllegalStateException
+case class ResponseProducerIdNotFound(message: String) extends IllegalStateException(message)
