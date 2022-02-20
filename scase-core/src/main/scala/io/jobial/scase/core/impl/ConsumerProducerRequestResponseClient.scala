@@ -90,7 +90,8 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
       }
     } yield DefaultRequestResponseResult(sendResult, result)
   }
-
+  
+  def stop = messageConsumer.stop
 }
 
 case class CorrelationInfo[F[_], REQ, RESP](
@@ -143,5 +144,5 @@ object ConsumerProducerRequestResponseClient extends Logging {
       }
     } yield
       new ConsumerProducerRequestResponseClient(correlationsRef, subscription, messageConsumer, messageProducer, responseProducerId, autoCommitResponse, name)
-
+  
 }

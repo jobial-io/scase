@@ -60,5 +60,6 @@ case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP:
       )
     }
 
+  def stop = Monad[F].unit
 }
 

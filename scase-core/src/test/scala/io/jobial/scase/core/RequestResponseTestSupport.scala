@@ -60,17 +60,21 @@ trait RequestResponseTestSupport extends AsyncFlatSpec
 
   def testSuccessfulReply(service: Service[IO], client: RequestResponseClient[IO, TestRequest[_ <: TestResponse], TestResponse]): IO[Assertion] = {
     for {
-      _ <- service.start
+      h <- service.start
       //_ <- IO.sleep(1000.seconds)
       r1 <- testSuccessfulReply(client, request1, response1)
       r2 <- testSuccessfulReply(client, request2, response2)
+      _ <- client.stop
+      _ <- h.stop
     } yield r1
   }
 
   def testAnotherSuccessfulReply(service: Service[IO], client: RequestResponseClient[IO, Req, Resp]) = {
     for {
-      _ <- service.start
+      h <- service.start
       r1 <- testSuccessfulReply(client, Req1(), Resp1())
+      _ <- client.stop
+      _ <- h.stop
     } yield r1
   }
 

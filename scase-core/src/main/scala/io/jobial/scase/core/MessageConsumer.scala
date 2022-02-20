@@ -45,6 +45,8 @@ trait MessageConsumer[F[_], M] {
   // TODO: get rid of Concurrent
   // TODO: add callback option for error result (e.g. unmarshalling error)?
   def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M]): F[MessageSubscription[F, M]]
+  
+  def stop: F[Unit]
 }
 
 case class CouldNotFindMessageToCommit[M](

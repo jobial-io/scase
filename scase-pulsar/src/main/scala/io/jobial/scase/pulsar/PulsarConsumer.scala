@@ -48,6 +48,8 @@ class PulsarConsumer[F[_] : Concurrent, M](topic: String, val subscriptions: Ref
           Concurrent[F].delay(logger.error("failed to unmarshal message", error))
       }
     } yield ()
+
+  def stop = Concurrent[F].delay(consumer.close())
 }
 
 object PulsarConsumer {

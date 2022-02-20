@@ -105,9 +105,9 @@ class SqsConsumer[F[_] : Concurrent, M](
     //      logger.error(s"failed to receive messages", t)
     //      Concurrent[F].raiseError(t)
     //    }
-
-
   }
+
+  def stop = Monad[F].unit
 }
 
 object SqsConsumer {

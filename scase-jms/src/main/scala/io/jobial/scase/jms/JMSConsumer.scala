@@ -16,7 +16,7 @@ class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscripti
   extends DefaultMessageConsumer[F, M] with Logging {
 
   val consumer = session.createConsumer(destination)
-
+  
   def unmarshalMessage(message: Message)(implicit u: Unmarshaller[M]) = message match {
     case m: TextMessage =>
       Unmarshaller[M].unmarshalFromText(m.getText)
@@ -59,6 +59,8 @@ class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscripti
 
       }).getOrElse(Monad[F].unit)
     } yield ()
+
+  def stop = Concurrent[F].delay(consumer.close())
 }
 
 object JMSConsumer {

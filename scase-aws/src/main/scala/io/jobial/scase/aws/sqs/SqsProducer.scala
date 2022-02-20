@@ -61,7 +61,7 @@ class SqsProducer[F[_] : Concurrent, M](
     }
   }
 
-
+  def stop = Monad[F].unit
 }
 
 object SqsProducer {

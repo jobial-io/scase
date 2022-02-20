@@ -33,6 +33,7 @@ class JMSProducer[F[_] : Concurrent, M](destination: Destination)(implicit sessi
       }
     }
 
+  def stop = Concurrent[F].delay(producer.close())
 }
 
 object JMSProducer {

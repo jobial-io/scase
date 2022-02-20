@@ -1,5 +1,6 @@
 package io.jobial.scase.core.impl
 
+import cats.Monad
 import cats.implicits._
 import cats.effect.Concurrent
 import cats.effect.concurrent.{Deferred, Ref}

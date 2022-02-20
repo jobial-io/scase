@@ -42,6 +42,7 @@ class PulsarProducer[F[_] : Concurrent, M](topic: String)(implicit context: Puls
       def rollback = Monad[F].unit
     }
 
+  def stop = Concurrent[F].delay(producer.close())
 }
 
 object PulsarProducer {

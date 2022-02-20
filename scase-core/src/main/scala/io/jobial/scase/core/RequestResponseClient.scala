@@ -19,4 +19,6 @@ trait RequestResponseClient[F[_], REQ, RESP] {
   
   def sendRequestWithResponseMapping[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST, requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE])
     (implicit sendRequestContext: SendRequestContext): F[RequestResponseResult[F, REQUEST, RESPONSE]]
+
+  def stop: F[Unit]
 }

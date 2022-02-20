@@ -49,9 +49,9 @@ class InMemoryConsumerProducer[F[_] : Concurrent, M](
 
       def rollback = Monad[F].unit
     }
-
-
   }
+
+  def stop = Monad[F].unit
 }
 
 object InMemoryConsumerProducer {
