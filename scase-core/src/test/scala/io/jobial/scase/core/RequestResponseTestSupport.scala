@@ -83,8 +83,12 @@ trait RequestResponseTestSupport extends AsyncFlatSpec
 
     IO.fromFuture(IO(recoverToSucceededIf[TimeoutException] {
       for {
-        _ <- client ? request1
-        _ <- client.stop
+        _ <- (client ? request1).handleErrorWith { t =>
+          for {
+            _ <- client.stop
+            _ <- IO.raiseError(t)
+          } yield ()
+        }
       } yield succeed
     }))
   }

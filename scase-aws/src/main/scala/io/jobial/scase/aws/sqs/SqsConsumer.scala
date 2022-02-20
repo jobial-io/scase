@@ -58,7 +58,7 @@ class SqsConsumer[F[_] : Concurrent, M](
         receiveMessage(queueUrl, 10, 1).getMessages
       }
       _ <- {
-        logger.debug(s"received messages $messages on queue $queueUrl")
+        logger.debug(s"received messages ${messages.toString.take(500)} on queue $queueUrl")
 
         Traverse[List].sequence(messages.asScala.toList.map { sqsMessage =>
           //                        try {
@@ -75,7 +75,7 @@ class SqsConsumer[F[_] : Concurrent, M](
                     o <- outstandingMessagesRef.get
                     r <- o.get(unmarshalledMessage) match {
                       case Some(receiptHandle) =>
-                        logger.debug(s"deleted message $unmarshalledMessage")
+                        logger.debug(s"deleted message ${unmarshalledMessage.toString.take(500)}")
                         Concurrent[F].delay(deleteMessage(queueUrl, receiptHandle))
                       case _ =>
                         Concurrent[F].raiseError(CouldNotFindMessageToCommit(unmarshalledMessage))

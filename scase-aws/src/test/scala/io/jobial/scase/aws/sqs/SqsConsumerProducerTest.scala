@@ -71,6 +71,7 @@ class SqsConsumerProducerTest extends AsyncFlatSpec with ScaseTestHelper {
     for {
       testProducer <- testProducer
       r <- testProducer.send(largeMessage)
+      _ <- testProducer.stop
     } yield {
       //println(r)
       succeed
@@ -90,6 +91,8 @@ class SqsConsumerProducerTest extends AsyncFlatSpec with ScaseTestHelper {
       }
       m <- IO.race(subscription.join,
         messages.take)
+      _ <- subscription.cancel
+      _ <- testConsumer.stop
     } yield {
       assert(m.right.map(_ sameElements largeMessage).getOrElse(fail))
     }
