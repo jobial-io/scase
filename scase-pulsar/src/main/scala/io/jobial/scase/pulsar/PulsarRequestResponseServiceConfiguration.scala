@@ -3,7 +3,7 @@ package io.jobial.scase.pulsar
 import cats.effect.{Concurrent, ContextShift, IO, Timer}
 import io.jobial.scase.core.{MessageConsumer, MessageProducer, RequestHandler, RequestResponseClient, ServiceConfiguration}
 import cats.implicits._
-import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService}
+import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService, ResponseProducerIdNotFound}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 import java.util.UUID.randomUUID
@@ -13,7 +13,6 @@ case class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshal
   serviceName: String,
   requestTopic: String,
   responseTopicOverride: Option[String],
-  requestTimeout: Duration,
   batchingMaxPublishDelay: Duration
 )(
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher
@@ -30,8 +29,14 @@ case class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshal
     for {
       consumer <- PulsarConsumer[F, REQ](requestTopic)
       service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
-        consumer,
-        { responseTopic => Concurrent[F].delay(PulsarProducer[F, Either[Throwable, RESP]](responseTopic)) }: String => F[MessageProducer[F, Either[Throwable, RESP]]],
+        consumer, { responseTopic =>
+          responseTopic match {
+            case Some(responseTopic) =>
+              Concurrent[F].delay(PulsarProducer[F, Either[Throwable, RESP]](responseTopic))
+            case None =>
+              Concurrent[F].raiseError(ResponseProducerIdNotFound("Not found response producer id in request"))
+          }
+        }: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
         requestHandler
       )
     } yield service
@@ -58,7 +63,6 @@ object PulsarRequestResponseServiceConfiguration {
   def apply[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
     requestTopic: String,
     responseTopicOverride: Option[String] = None,
-    requestTimeout: Duration = 5.minutes,
     batchingMaxPublishDelay: Duration = 1.millis
   )(
     //implicit monitoringPublisher: MonitoringPublisher = noPublisher
@@ -69,7 +73,6 @@ object PulsarRequestResponseServiceConfiguration {
       requestTopic,
       requestTopic,
       responseTopicOverride,
-      requestTimeout,
       batchingMaxPublishDelay
     )
 }

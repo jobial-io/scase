@@ -31,7 +31,7 @@ class ConsumerProducerRequestResponseServiceTest
       testMessageProducer <- InMemoryConsumerProducer[IO, Either[Throwable, RESP]]()
       service <- ConsumerProducerRequestResponseService[IO, REQ, RESP](
         testMessageConsumer,
-        { _: String => IO(testMessageProducer) },
+        { _: Option[String] => IO(testMessageProducer) },
         testRequestProcessor
       )
       s <- service.start
@@ -55,7 +55,7 @@ class ConsumerProducerRequestResponseServiceTest
       testMessageProducer <- InMemoryConsumerProducer[IO, Either[Throwable, RESP]]()
       service <- ConsumerProducerRequestResponseService[IO, REQ, RESP](
         testMessageConsumer,
-        { _: String => IO(testMessageProducer) },
+        { _: Option[String] => IO(testMessageProducer) },
         testRequestProcessor
       )
       s <- service.start

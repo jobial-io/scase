@@ -1,14 +1,13 @@
 package io.jobial.scase.jms
 
-import cats.effect.{Concurrent, ContextShift, IO, Timer}
+import cats.effect.{Concurrent, Timer}
 import cats.implicits._
-import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService}
+import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService, ResponseProducerIdNotFound}
 import io.jobial.scase.core.{MessageProducer, RequestHandler, RequestResponseClient, ServiceConfiguration}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
-import io.jobial.scase.jms.JMSProducer
 import io.jobial.scase.util.Hash.uuid
 
-import javax.jms.{Destination, JMSContext, Session}
+import javax.jms.{Destination, Session}
 import scala.concurrent.duration.{Duration, DurationInt}
 
 
@@ -17,8 +16,7 @@ class JMSRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RES
   requestDestination: Destination,
   responseDestination: Option[Destination],
   createDestination: Option[(Session, String) => Destination],
-  nameFromDestination: Option[Destination => String],
-  requestTimeout: Duration
+  nameFromDestination: Option[Destination => String]
 )(
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher
   implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
@@ -34,12 +32,19 @@ class JMSRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RES
     for {
       consumer <- JMSConsumer[F, REQ](requestDestination)
       service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
-        consumer, { responseTopic =>
+        consumer, { responseDestinationName =>
           for {
-            responseProducer <- JMSProducer[F, Either[Throwable, RESP]](responseDestination
-              .orElse(createDestination.map(_ (session, responseTopic))).getOrElse(???))
-          } yield responseProducer
-        }: String => F[MessageProducer[F, Either[Throwable, RESP]]],
+            destination <- responseDestination.map(Concurrent[F].delay(_)).getOrElse {
+              responseDestinationName match {
+                case Some(responseDestinationName) =>
+                  Concurrent[F].delay(createDestination.map(_ (session, responseDestinationName)).getOrElse(???))
+                case None =>
+                  Concurrent[F].raiseError(ResponseProducerIdNotFound("Not found response producer id in request"))
+              }
+            }
+            producer <- JMSProducer[F, Either[Throwable, RESP]](destination)
+          } yield producer
+        }: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
         requestHandler,
         defaultProducerId = responseDestination.map(_ => ""),
         autoCommitRequest = false,
@@ -79,47 +84,7 @@ class JMSRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RES
 }
 
 object JMSRequestResponseServiceConfiguration {
-
-  def apply[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
-    serviceName: String,
-    requestDestination: Destination,
-    responseDestination: Destination,
-    requestTimeout: Duration
-  )(
-    //implicit monitoringPublisher: MonitoringPublisher = noPublisher
-    implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
-    responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
-  ): JMSRequestResponseServiceConfiguration[REQ, RESP] =
-    new JMSRequestResponseServiceConfiguration[REQ, RESP](
-      serviceName,
-      requestDestination,
-      Some(responseDestination),
-      createDestination = ???,
-      nameFromDestination = ???,
-      requestTimeout
-    )
-
-  def apply[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
-    serviceName: String,
-    requestDestination: Destination,
-    responseDestination: Option[Destination],
-    createDestination: Option[(Session, String) => Destination],
-    nameFromDestination: Option[Destination => String],
-    requestTimeout: Duration
-  )(
-    //implicit monitoringPublisher: MonitoringPublisher = noPublisher
-    implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
-    responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
-  ): JMSRequestResponseServiceConfiguration[REQ, RESP] =
-    new JMSRequestResponseServiceConfiguration[REQ, RESP](
-      serviceName,
-      requestDestination,
-      responseDestination,
-      createDestination,
-      nameFromDestination,
-      requestTimeout
-    )
-
+  
   def apply[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
     serviceName: String,
     requestDestination: Destination,
@@ -131,13 +96,12 @@ object JMSRequestResponseServiceConfiguration {
     implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
     responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
   ): JMSRequestResponseServiceConfiguration[REQ, RESP] =
-    JMSRequestResponseServiceConfiguration[REQ, RESP](
+    new JMSRequestResponseServiceConfiguration[REQ, RESP](
       serviceName,
       requestDestination,
       responseDestination,
       createDestination,
-      nameFromDestination,
-      5.minutes
+      nameFromDestination
     )
 
   def apply[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
@@ -149,19 +113,17 @@ object JMSRequestResponseServiceConfiguration {
     implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
     responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
   ): JMSRequestResponseServiceConfiguration[REQ, RESP] =
-    JMSRequestResponseServiceConfiguration[REQ, RESP](
+    new JMSRequestResponseServiceConfiguration[REQ, RESP](
       serviceName,
       requestDestination,
       Some(responseDestination),
       None,
-      None,
-      30.seconds
+      None
     )
 
   def apply[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
     serviceName: String,
-    requestDestination: Destination,
-    requestTimeout: Duration = 5.minutes
+    requestDestination: Destination
   )(
     //implicit monitoringPublisher: MonitoringPublisher = noPublisher
     implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
@@ -184,8 +146,7 @@ object JMSRequestResponseServiceConfiguration {
       },
       Some { destination =>
         destination.toString
-      },
-      requestTimeout
+      }
     )
   }
 

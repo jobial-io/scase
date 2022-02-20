@@ -3,7 +3,7 @@ package io.jobial.scase.aws.sqs
 import cats.effect.{Concurrent, ContextShift, IO, Timer}
 import cats.implicits._
 import io.jobial.scase.aws.client.AwsContext
-import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService, ProducerSenderClient}
+import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService, ProducerSenderClient, ResponseProducerIdNotFound}
 import io.jobial.scase.core.{MessageProducer, RequestHandler, RequestResponseClient, SenderClient, ServiceConfiguration}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 import io.jobial.scase.util.Hash.uuid
@@ -30,10 +30,15 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
     requestConsumer <- SqsConsumer[F, REQ](requestQueueUrl, cleanup = false)
     service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
       requestConsumer, { responseQueueUrl =>
-        for {
-          responseProducer <- SqsProducer[F, Either[Throwable, RESP]](responseQueueUrl, cleanup = true)
-        } yield responseProducer
-      }: String => F[MessageProducer[F, Either[Throwable, RESP]]],
+        responseQueueUrl match {
+          case Some(responseQueueUrl) =>
+            for {
+              responseProducer <- SqsProducer[F, Either[Throwable, RESP]](responseQueueUrl, cleanup = true)
+            } yield responseProducer
+          case None =>
+            Concurrent[F].raiseError(ResponseProducerIdNotFound("Not found response producer id in request"))
+        }
+      }: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
       requestHandler
     )
   } yield service
