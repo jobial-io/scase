@@ -91,7 +91,11 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
     } yield DefaultRequestResponseResult(sendResult, result)
   }
   
-  def stop = messageConsumer.stop
+  def stop = 
+    for {
+      _ <- messageSubscription.cancel
+      _ <- messageConsumer.stop
+    } yield ()
 }
 
 case class CorrelationInfo[F[_], REQ, RESP](

@@ -18,6 +18,8 @@ import io.jobial.scase.core._
 import io.jobial.scase.marshalling.circe._
 import io.jobial.scase.util.Hash.uuid
 
+import scala.concurrent.duration.DurationInt
+
 
 class SqsRequestResponseServiceTest
   extends RequestResponseTestSupport {

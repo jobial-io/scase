@@ -84,15 +84,18 @@ trait RequestResponseTestSupport extends AsyncFlatSpec
     IO.fromFuture(IO(recoverToSucceededIf[TimeoutException] {
       for {
         _ <- client ? request1
+        _ <- client.stop
       } yield succeed
     }))
   }
 
   def testErrorReply(service: Service[IO], client: RequestResponseClient[IO, TestRequest[_ <: TestResponse], TestResponse]) = {
     for {
-      _ <- service.start
+      h <- service.start
       r1 <- client ? request1
       r2 <- (client ? request2).map(_ => fail("expected exception")).handleErrorWith { case TestException("exception!!!") => IO(succeed) }
+      _ <- client.stop
+      _ <- h.stop
     } yield {
       assert(r1 === response1)
     }
