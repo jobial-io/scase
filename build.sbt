@@ -67,11 +67,9 @@ lazy val root: Project = project
     makePom / publishArtifact := true
   )
   .aggregate(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`, `scase-spray-json-example`,
-    `scase-sqs-example`, `scase-pulsar`, `scase-jms`, `scase-pulsar-example`, `scase-zio-example`,
-    `sbt-condense`, `condense`)
+    `scase-sqs-example`, `scase-pulsar`, `scase-jms`, `scase-pulsar-example`, `scase-zio-example`)
   .dependsOn(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`, `scase-spray-json-example`,
-    `scase-sqs-example`, `scase-pulsar`, `scase-jms`, `scase-pulsar-example`, `scase-zio-example`,
-    `sbt-condense`, `condense`)
+    `scase-sqs-example`, `scase-pulsar`, `scase-jms`, `scase-pulsar-example`, `scase-zio-example`)
 
 lazy val `scase-core` = project
   .settings(commonSettings)
@@ -110,16 +108,6 @@ lazy val `scase-aws` = project
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "test->test")
 
-lazy val `condense` = project
-  .settings(commonSettings)
-  .settings(
-    libraryDependencies ++= Seq(
-      "io.jobial" %% "cloud-formation-template-generator" % CloudformationTemplateGeneratorVersion,
-      "io.jobial" %% "sclap" % SclapVersion
-    )
-  )
-  .dependsOn(`scase-aws` % "compile->compile;test->test")
-
 lazy val `scase-spray-json` = project
   .settings(commonSettings)
   .settings(
@@ -143,32 +131,6 @@ lazy val `scase-circe` = project
       "io.circe" %% "circe-parser"
     ).map(_ % CirceVersion))
   .dependsOn(`scase-core` % "compile->compile;test->test")
-
-
-// check https://stackoverflow.com/questions/37525980/sbt-exclude-module-from-aggregates-or-compilation-based-on-scala-version
-lazy val `sbt-condense` = project
-  .settings(commonSettings)
-  //.enablePlugins(SbtPlugin)
-  .settings(
-    name := "sbt-condense",
-    publish := scalaBinaryVersion.value == "2.12",
-    //      unmanagedSources / excludeFilter := AllPassFilter,
-    //      managedSources / excludeFilter := AllPassFilter,
-    Compile / unmanagedSourceDirectories := (if (scalaBinaryVersion.value == "2.12") Seq(baseDirectory.value / "src" / "main" / "scala") else Nil),
-    //      Compile / managedSourceDirectories := Nil,
-    publishMavenStyle := scalaBinaryVersion.value == "2.12",
-    sbtPlugin := scalaBinaryVersion.value == "2.12",
-    pluginCrossBuild / sbtVersion := "1.2.8", // set minimum sbt version
-    libraryDependencies ++= {
-      val sbtV = (sbtBinaryVersion in pluginCrossBuild).value
-      val scalaV = (scalaBinaryVersion in update).value
-
-      if (scalaBinaryVersion.value == "2.12")
-        Seq(sbtPluginExtra("com.github.sbt" % "sbt-proguard" % "0.5.0", sbtV, scalaV))
-      else
-        Seq()
-    }
-  )
 
 lazy val `scase-pulsar` = project
   .settings(commonSettings)
