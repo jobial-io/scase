@@ -30,13 +30,13 @@ case class SqsOneWayServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: M
     )
   } yield service
 
-  def client[F[_] : Concurrent : Timer](
+  def client[F[_] : Concurrent](
     implicit awsContext: AwsContext = AwsContext(),
     cs: ContextShift[IO]
   ): F[SenderClient[F, REQ]] = {
     for {
       producer <- SqsProducer[F, REQ](requestQueueUrl)
-      client = ProducerSenderClient[F, REQ](producer)
+      client <- ProducerSenderClient[F, REQ](producer)
     } yield client
   }
 

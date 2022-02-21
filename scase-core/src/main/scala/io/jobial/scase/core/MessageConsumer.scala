@@ -41,13 +41,16 @@ trait MessageSubscription[F[_], M] {
 
 trait MessageConsumer[F[_], M] {
 
+  def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]): F[MessageReceiveResult[F, M]]
+
   // Subscribes to the message source. In the background, subscribe might start async processing (e.g. a Fiber to poll messages in a source).
-  // TODO: get rid of Concurrent
-  // TODO: add callback option for error result (e.g. unmarshalling error)?
+  // TODO: should the result be in F too?
   def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M]): F[MessageSubscription[F, M]]
-  
+
   def stop: F[Unit]
 }
+
+case class ReceiveTimeout[F[_]](consumer: MessageConsumer[F, _], timeout: Option[Duration]) extends Exception(s"receive timed out in $consumer after $timeout")
 
 case class CouldNotFindMessageToCommit[M](
   message: M

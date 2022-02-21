@@ -13,6 +13,8 @@ import java.util.UUID.randomUUID
 import java.util.concurrent.CompletableFuture
 import scala.collection.JavaConverters._
 import scala.compat.java8.FutureConverters.toScala
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.{Duration, FiniteDuration}
 
 
 class PulsarConsumer[F[_] : Concurrent, M](topic: String, val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]])(implicit context: PulsarContext, cs: ContextShift[IO])
@@ -33,21 +35,26 @@ class PulsarConsumer[F[_] : Concurrent, M](topic: String, val subscriptions: Ref
 
   implicit def toScalaFuture[T](f: CompletableFuture[T]) = toScala[T](f)
 
-  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M]): F[Unit] =
+  // TODO: get rid of this
+  implicit val timer = IO.timer(ExecutionContext.global)
+
+  def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]) =
     for {
       // TODO: could avoid IO here and just use Concurrent[F].async
-      pulsarMessage <- Concurrent[F].liftIO(IO.fromFuture(IO(toScala(consumer.receiveAsync))))
+      pulsarMessage <- Concurrent[F].liftIO {
+        val r = IO.fromFuture(IO(toScala(consumer.receiveAsync)))
+        timeout.map(r.timeout(_)).getOrElse(r)
+      }
       _ = logger.debug(s"received message ${new String(pulsarMessage.getData).take(200)} on $topic")
-      x = Unmarshaller[M].unmarshal(pulsarMessage.getData)
-      _ <- x match {
+      unmarshalledMessage = Unmarshaller[M].unmarshal(pulsarMessage.getData)
+      result <- unmarshalledMessage match {
         case Right(message) =>
           val attributes = pulsarMessage.getProperties.asScala.toMap
-          val messageReceiveResult = DefaultMessageReceiveResult(Monad[F].pure(message), attributes, Monad[F].unit, Monad[F].unit)
-          callback(messageReceiveResult)
+          Monad[F].pure(DefaultMessageReceiveResult(Monad[F].pure(message), attributes, Monad[F].unit, Monad[F].unit))
         case Left(error) =>
-          Concurrent[F].delay(logger.error("failed to unmarshal message", error))
+          Concurrent[F].raiseError(error)
       }
-    } yield ()
+    } yield result
 
   def stop = Concurrent[F].delay(consumer.close())
 }

@@ -4,8 +4,12 @@ Run Scala code as a portable serverless function or microservice, with zero boil
 
 **Scase** helps you achieve boring concepts like:
 
+ * Type-safe, functional implementation of common messaging patterns
+ * Type-safe and functional access to common messaging protocols
  * Clean separation of service API, implementation and client side
  * Portability: deployment on multiple platforms like **AWS Lambda** or **Apache Pulsar** without rewriting application logic
+ * Clean, purely functional internal design and API
+ * High performance
  * Support for messaging patterns frequently arising in enterprise applications.
 
 **Scase** is a lightweight functional library that bridges the gap between microservice platforms / APIs and functional Scala code.

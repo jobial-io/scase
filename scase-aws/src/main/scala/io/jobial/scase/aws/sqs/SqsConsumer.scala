@@ -48,24 +48,24 @@ class SqsConsumer[F[_] : Concurrent, M](
       _ <- visibilityTimeout.map(setVisibilityTimeout(queueUrl, _)).getOrElse(IO())
     } yield ())
 
-  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M]) = {
-    logger.debug(s"subscribed with callback $callback to queue $queueUrl")
-
+  def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]) =
     for {
       // TODO: set visibility timeout to 0 here to allow other clients receiving uncorrelated messages
       messages <- Concurrent[F].delay {
         logger.debug(s"waiting for messages on $queueUrl")
-        receiveMessage(queueUrl, 10, 1).getMessages
+        // TODO: allow batch receive, handle timeout correctly
+        receiveMessage(queueUrl, 1, timeout.map(_.toSeconds.toInt).getOrElse(Int.MaxValue)).getMessages
       }
-      _ <- {
+      result <- {
         logger.debug(s"received messages ${messages.toString.take(500)} on queue $queueUrl")
 
-        Traverse[List].sequence(messages.asScala.toList.map { sqsMessage =>
-          //                        try {
-          for {
-            unmarshalledMessage <- Concurrent[F].fromEither(u.unmarshalFromText(sqsMessage.getBody))
-            _ <- outstandingMessagesRef.update(_ + ((unmarshalledMessage, sqsMessage.getReceiptHandle)))
-            r <- callback(
+        messages.asScala.headOption match {
+          case Some(sqsMessage) =>
+            //                        try {
+            for {
+              unmarshalledMessage <- Concurrent[F].fromEither(u.unmarshalFromText(sqsMessage.getBody))
+              _ <- outstandingMessagesRef.update(_ + ((unmarshalledMessage, sqsMessage.getReceiptHandle)))
+            } yield
               DefaultMessageReceiveResult[F, M](
                 message = Monad[F].pure(unmarshalledMessage),
                 // TODO: add standard attributes returned by getAttributes...
@@ -91,21 +91,16 @@ class SqsConsumer[F[_] : Concurrent, M](
                 //                                    IO.raiseError(CouldNotFindMessageToCommit(unmarshalledMessage))
                 //                                }
               )
-            )
-            //                        } catch {
-            //                          case t: Throwable =>
-            //                            // TODO: add retry limit and a limited cache for failed messages to avoid retrying over and over again
-            //                            logger.error(s"could not process received message $sqsMessage", t)
-            //                        }
-          } yield r
-        })
+          //                        } catch {
+          //                          case t: Throwable =>
+          //                            // TODO: add retry limit and a limited cache for failed messages to avoid retrying over and over again
+          //                            logger.error(s"could not process received message $sqsMessage", t)
+          //                        }
+          case None =>
+            Concurrent[F].raiseError(ReceiveTimeout(this, timeout))
+        }
       }
-    } yield ()
-    //    ) handleErrorWith { t =>
-    //      logger.error(s"failed to receive messages", t)
-    //      Concurrent[F].raiseError(t)
-    //    }
-  }
+    } yield result
 
   def stop = Monad[F].unit
 }

@@ -9,6 +9,7 @@ import io.jobial.scase.marshalling.Marshaller
 
 import java.util.UUID.randomUUID
 
+// TODO: add autocommit
 class ProducerSenderClient[F[_] : Concurrent, REQ: Marshaller](
   messageProducer: MessageProducer[F, REQ],
   responseProducerId: String
@@ -29,6 +30,7 @@ class ProducerSenderClient[F[_] : Concurrent, REQ: Marshaller](
     } yield sendResult.asInstanceOf[MessageSendResult[F, REQUEST]]
   }
 
+  def stop = messageProducer.stop
 }
 
 case class DefaultMessageSendResult[F[_] : Monad, M](commit: F[Unit], rollback: F[Unit])
@@ -39,5 +41,5 @@ object ProducerSenderClient {
   def apply[F[_] : Concurrent, REQ: Marshaller](
     messageProducer: MessageProducer[F, REQ],
     responseProducerId: String = randomUUID.toString
-  ) = new ProducerSenderClient(messageProducer, responseProducerId)
+  ) = Concurrent[F].delay(new ProducerSenderClient(messageProducer, responseProducerId))
 }
