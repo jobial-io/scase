@@ -4,7 +4,7 @@ import cats.Monad
 import cats.effect.concurrent.{Deferred, Ref}
 import cats.effect.{Concurrent, ContextShift, IO, Sync}
 import cats.implicits._
-import io.jobial.scase.core.{DefaultMessageReceiveResult, MessageReceiveResult}
+import io.jobial.scase.core.{DefaultMessageReceiveResult, MessageReceiveResult, ReceiveTimeout}
 import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
@@ -43,7 +43,7 @@ class PulsarConsumer[F[_] : Concurrent, M](topic: String, val subscriptions: Ref
       // TODO: could avoid IO here and just use Concurrent[F].async
       pulsarMessage <- Concurrent[F].liftIO {
         val r = IO.fromFuture(IO(toScala(consumer.receiveAsync)))
-        timeout.map(r.timeout(_)).getOrElse(r)
+        timeout.map(r.timeout(_) handleErrorWith(t => IO.raiseError(ReceiveTimeout(this, timeout)))).getOrElse(r)
       }
       _ = logger.debug(s"received message ${new String(pulsarMessage.getData).take(200)} on $topic")
       unmarshalledMessage = Unmarshaller[M].unmarshal(pulsarMessage.getData)
