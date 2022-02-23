@@ -12,12 +12,10 @@
  */
 package io.jobial.scase.local
 
-import cats.effect.IO
 import io.jobial.scase.core._
 
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration.DurationInt
-import org.scalactic.CanEqual
 
 
 class LocalRequestResponseServiceTest
