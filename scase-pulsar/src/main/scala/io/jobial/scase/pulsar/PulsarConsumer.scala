@@ -13,7 +13,7 @@ import java.util.UUID.randomUUID
 import java.util.concurrent.CompletableFuture
 import scala.collection.JavaConverters._
 import scala.compat.java8.FutureConverters.toScala
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, TimeoutException}
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
 
@@ -43,7 +43,7 @@ class PulsarConsumer[F[_] : Concurrent, M](topic: String, val subscriptions: Ref
       // TODO: could avoid IO here and just use Concurrent[F].async
       pulsarMessage <- Concurrent[F].liftIO {
         val r = IO.fromFuture(IO(toScala(consumer.receiveAsync)))
-        timeout.map(r.timeout(_) handleErrorWith(t => IO.raiseError(ReceiveTimeout(this, timeout)))).getOrElse(r)
+        timeout.map(r.timeout(_) handleErrorWith { case t: TimeoutException => IO.raiseError(ReceiveTimeout(this, timeout)) }).getOrElse(r)
       }
       _ = logger.debug(s"received message ${new String(pulsarMessage.getData).take(200)} on $topic")
       unmarshalledMessage = Unmarshaller[M].unmarshal(pulsarMessage.getData)

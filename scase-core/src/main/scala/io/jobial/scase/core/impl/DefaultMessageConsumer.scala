@@ -14,20 +14,27 @@ import scala.concurrent.duration.DurationInt
  */
 abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsumer[F, M] with Logging {
 
-  def receiveMessagesUntilCancelled[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M]): F[Unit] =
+  def receiveMessagesUntilCancelled[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M]): F[Unit] = {
+
+    def continueIfNotCancelled =
+      for {
+        c <- cancelled.get
+        r <- if (!c) receiveMessagesUntilCancelled(callback, cancelled) else Concurrent[F].unit
+      } yield r
+
     (for {
       result <- receive(Some(1.second))
       _ <- callback(result)
-      c <- cancelled.get
-      _ <- if (!c) receiveMessagesUntilCancelled(callback, cancelled) else Concurrent[F].unit
+      _ <- continueIfNotCancelled
     } yield {
       logger.info(s"finished receiving messages in $this")
     }) handleErrorWith {
       case t: ReceiveTimeout[F] =>
-        receiveMessagesUntilCancelled(callback, cancelled)
+        continueIfNotCancelled
       case t =>
         Concurrent[F].delay(logger.error(s"stopped receiving messages on consumer $this", t))
     }
+  }
 
   def initialize = Concurrent[F].unit
 

@@ -4,6 +4,7 @@ import cats.effect.IO
 import io.circe.generic.auto._
 import io.jobial.scase.core._
 import io.jobial.scase.marshalling.circe._
+import io.jobial.scase.util.Hash.uuid
 
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration._
@@ -15,7 +16,7 @@ class PulsarRequestResponseServiceTest
   implicit val pulsarContext = PulsarContext()
 
   "request-response service" should "reply successfully" in {
-    val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello-test")
+    val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse](s"hello-test-${uuid(6)}")
 
     for {
       service <- serviceConfig.service(requestHandler)
@@ -25,7 +26,7 @@ class PulsarRequestResponseServiceTest
   }
 
   "another request-response service" should "reply successfully" in {
-    val serviceConfig = PulsarRequestResponseServiceConfiguration[Req, Resp]("another-test")
+    val serviceConfig = PulsarRequestResponseServiceConfiguration[Req, Resp](s"another-test-${uuid(6)}")
 
     for {
       service <- serviceConfig.service(anotherRequestProcessor)
@@ -35,7 +36,7 @@ class PulsarRequestResponseServiceTest
   }
 
   "request" should "time out if service is not started" in {
-    val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello-timeout-test")
+    val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse](s"hello-timeout-test-${uuid(6)}")
 
     for {
       service <- serviceConfig.service(requestHandler)
@@ -45,7 +46,7 @@ class PulsarRequestResponseServiceTest
   }
 
   "request-response service" should "reply with error" in {
-    val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello-error-test")
+    val serviceConfig = PulsarRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse](s"hello-error-test-${uuid(6)}")
 
     for {
       service <- serviceConfig.service(requestHandlerWithError)
