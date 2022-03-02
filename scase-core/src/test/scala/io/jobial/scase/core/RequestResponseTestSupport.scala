@@ -15,6 +15,7 @@ package io.jobial.scase.core
 import cats.Eq
 import cats.effect.IO
 import cats.tests.StrictCatsEquality
+import io.jobial.scase.marshalling.Unmarshaller
 import org.scalatest.Assertion
 import org.scalatest.flatspec.AsyncFlatSpec
 
@@ -73,6 +74,31 @@ trait RequestResponseTestSupport extends AsyncFlatSpec
     for {
       h <- service.start
       r1 <- testSuccessfulReply(client, Req1(), Resp1())
+      _ <- client.stop
+      _ <- h.stop
+    } yield r1
+  }
+
+  def testSuccessfulStreamReply[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP : Unmarshaller : Eq](client: SenderClient[IO, REQ],
+    request1: REQUEST, response1: RESPONSE, responseConsumer: MessageConsumer[IO, RESPONSE]): IO[Assertion] =
+    for {
+      _ <- client.send(request1)
+      r1 <- responseConsumer.receive(None)
+      m1 <- r1.message
+      _ <- client ! request1
+      r2 <- responseConsumer.receive(None)
+      m2 <- r2.message
+    } yield assert(
+      response1 === m1 && response1 === m2
+    )
+
+  def testSuccessfulStreamReply(service: Service[IO], client: SenderClient[IO, TestRequest[_ <: TestResponse]], responseConsumer: MessageConsumer[IO, TestResponse])
+    (implicit u: Unmarshaller[TestResponse]): IO[Assertion] = {
+    for {
+      h <- service.start
+      //_ <- IO.sleep(1000.seconds)
+      r1 <- testSuccessfulStreamReply(client, request1, response1, responseConsumer)
+      r2 <- testSuccessfulStreamReply(client, request2, response2, responseConsumer)
       _ <- client.stop
       _ <- h.stop
     } yield r1

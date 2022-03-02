@@ -1,33 +1,32 @@
 package io.jobial.scase.core.impl
 
-import cats.Monad
-import cats.implicits._
 import cats.effect.Concurrent
 import cats.effect.concurrent.{Deferred, Ref}
-import io.jobial.scase.core.{MessageConsumer, MessageReceiveResult, MessageSubscription}
+import cats.implicits._
+import io.jobial.scase.core.{MessageConsumer, MessageReceiveResult, MessageSubscription, ReceiveTimeout}
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
+
+import scala.concurrent.duration.DurationInt
 
 /**
  * Adds cancellation, subscription state. 
  */
 abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsumer[F, M] with Logging {
 
-  val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]]
-
-  def receiveMessages[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M]): F[Unit]
-
   def receiveMessagesUntilCancelled[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean])(implicit u: Unmarshaller[M]): F[Unit] =
     (for {
-      _ <- receiveMessages(callback, cancelled)
+      result <- receive(Some(1.second))
+      _ <- callback(result)
       c <- cancelled.get
       _ <- if (!c) receiveMessagesUntilCancelled(callback, cancelled) else Concurrent[F].unit
     } yield {
       logger.info(s"finished receiving messages in $this")
     }) handleErrorWith {
+      case t: ReceiveTimeout[F] =>
+        receiveMessagesUntilCancelled(callback, cancelled)
       case t =>
-        logger.error(s"stopped receiving messages on consumer $this", t)
-        Concurrent[F].unit
+        Concurrent[F].delay(logger.error(s"stopped receiving messages on consumer $this", t))
     }
 
   def initialize = Concurrent[F].unit
@@ -35,7 +34,6 @@ abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsu
   override def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M]): F[MessageSubscription[F, M]] =
     for {
       _ <- initialize
-      _ <- subscriptions.modify(s => (callback :: s, ()))
       cancelled <- Ref.of[F, Boolean](false)
       cancellationHappened <- Deferred[F, Unit]
       _ <- Concurrent[F].start(receiveMessagesUntilCancelled(callback, cancelled))
@@ -58,6 +56,4 @@ abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsu
           cancelled.get
         }
       }
-
-  // TODO: deliverToAllSubscribers, allowMultipleSubscribers
 }

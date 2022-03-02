@@ -9,4 +9,6 @@ trait SenderClient[F[_], REQ] {
   def ![REQUEST <: REQ](request: REQUEST)
     (implicit sendRequestContext: SendRequestContext = SendRequestContext()) =
     send(request)
+
+  def stop: F[Unit]
 }

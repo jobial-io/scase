@@ -64,7 +64,7 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
   ): F[SenderClient[F, REQ]] = {
     for {
       producer <- SqsProducer[F, REQ](requestQueueUrl)
-      client = ProducerSenderClient[F, REQ](producer)
+      client <- ProducerSenderClient[F, REQ](producer)
     } yield client
   }
 

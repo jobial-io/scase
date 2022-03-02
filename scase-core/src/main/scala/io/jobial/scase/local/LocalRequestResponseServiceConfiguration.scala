@@ -21,8 +21,8 @@ case class LocalRequestResponseServiceConfiguration[REQ, RESP](
 
   def serviceAndClient[F[_] : Concurrent : Timer](requestHandler: RequestHandler[F, REQ, RESP]) =
     for {
-      requestQueue <- InMemoryConsumerProducer[F, REQ]()
-      responseQueue <- InMemoryConsumerProducer[F, Either[Throwable, RESP]]()
+      requestQueue <- InMemoryConsumerProducer[F, REQ]
+      responseQueue <- InMemoryConsumerProducer[F, Either[Throwable, RESP]]
       service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
         requestQueue, { _ => Concurrent[F].delay(responseQueue) }: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
         requestHandler

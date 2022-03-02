@@ -27,8 +27,8 @@ class ConsumerProducerRequestResponseServiceTest
 
   def testRequestResponse[REQ, RESP](testRequestProcessor: RequestHandler[IO, REQ, RESP], request: REQ, response: Either[Throwable, RESP]) =
     for {
-      testMessageConsumer <- InMemoryConsumerProducer[IO, REQ]()
-      testMessageProducer <- InMemoryConsumerProducer[IO, Either[Throwable, RESP]]()
+      testMessageConsumer <- InMemoryConsumerProducer[IO, REQ]
+      testMessageProducer <- InMemoryConsumerProducer[IO, Either[Throwable, RESP]]
       service <- ConsumerProducerRequestResponseService[IO, REQ, RESP](
         testMessageConsumer,
         { _: Option[String] => IO(testMessageProducer) },
@@ -51,8 +51,8 @@ class ConsumerProducerRequestResponseServiceTest
     implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]
   ) =
     for {
-      testMessageConsumer <- InMemoryConsumerProducer[IO, REQ]()
-      testMessageProducer <- InMemoryConsumerProducer[IO, Either[Throwable, RESP]]()
+      testMessageConsumer <- InMemoryConsumerProducer[IO, REQ]
+      testMessageProducer <- InMemoryConsumerProducer[IO, Either[Throwable, RESP]]
       service <- ConsumerProducerRequestResponseService[IO, REQ, RESP](
         testMessageConsumer,
         { _: Option[String] => IO(testMessageProducer) },
