@@ -5,7 +5,7 @@ pipelines:
   default:
     - step:
        script:
-         - build-with-sbt
+         - build-with-sbt -n
        services:
          - pulsar
          - activemq
