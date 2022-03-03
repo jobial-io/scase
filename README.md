@@ -1,5 +1,7 @@
 # Scase
 
+![Continuous Integration](https://github.com/jobial-io/scase/actions/workflows/ci.yml/badge.svg)
+
 Run Scala code as a portable serverless function or microservice, with zero boilerplate and maximum type safety.
 
 **Scase** helps you achieve boring concepts like:
