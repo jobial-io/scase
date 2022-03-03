@@ -1,6 +1,7 @@
 # Scase
 
 ![Continuous Integration](https://github.com/jobial-io/scase/actions/workflows/ci.yml/badge.svg)
+[![Scala version support](https://index.scala-lang.org/jobial-io/scase/scase/latest-by-scala-version.svg?targetType=Js)](https://index.scala-lang.org/jobial-io/scase)
 
 Run Scala code as a portable serverless function or microservice, with zero boilerplate and maximum type safety.
 
