@@ -25,7 +25,7 @@ class LambdaRequestHandlerTest extends LambdaRequestHandlerTestSupport {
 
 trait TestHandlerLambdaConfig {
 
-  val serviceConfiguration = LambdaRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("test")
+  val serviceConfiguration = LambdaServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("test")
 }
 
 class LambdaTestHandler

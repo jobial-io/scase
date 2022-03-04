@@ -3,11 +3,34 @@ package io.jobial.scase.jms
 import cats.effect.{Concurrent, Timer}
 import cats.implicits._
 import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService, ProducerSenderClient, ResponseProducerIdNotFound}
-import io.jobial.scase.core.{MessageProducer, RequestHandler, RequestResponseClient, SenderClient, ServiceConfiguration}
+import io.jobial.scase.core.{MessageHandler, MessageProducer, ReceiverClient, RequestHandler, RequestResponseClient, SenderClient, ServiceConfiguration}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 import io.jobial.scase.util.Hash.uuid
 
 import javax.jms.{Destination, Session}
+
+
+class JMSMessageHandlerServiceConfiguration[REQ: Marshaller : Unmarshaller](
+  val serviceName: String,
+  requestDestination: Destination
+) {
+
+  def service[F[_] : Concurrent](messageHandler: MessageHandler[F, REQ])(
+    implicit session: Session
+  ) = ???
+
+  def client[F[_] : Concurrent : Timer](
+    implicit session: Session
+  ): F[SenderClient[F, REQ]] = ???
+}
+
+class JMSMessageSourceServiceConfiguration[REQ : Unmarshaller](
+  sourceDestination: Destination
+) {
+  def client[F[_] : Concurrent : Timer](
+    implicit session: Session
+  ): F[ReceiverClient[F, REQ]] = ???
+}
 
 
 class JMSRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
@@ -103,8 +126,6 @@ class JMSStreamServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marsha
         //autoCommitResponse = false
       )
     } yield client
-
-
 }
 
 object JMSServiceConfiguration {
@@ -169,4 +190,5 @@ object JMSServiceConfiguration {
     )
   }
 
+  def source[M: Unmarshaller]: JMSMessageSourceServiceConfiguration[M] = ???
 }
