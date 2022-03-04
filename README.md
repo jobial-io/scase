@@ -3,21 +3,30 @@
 [![Continuous Integration](https://github.com/jobial-io/scase/actions/workflows/ci.yml/badge.svg)](https://github.com/jobial-io/scase/actions/workflows/ci.yml)
 [![Scala version support](https://index.scala-lang.org/jobial-io/scase/scase/latest-by-scala-version.svg?targetType=Js)](https://index.scala-lang.org/jobial-io/scase)
 
-Run Scala code as a portable serverless function or microservice, with zero boilerplate and maximum type safety.
+**Run Scala code as a portable serverless function or microservice, with zero boilerplate and maximum type safety.**
 
-**Scase** helps you achieve boring concepts like:`
+**Use a uniform, portable messaging API in your applications.** 
 
- * Type-safe, functional implementation of common messaging patterns
- * Type-safe and functional access to common messaging protocols
+**Scase** helps you achieve
+
+ * Quick implementation and deployment of serverless functions or microservices
+ * Type-safe, functional implementation of common messaging patterns in enterprise applications
+ * Uniform API for a wide range of messaging protocols and middelware
  * Clean separation of service API, implementation and client side
- * Portability: deployment on multiple platforms like **AWS Lambda** or **Apache Pulsar** without rewriting application logic
+ * Portability: deployment on multiple platforms like **AWS Lambda**, **Kafka** or **Apache Pulsar** without rewriting application code
  * Clean, purely functional internal design and API
  * High performance
- * Support for messaging patterns frequently arising in enterprise applications.
 
-**Scase** is a lightweight functional library that bridges the gap between microservice platforms / APIs and functional Scala code.
+**Scase** is a lightweight functional library that bridges the gap between microservice platforms and messaging APIs and functional Scala code.
 
 ## Motivation
+
+Serverless functions and messaging are fundamental building blocks of many applications. From an application developer point of view, the use cases are often similar, yet
+the underlying APIs and runtimes can be quite different. In many cases, integration and deployment requires a substantial effort and a lot of boilerplate code.
+Often the application code outlives these runtimes and protocols, or the same code has to run on multiple runtimes at the same time (e.g. local execution, cloud deployment, testing, migration...).
+Scase provides a clean and simple way to cover these use cases while keeping your code portable and clean.
+
+## Serverless function case
 
 When thinking of implementing a microservice or a serverless function, we typically want to do something like:
 
