@@ -1,8 +1,11 @@
 # Scase
 
+[![Continuous Integration](https://github.com/jobial-io/scase/actions/workflows/ci.yml/badge.svg)](https://github.com/jobial-io/scase/actions/workflows/ci.yml)
+[![Scala version support](https://index.scala-lang.org/jobial-io/scase/scase/latest-by-scala-version.svg?targetType=Js)](https://index.scala-lang.org/jobial-io/scase)
+
 Run Scala code as a portable serverless function or microservice, with zero boilerplate and maximum type safety.
 
-**Scase** helps you achieve boring concepts like:
+**Scase** helps you achieve boring concepts like:`
 
  * Type-safe, functional implementation of common messaging patterns
  * Type-safe and functional access to common messaging protocols
