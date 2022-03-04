@@ -13,7 +13,7 @@ import io.jobial.scase.marshalling.serialization._
  * Request-response client and service impl that internally wraps an existing request processor in a consumer-producer service
  * and uses in-memory queues to send requests and responses.
  */
-case class LocalRequestResponseServiceConfiguration[REQ, RESP](
+case class LocalServiceConfiguration[REQ, RESP](
   serviceName: String
 )(
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher

@@ -19,7 +19,7 @@ import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 import scala.concurrent.ExecutionContext
 
-case class LambdaRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
+case class LambdaServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
   functionName: String
 ) extends ServiceConfiguration {
   

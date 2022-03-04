@@ -28,7 +28,7 @@ import scala.concurrent.duration.DurationInt
 
 abstract class LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandler with RequestHandler[F, REQ, RESP] with Logging {
   
-  def serviceConfiguration: LambdaRequestResponseServiceConfiguration[REQ, RESP]
+  def serviceConfiguration: LambdaServiceConfiguration[REQ, RESP]
 
   implicit def concurrent: Concurrent[F]
 
