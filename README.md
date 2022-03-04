@@ -21,7 +21,7 @@
 
 ## Motivation
 
-Serverless functions and messaging are fundamental building blocks of many applications. From an application developer point of view, the use cases are often similar, yet
+Mircoservices and messaging are fundamental building blocks of many applications. From an application developer point of view, the use cases are often similar, yet
 the underlying APIs and runtimes can be quite different. In many cases, integration and deployment requires a substantial effort and a lot of boilerplate code.
 Often the application code outlives these runtimes and protocols, or the same code has to run on multiple runtimes at the same time (e.g. local execution, cloud deployment, testing, migration...).
 Scase provides a clean and simple way to cover these use cases while keeping your code portable and clean.
