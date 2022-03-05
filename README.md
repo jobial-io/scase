@@ -2,7 +2,7 @@
 
 [![Continuous Integration](https://github.com/jobial-io/scase/actions/workflows/ci.yml/badge.svg)](https://github.com/jobial-io/scase/actions/workflows/ci.yml)
 [![Scala version support](https://index.scala-lang.org/jobial-io/scase/scase/latest-by-scala-version.svg?targetType=Js)](https://index.scala-lang.org/jobial-io/scase)
-[Test Coverage](https://jobial-ci.s3.eu-west-1.amazonaws.com/github/scase/master/target/scala-2.13/scoverage-report/index.html)
+[![Test Coverage](https://badgen.net/badge/icon/Test%20Coverage/green?icon=libraries&label)](https://jobial-ci.s3.eu-west-1.amazonaws.com/github/scase/master/target/scala-2.13/scoverage-report/index.html)
 
 **Run Scala code as a portable serverless function or microservice, with zero boilerplate and maximum type safety.**
 
