@@ -19,7 +19,7 @@ import scala.concurrent.duration.DurationInt
 
 
 class LocalRequestResponseServiceTest
-  extends RequestResponseTestSupport {
+  extends ServiceTestSupport {
 
   "request-response service" should "reply successfully" in {
     for {

@@ -5,11 +5,12 @@ import cats.effect.implicits.catsEffectSyntaxConcurrent
 import cats.effect.{Concurrent, Timer}
 import cats.implicits._
 import cats._
-import io.jobial.scase.core.{CorrelationIdKey, DefaultMessageReceiveResult, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSendResult, MessageSubscription, RequestResponseClient, RequestResponseMapping, RequestResponseResult, RequestTimeoutKey, ResponseProducerIdKey, SendRequestContext}
+import io.jobial.scase.core.{CorrelationIdKey, DefaultMessageReceiveResult, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSendResult, MessageSubscription, RequestResponseClient, RequestResponseMapping, RequestResponseResult, RequestTimeout, RequestTimeoutKey, ResponseProducerIdKey, SendRequestContext}
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 
 import java.util.UUID.randomUUID
+import scala.concurrent.TimeoutException
 import scala.concurrent.duration.FiniteDuration
 
 class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Marshaller, RESP](
@@ -68,7 +69,12 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
           requestTimeout match {
             case requestTimeout: FiniteDuration =>
               logger.info(s"waiting on $receiveResultDeferred")
-              receiveResultDeferred.get.timeout(requestTimeout)
+              receiveResultDeferred.get.timeout(requestTimeout).handleErrorWith {
+                case t: TimeoutException =>
+                  Concurrent[F].raiseError(RequestTimeout(this, requestTimeout))
+                case t =>
+                  Concurrent[F].raiseError(t)
+              }
             case _ =>
               receiveResultDeferred.get
           }
@@ -90,8 +96,8 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
       }
     } yield DefaultRequestResponseResult(sendResult, result)
   }
-  
-  def stop = 
+
+  def stop =
     for {
       _ <- messageSubscription.cancel
       _ <- messageConsumer.stop
@@ -148,5 +154,5 @@ object ConsumerProducerRequestResponseClient extends Logging {
       }
     } yield
       new ConsumerProducerRequestResponseClient(correlationsRef, subscription, messageConsumer, messageProducer, responseProducerId, autoCommitResponse, name)
-  
+
 }

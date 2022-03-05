@@ -22,10 +22,10 @@ import org.scalatest.flatspec.AsyncFlatSpec
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration._
 
-trait RequestResponseTestSupport extends AsyncFlatSpec
+trait ServiceTestSupport extends AsyncFlatSpec
   with StrictCatsEquality
   with ScaseTestHelper
-  with RequestResponseTestModel {
+  with ServiceTestModel {
 
   val requestHandler = new TestRequestHandler {}
 
@@ -59,7 +59,7 @@ trait RequestResponseTestSupport extends AsyncFlatSpec
       response1 === m1 && response1 === r11
     )
 
-  def testSuccessfulReply(service: Service[IO], client: RequestResponseClient[IO, TestRequest[_ <: TestResponse], TestResponse]): IO[Assertion] = {
+  def testSuccessfulReply(service: Service[IO], client: RequestResponseClient[IO, TestRequest[_ <: TestResponse], TestResponse]): IO[Assertion] =
     for {
       h <- service.start
       //_ <- IO.sleep(1000.seconds)
@@ -68,46 +68,50 @@ trait RequestResponseTestSupport extends AsyncFlatSpec
       _ <- client.stop
       _ <- h.stop
     } yield r1
-  }
 
-  def testAnotherSuccessfulReply(service: Service[IO], client: RequestResponseClient[IO, Req, Resp]) = {
+  def testAnotherSuccessfulReply(service: Service[IO], client: RequestResponseClient[IO, Req, Resp]) =
     for {
       h <- service.start
       r1 <- testSuccessfulReply(client, Req1(), Resp1())
       _ <- client.stop
       _ <- h.stop
     } yield r1
-  }
 
-  def testSuccessfulStreamReply[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP : Unmarshaller : Eq](client: SenderClient[IO, REQ],
-    request1: REQUEST, response1: RESPONSE, responseConsumer: MessageConsumer[IO, RESPONSE]): IO[Assertion] =
+  def testSuccessfulStreamReply[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP : Unmarshaller : Eq](
+    senderClient: SenderClient[IO, REQ],
+    request1: REQUEST, response1: RESPONSE,
+    receiverClient: ReceiverClient[IO, RESPONSE]
+  ): IO[Assertion] =
     for {
-      _ <- client.send(request1)
-      r1 <- responseConsumer.receive(None)
+      _ <- senderClient.send(request1)
+      r1 <- receiverClient.receiveWithContext
       m1 <- r1.message
-      _ <- client ! request1
-      r2 <- responseConsumer.receive(None)
-      m2 <- r2.message
+      _ <- senderClient ! request1
+      m2 <- receiverClient.receive
     } yield assert(
       response1 === m1 && response1 === m2
     )
 
-  def testSuccessfulStreamReply(service: Service[IO], client: SenderClient[IO, TestRequest[_ <: TestResponse]], responseConsumer: MessageConsumer[IO, TestResponse])
-    (implicit u: Unmarshaller[TestResponse]): IO[Assertion] = {
+  def testSuccessfulStreamReply(
+    service: Service[IO],
+    senderClient: SenderClient[IO, TestRequest[_ <: TestResponse]],
+    receiverClient: ReceiverClient[IO, TestResponse]
+  )(implicit u: Unmarshaller[TestResponse]): IO[Assertion] = {
     for {
       h <- service.start
       //_ <- IO.sleep(1000.seconds)
-      r1 <- testSuccessfulStreamReply(client, request1, response1, responseConsumer)
-      r2 <- testSuccessfulStreamReply(client, request2, response2, responseConsumer)
-      _ <- client.stop
+      r1 <- testSuccessfulStreamReply(senderClient, request1, response1, receiverClient)
+      r2 <- testSuccessfulStreamReply(senderClient, request2, response2, receiverClient)
+      _ <- senderClient.stop
+      _ <- receiverClient.stop
       _ <- h.stop
     } yield r1
   }
 
-  def testTimeout(client: RequestResponseClient[IO, TestRequest[_ <: TestResponse], TestResponse]) = {
+  def testRequestResponseTimeout(client: RequestResponseClient[IO, TestRequest[_ <: TestResponse], TestResponse]) = {
     implicit val sendRequestContext = SendRequestContext(requestTimeout = Some(1.second))
 
-    IO.fromFuture(IO(recoverToSucceededIf[TimeoutException] {
+    recoverToSucceededIf[TimeoutException] {
       for {
         _ <- (client ? request1).handleErrorWith { t =>
           for {
@@ -116,10 +120,30 @@ trait RequestResponseTestSupport extends AsyncFlatSpec
           } yield ()
         }
       } yield succeed
-    }))
+    }
   }
 
-  def testErrorReply(service: Service[IO], client: RequestResponseClient[IO, TestRequest[_ <: TestResponse], TestResponse]) = {
+  def testStreamTimeout(
+    senderClient: SenderClient[IO, TestRequest[_ <: TestResponse]],
+    receiverClient: ReceiverClient[IO, TestResponse]
+  ) = {
+    implicit val sendRequestContext = SendRequestContext(requestTimeout = Some(1.second))
+
+    recoverToSucceededIf[TimeoutException] {
+      for {
+        _ <- senderClient ! request1
+        _ <- receiverClient.receive(1.second).handleErrorWith { t =>
+          for {
+            _ <- senderClient.stop
+            _ <- receiverClient.stop
+            _ <- IO.raiseError(t)
+          } yield ()
+        }
+      } yield succeed
+    }
+  }
+
+  def testRequestResponseErrorReply(service: Service[IO], client: RequestResponseClient[IO, TestRequest[_ <: TestResponse], TestResponse]) =
     for {
       h <- service.start
       r1 <- client ? request1
@@ -129,11 +153,24 @@ trait RequestResponseTestSupport extends AsyncFlatSpec
     } yield {
       assert(r1 === response1)
     }
-  }
 
+  def testStreamErrorReply(
+    service: Service[IO],
+    senderClient: SenderClient[IO, TestRequest[_ <: TestResponse]],
+    receiverClient: ReceiverClient[IO, TestResponse]
+  ) = {
+    implicit val sendRequestContext = SendRequestContext(requestTimeout = Some(1.second))
+
+    recoverToSucceededIf[ReceiveTimeout[IO]] {
+      for {
+        _ <- senderClient ! request1
+        _ <- receiverClient.receive(1.second).map(_ => fail("expected exception"))
+      } yield succeed
+    }
+  }
 }
 
-trait TestRequestHandler extends RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] with RequestResponseTestModel {
+trait TestRequestHandler extends RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] with ServiceTestModel {
   override def handleRequest(implicit context: RequestContext[IO]) = {
     case r: TestRequest1 =>
       println("replying...")

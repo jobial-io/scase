@@ -2,36 +2,12 @@ package io.jobial.scase.jms
 
 import cats.effect.{Concurrent, Timer}
 import cats.implicits._
-import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService, ProducerSenderClient, ResponseProducerIdNotFound}
+import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService, ConsumerReceiverClient, ProducerSenderClient, ResponseProducerIdNotFound}
 import io.jobial.scase.core.{MessageHandler, MessageProducer, ReceiverClient, RequestHandler, RequestResponseClient, SenderClient, ServiceConfiguration}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 import io.jobial.scase.util.Hash.uuid
 
 import javax.jms.{Destination, Session}
-
-
-class JMSMessageHandlerServiceConfiguration[REQ: Marshaller : Unmarshaller](
-  val serviceName: String,
-  requestDestination: Destination
-) {
-
-  def service[F[_] : Concurrent](messageHandler: MessageHandler[F, REQ])(
-    implicit session: Session
-  ) = ???
-
-  def client[F[_] : Concurrent : Timer](
-    implicit session: Session
-  ): F[SenderClient[F, REQ]] = ???
-}
-
-class JMSMessageSourceServiceConfiguration[REQ : Unmarshaller](
-  sourceDestination: Destination
-) {
-  def client[F[_] : Concurrent : Timer](
-    implicit session: Session
-  ): F[ReceiverClient[F, REQ]] = ???
-}
-
 
 class JMSRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
   val serviceName: String,
@@ -128,9 +104,35 @@ class JMSStreamServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marsha
     } yield client
 }
 
+class JMSMessageHandlerServiceConfiguration[REQ: Marshaller : Unmarshaller](
+  val serviceName: String,
+  requestDestination: Destination
+) {
+
+  def service[F[_] : Concurrent](messageHandler: MessageHandler[F, REQ])(
+    implicit session: Session
+  ) = ???
+
+  def client[F[_] : Concurrent : Timer](
+    implicit session: Session
+  ): F[SenderClient[F, REQ]] = ???
+}
+
+class JMSMessageSourceServiceConfiguration[REQ: Unmarshaller](
+  sourceDestination: Destination
+) {
+  def client[F[_] : Concurrent : Timer](
+    implicit session: Session
+  ): F[ReceiverClient[F, REQ]] =
+    for {
+      consumer <- JMSConsumer[F, REQ](sourceDestination)
+      client <- ConsumerReceiverClient[F, REQ](consumer)
+    } yield client
+}
+
 object JMSServiceConfiguration {
 
-  def apply[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
+  def requestResponse[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
     serviceName: String,
     requestDestination: Destination,
     createDestination: (Session, String) => Destination,
@@ -147,7 +149,7 @@ object JMSServiceConfiguration {
       nameFromDestination
     )
 
-  def apply[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
+  def stream[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
     serviceName: String,
     requestDestination: Destination,
     responseDestination: Destination
@@ -162,7 +164,7 @@ object JMSServiceConfiguration {
       responseDestination
     )
 
-  def apply[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
+  def requestResponse[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
     serviceName: String,
     requestDestination: Destination
   )(
@@ -190,5 +192,8 @@ object JMSServiceConfiguration {
     )
   }
 
-  def source[M: Unmarshaller]: JMSMessageSourceServiceConfiguration[M] = ???
+  def handler[M: Unmarshaller]: JMSMessageHandlerServiceConfiguration[M] = ???
+
+  def source[M: Unmarshaller](sourceDestination: Destination): JMSMessageSourceServiceConfiguration[M] =
+    new JMSMessageSourceServiceConfiguration(sourceDestination)
 }
