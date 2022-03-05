@@ -28,12 +28,16 @@ jobs:
         java-version: '11'
         distribution: 'temurin'
     - name: Setup Env
-      run:  
-        echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >>$GITHUB_ENV
-        echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >>$GITHUB_ENV
-        echo "AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }}" >>$GITHUB_ENV
+      run: | 
+        echo export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} >>job_env
+        echo export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} >>job_env
+        echo export AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }} >>job_env
     - name: Run tests
-      run: sbt coverage +test coverageReport coverageAggregate
+      run: |
+        . job_env
+        sbt coverage +test coverageReport coverageAggregate
     - name: Get coverage badge
-      run: cat target/scala-2.*/scoverage-report/scoverage.xml | head -n 2 | grep statement-rate | sed 's/.*statement-rate="//' | sed 's/".*//'
+      run: |
+        . job_env
+        cat target/scala-2.*/scoverage-report/scoverage.xml | head -n 2 | grep statement-rate | sed 's/.*statement-rate="//' | sed 's/".*//'
         
