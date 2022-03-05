@@ -21,11 +21,11 @@ import io.jobial.scase.util.Hash.uuid
 import scala.concurrent.duration.DurationInt
 
 
-class SqsRequestResponseServiceTest
-  extends RequestResponseTestSupport {
+class SqsServiceTest
+  extends ServiceTestSupport {
   
   "request-response service" should "reply successfully" in {
-    val serviceConfig = SqsRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse](s"test-hello-${uuid(5)}")
+    val serviceConfig = SqsServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"test-hello-${uuid(5)}")
 
     for {
       service <- serviceConfig.service(requestHandler)
@@ -35,7 +35,7 @@ class SqsRequestResponseServiceTest
   }
 
   "another request-response service" should "reply successfully" in {
-    val serviceConfig = SqsRequestResponseServiceConfiguration[Req, Resp](s"test-another-${uuid(5)}")
+    val serviceConfig = SqsServiceConfiguration.requestResponse[Req, Resp](s"test-another-${uuid(5)}")
 
     for {
       service <- serviceConfig.service(anotherRequestProcessor)
@@ -45,22 +45,22 @@ class SqsRequestResponseServiceTest
   }
 
   "request" should "time out if service is not started" in {
-    val serviceConfig = SqsRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse](s"test-hello-timeout-${uuid(5)}")
+    val serviceConfig = SqsServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"test-hello-timeout-${uuid(5)}")
 
     for {
       service <- serviceConfig.service(requestHandler)
       client <- serviceConfig.client[IO]
-      r <- testTimeout(client)
+      r <- testRequestResponseTimeout(client)
     } yield r
   }
 
   "request-response service" should "reply with error" in {
-    val serviceConfig = SqsRequestResponseServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse](s"test-hello-error-${uuid(5)}")
+    val serviceConfig = SqsServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"test-hello-error-${uuid(5)}")
 
     for {
       service <- serviceConfig.service(requestHandlerWithError)
       client <- serviceConfig.client[IO]
-      r <- testErrorReply(service, client)
+      r <- testRequestResponseErrorReply(service, client)
     } yield r
   }
 

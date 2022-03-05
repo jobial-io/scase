@@ -10,8 +10,8 @@ import scala.concurrent.TimeoutException
 import scala.concurrent.duration._
 
 
-class PulsarRequestResponseServiceTest
-  extends RequestResponseTestSupport {
+class PulsarServiceTest
+  extends ServiceTestSupport {
 
   implicit val pulsarContext = PulsarContext()
 
@@ -41,7 +41,7 @@ class PulsarRequestResponseServiceTest
     for {
       service <- serviceConfig.service(requestHandler)
       client <- serviceConfig.client[IO]
-      r <- testTimeout(client)
+      r <- testRequestResponseTimeout(client)
     } yield r
   }
 
@@ -51,7 +51,7 @@ class PulsarRequestResponseServiceTest
     for {
       service <- serviceConfig.service(requestHandlerWithError)
       client <- serviceConfig.client[IO]
-      r <- testErrorReply(service, client)
+      r <- testRequestResponseErrorReply(service, client)
     } yield r
   }
 

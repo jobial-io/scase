@@ -36,7 +36,7 @@ case class Req1() extends Req
 
 case class Resp1() extends Resp
 
-trait RequestResponseTestModel {
+trait ServiceTestModel {
 
   val request1 = TestRequest1("1")
 

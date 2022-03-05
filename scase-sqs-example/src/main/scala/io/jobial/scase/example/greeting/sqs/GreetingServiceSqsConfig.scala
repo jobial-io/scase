@@ -13,11 +13,11 @@
 package io.jobial.scase.example.greeting.sqs
 
 import io.circe.generic.auto._
-import io.jobial.scase.aws.sqs.SqsRequestResponseServiceConfiguration
+import io.jobial.scase.aws.sqs.{SqsRequestResponseServiceConfiguration, SqsServiceConfiguration}
 import io.jobial.scase.marshalling.circe._
 
 trait GreetingServiceSqsConfig {
   
   val greetingServiceConfig =
-    SqsRequestResponseServiceConfiguration[GreetingRequest[_ <: GreetingResponse], GreetingResponse]("greeting")
+    SqsServiceConfiguration.requestResponse[GreetingRequest[_ <: GreetingResponse], GreetingResponse]("greeting")
 }

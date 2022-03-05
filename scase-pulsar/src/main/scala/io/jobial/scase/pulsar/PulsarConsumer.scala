@@ -43,7 +43,10 @@ class PulsarConsumer[F[_] : Concurrent, M](topic: String, val subscriptions: Ref
       // TODO: could avoid IO here and just use Concurrent[F].async
       pulsarMessage <- Concurrent[F].liftIO {
         val r = IO.fromFuture(IO(toScala(consumer.receiveAsync)))
-        timeout.map(r.timeout(_) handleErrorWith { case t: TimeoutException => IO.raiseError(ReceiveTimeout(this, timeout)) }).getOrElse(r)
+        timeout.map(r.timeout(_) handleErrorWith {
+          case t: TimeoutException => IO.raiseError(ReceiveTimeout(this, timeout))
+          case t => IO.raiseError(t)
+        }).getOrElse(r)
       }
       _ = logger.debug(s"received message ${new String(pulsarMessage.getData).take(200)} on $topic")
       unmarshalledMessage = Unmarshaller[M].unmarshal(pulsarMessage.getData)

@@ -23,7 +23,7 @@ import io.jobial.scase.marshalling.serialization._
 import scala.concurrent.duration.DurationInt
 
 class ConsumerProducerRequestResponseServiceTest
-  extends RequestResponseTestSupport {
+  extends ServiceTestSupport {
 
   def testRequestResponse[REQ, RESP](testRequestProcessor: RequestHandler[IO, REQ, RESP], request: REQ, response: Either[Throwable, RESP]) =
     for {

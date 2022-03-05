@@ -3,8 +3,8 @@ package io.jobial.scase.aws.sqs
 import cats.effect.{Concurrent, ContextShift, IO, Timer}
 import cats.implicits._
 import io.jobial.scase.aws.client.AwsContext
-import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService, ProducerSenderClient, ResponseProducerIdNotFound}
-import io.jobial.scase.core.{MessageProducer, RequestHandler, RequestResponseClient, SenderClient, ServiceConfiguration}
+import io.jobial.scase.core.impl.{ConsumerMessageHandlerService, ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService, ProducerSenderClient, ResponseProducerIdNotFound}
+import io.jobial.scase.core.{MessageHandler, MessageProducer, RequestHandler, RequestResponseClient, SenderClient, ServiceConfiguration}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 import io.jobial.scase.util.Hash.uuid
 
@@ -70,9 +70,44 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
 
 }
 
-object SqsRequestResponseServiceConfiguration {
+class SqsMessageHandlerServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
+  val serviceName: String,
+  requestQueueName: String,
+  cleanup: Boolean
+)(
+  //implicit monitoringPublisher: MonitoringPublisher = noPublisher
+  implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
+  responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
+) extends ServiceConfiguration {
 
-  def apply[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
+  val requestQueueUrl = requestQueueName
+
+  def service[F[_] : Concurrent](messageHandler: MessageHandler[F, REQ])(
+    implicit awsContext: AwsContext = AwsContext(),
+    cs: ContextShift[IO]
+  ) = for {
+    requestConsumer <- SqsConsumer[F, REQ](requestQueueUrl, cleanup = false)
+    service = new ConsumerMessageHandlerService[F, REQ](
+      requestConsumer,
+      messageHandler
+    )
+  } yield service
+
+  def client[F[_] : Concurrent](
+    implicit awsContext: AwsContext = AwsContext(),
+    cs: ContextShift[IO]
+  ): F[SenderClient[F, REQ]] = {
+    for {
+      producer <- SqsProducer[F, REQ](requestQueueUrl)
+      client <- ProducerSenderClient[F, REQ](producer)
+    } yield client
+  }
+
+}
+
+object SqsServiceConfiguration {
+
+  def requestResponse[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
     requestQueueName: String
   )(
     //implicit monitoringPublisher: MonitoringPublisher = noPublisher
@@ -81,7 +116,7 @@ object SqsRequestResponseServiceConfiguration {
   ): SqsRequestResponseServiceConfiguration[REQ, RESP] =
     SqsRequestResponseServiceConfiguration[REQ, RESP](requestQueueName, requestQueueName, None, false)
 
-  def apply[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
+  def stream[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
     requestQueueName: String,
     responseQueueName: String
   )(

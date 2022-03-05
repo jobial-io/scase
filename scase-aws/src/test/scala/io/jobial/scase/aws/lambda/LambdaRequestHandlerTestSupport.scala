@@ -24,7 +24,7 @@ import cats.implicits.catsSyntaxParallelSequence_
 import java.io.ByteArrayInputStream
 import cats.implicits._
 
-trait LambdaRequestHandlerTestSupport extends RequestResponseTestSupport {
+trait LambdaRequestHandlerTestSupport extends ServiceTestSupport {
 
   val emptyContext = new Context {
     override def getAwsRequestId: String = ""
