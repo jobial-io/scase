@@ -36,8 +36,9 @@ jobs:
       run: |
         . job_env
         sbt coverage +test coverageReport coverageAggregate
-    - name: Get coverage badge
+    - name: Upload results
       run: |
         . job_env
+        aws s3 sync ./ s3://jobial-ci/github/scase/master/ --exclude "*" --include "**/target/**"
         cat target/scala-2.*/scoverage-report/scoverage.xml | head -n 2 | grep statement-rate | sed 's/.*statement-rate="//' | sed 's/".*//'
         
