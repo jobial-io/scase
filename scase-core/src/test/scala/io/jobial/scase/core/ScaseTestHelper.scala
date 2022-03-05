@@ -26,10 +26,12 @@ import scala.reflect.ClassTag
 
 trait ScaseTestHelper {
   this: AsyncFlatSpec =>
+  
+  val ec = fromExecutor(newCachedThreadPool)
+  
+  implicit val cs = IO.contextShift(ec)
 
-  implicit val cs = IO.contextShift(fromExecutor(newCachedThreadPool))
-
-  implicit val timer = IO.timer(ExecutionContext.global)
+  implicit val timer = IO.timer(ec)
 
   implicit def runIOResult(r: IO[Assertion]) = r.unsafeToFuture
 
