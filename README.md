@@ -15,6 +15,7 @@
  * Clean separation of service API, implementation and client side
  * Portability: deployment on multiple platforms like **AWS Lambda**, **Kafka** or **Apache Pulsar** without rewriting application code
  * Clean, purely functional internal design and API
+ * Pluggable protocol support
  * High performance
 
 **Scase** is a lightweight functional library that bridges the gap between microservice platforms and messaging APIs and functional Scala code.
