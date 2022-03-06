@@ -41,4 +41,7 @@ jobs:
         . job_env
         aws s3 sync ./ s3://jobial-ci/github/scase/master/ --exclude "*" --include "**/target/**"
         cat target/scala-2.*/scoverage-report/scoverage.xml | head -n 2 | grep statement-rate | sed 's/.*statement-rate="//' | sed 's/".*//'
-        
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v2
+      with:
+        verbose: true        
