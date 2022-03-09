@@ -54,7 +54,6 @@ lazy val SclapVersion = "1.1.7"
 lazy val CirceVersion = "0.12.0-M3"
 lazy val SprayJsonVersion = "1.3.6"
 lazy val PulsarVersion = "2.9.0"
-lazy val ZioVersion = "2.0.0.0-RC13" // TODO: upgrade when Cats version is upgraded
 lazy val ScalaJava8CompatVersion = "1.0.2"
 lazy val LogbackVersion = "1.2.3"
 lazy val ShapelessVersion = "2.3.3"
@@ -67,9 +66,9 @@ lazy val root: Project = project
     makePom / publishArtifact := true
   )
   .aggregate(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`,
-    `scase-pulsar`, `scase-jms`, `scase-zio-example`)
+    `scase-pulsar`, `scase-jms`)
   .dependsOn(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`,
-    `scase-pulsar`, `scase-jms`, `scase-zio-example`)
+    `scase-pulsar`, `scase-jms`)
 
 lazy val `scase-core` = project
   .settings(commonSettings)
@@ -153,14 +152,3 @@ lazy val `scase-jms` = project
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "test->test")
-
-lazy val `scase-zio-example` = project
-  .settings(commonSettings)
-  .settings(
-    libraryDependencies ++= Seq(
-      "dev.zio" %% "zio-interop-cats" % ZioVersion,
-      "io.jobial" %% "sclap-zio" % SclapVersion
-    )
-  )
-  .dependsOn(`scase-circe` % "compile->compile;test->test")
-  .dependsOn(`scase-core` % "compile->compile;test->test")
