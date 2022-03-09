@@ -66,9 +66,9 @@ lazy val root: Project = project
     publishArtifact := false,
     makePom / publishArtifact := true
   )
-  .aggregate(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`, `scase-spray-json-example`,
+  .aggregate(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`,
     `scase-pulsar`, `scase-jms`, `scase-zio-example`)
-  .dependsOn(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`, `scase-spray-json-example`,
+  .dependsOn(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`,
     `scase-pulsar`, `scase-jms`, `scase-zio-example`)
 
 lazy val `scase-core` = project
@@ -153,16 +153,6 @@ lazy val `scase-jms` = project
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "test->test")
-
-lazy val `scase-spray-json-example` = project
-  .settings(commonSettings)
-  .settings(
-    libraryDependencies ++= Seq(
-      "io.jobial" %% "sclap" % SclapVersion
-    )
-  )
-  .dependsOn(`scase-spray-json` % "compile->compile;test->test")
-  .dependsOn(`scase-pulsar`)
 
 lazy val `scase-zio-example` = project
   .settings(commonSettings)
