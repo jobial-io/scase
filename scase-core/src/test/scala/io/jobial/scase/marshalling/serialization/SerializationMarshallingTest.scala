@@ -5,6 +5,6 @@ import io.jobial.scase.marshalling.MarshallingTestSupport
 class SerializationMarshallingTest extends MarshallingTestSupport {
   
   "marshalling" should "work" in {
-    testMarshalling(response1)
+    testMarshallingWithDefaultFormats(response1)
   }
 }

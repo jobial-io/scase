@@ -12,11 +12,14 @@
  */
 package io.jobial.scase.marshalling.sprayjson
 
+import io.circe.Json
+import io.jobial.scase.marshalling.MarshallingUtils
 import spray.json._
+
 import scala.util.Try
 
-trait DefaultFormats {
-  implicit def eitherJsonFormat[A: JsonFormat, B: JsonFormat] = new JsonFormat[Either[A, B]] {
+trait DefaultFormats extends MarshallingUtils {
+  implicit def eitherJsonFormat[A: JsonWriter : JsonReader, B: JsonWriter : JsonReader] = new JsonFormat[Either[A, B]] {
     def write(obj: Either[A, B]): JsValue = obj match {
       case Left(a) =>
         a.toJson
@@ -29,9 +32,17 @@ trait DefaultFormats {
   }
 
   implicit def throwableJsonFormat = new JsonFormat[Throwable] {
-    override def write(obj: Throwable): JsValue = ???
+    def write(obj: Throwable) = JsObject(
+      "errorMessage" -> JsString(obj.getMessage),
+      "errorType" -> JsString(obj.getClass.getName)
+    )
 
-    override def read(json: JsValue): Throwable = ???
+    def read(json: JsValue) = {
+      val message = json.asJsObject.fields("errorMessage").asInstanceOf[JsString].value
+      val className = json.asJsObject.fields("errorType").asInstanceOf[JsString].value
+      createThrowable(className, message)
+    }
+
   }
 
 }

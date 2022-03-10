@@ -16,9 +16,11 @@ import io.circe.Decoder.Result
 import io.circe.syntax.EncoderOps
 import io.circe.{Decoder, Encoder, HCursor, Json}
 import cats.syntax.either._
+import io.jobial.scase.marshalling.MarshallingUtils
+
 import scala.util.Try
 
-trait CirceDefaultCodecs {
+trait CirceDefaultCodecs extends MarshallingUtils {
 
   implicit val throwableEncoder: Encoder[Throwable] = new Encoder[Throwable] {
     override def apply(a: Throwable): Json = Json.obj(
@@ -33,12 +35,7 @@ trait CirceDefaultCodecs {
       for {
         message <- c.downField("errorMessage").as[String]
         className <- c.downField("errorType").as[String]
-      } yield {
-        val c = Class.forName(className)
-        Try(c.getConstructor(classOf[String]).newInstance(message).asInstanceOf[Throwable]) orElse
-          Try(c.newInstance.asInstanceOf[Throwable]) getOrElse
-          new IllegalStateException(message)
-      }
+      } yield createThrowable(className, message)
     }
   }
 
