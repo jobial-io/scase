@@ -20,6 +20,8 @@ import io.jobial.scase.core.{ScaseTestHelper, ServiceTestModel, TestException}
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.scalatest.flatspec.AsyncFlatSpec
 
+import java.io.ByteArrayInputStream
+
 trait MarshallingTestSupport extends AsyncFlatSpec
   with StrictCatsEquality
   with ScaseTestHelper
@@ -30,9 +32,11 @@ trait MarshallingTestSupport extends AsyncFlatSpec
 
     for {
       _ <- Marshaller[M].marshal(message, buf)
+      _ = buf.close
+      r <- Unmarshaller[M].unmarshal(new ByteArrayInputStream(buf.toByteArray))
     } yield {
-      buf.close
       assert(Unmarshaller[M].unmarshal(buf.toByteArray) === message.asRight[Throwable])
+      assert(r === message)
       assert(Unmarshaller[M].unmarshal(Marshaller[M].marshal(message)) === message.asRight[Throwable])
       assert(Unmarshaller[M].unmarshalFromText(Marshaller[M].marshalToText(message)) === message.asRight[Throwable])
       if (testUnmarshalError)
