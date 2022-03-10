@@ -1,6 +1,7 @@
 package io.jobial.scase.jms
 
 import cats.effect.IO
+import cats.effect.concurrent.Deferred
 import io.circe.generic.auto._
 import io.jobial.scase.core._
 import io.jobial.scase.marshalling.circe._
@@ -71,6 +72,18 @@ class JMSServiceTest
       senderClient <- serviceConfig.client[IO]
       receiverClient <- sourceConfig.client[IO]
       r <- testStreamErrorReply(service, senderClient, receiverClient)
+    } yield r
+  }
+
+  "message handler service" should "receive successfully" in {
+    val serviceConfig = JMSServiceConfiguration.handler[TestRequest[_ <: TestResponse]](
+      s"hello-test-handler-${uuid(5)}", session.createQueue(s"hello-test-handler-${uuid(5)}"))
+
+    for {
+      receivedMessage <- Deferred[IO, TestRequest[_ <: TestResponse]]
+      service <- serviceConfig.service(TestMessageHandler(receivedMessage))
+      senderClient <- serviceConfig.client[IO]
+      r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)
     } yield r
   }
 
