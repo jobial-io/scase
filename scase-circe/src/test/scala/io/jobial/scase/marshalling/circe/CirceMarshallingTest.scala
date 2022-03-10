@@ -6,6 +6,6 @@ import io.circe.generic.auto._
 class CirceMarshallingTest extends MarshallingTestSupport {
   
   "marshalling" should "work" in {
-    testMarshalling(response1)
+    testMarshallingWithDefaultFormats(response1)
   }
 }

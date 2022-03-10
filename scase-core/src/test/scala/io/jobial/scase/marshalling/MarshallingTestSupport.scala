@@ -16,7 +16,7 @@ import cats.Eq
 import cats.implicits.catsSyntaxEitherId
 import cats.instances.either._
 import cats.tests.StrictCatsEquality
-import io.jobial.scase.core.{ScaseTestHelper, ServiceTestModel}
+import io.jobial.scase.core.{ScaseTestHelper, ServiceTestModel, TestException}
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.scalatest.flatspec.AsyncFlatSpec
 
@@ -27,6 +27,7 @@ trait MarshallingTestSupport extends AsyncFlatSpec
 
   def testMarshalling[M: Marshaller : Unmarshaller : Eq](message: M, testUnmarshalError: Boolean = false) = {
     val buf = new ByteArrayOutputStream
+
     for {
       _ <- Marshaller[M].marshal(message, buf)
     } yield {
@@ -40,6 +41,16 @@ trait MarshallingTestSupport extends AsyncFlatSpec
         succeed
     }
   }
+
+  def testMarshallingWithDefaultFormats[M: Marshaller : Unmarshaller : Eq](message: M, testUnmarshalError: Boolean = false)
+    (implicit eitherMarshaller: Marshaller[Either[Throwable, M]], throwableMarshaller: Marshaller[Throwable],
+      eitherUnmarshaller: Unmarshaller[Either[Throwable, M]], throwableUnmarshaller: Unmarshaller[Throwable]
+    ) =
+    for {
+      r <- testMarshalling(message, testUnmarshalError)
+      r <- testMarshalling(message.asRight[Throwable], testUnmarshalError)
+      r <- testMarshalling(TestException("error").asLeft[M]: Either[Throwable, M], testUnmarshalError)
+    } yield r
 }
 
 
