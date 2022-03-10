@@ -51,6 +51,8 @@ trait ServiceTestModel {
   implicit val eqTestResponse1: Eq[TestResponse1] = Eq.fromUniversalEquals
 
   implicit val eqTestResponse2: Eq[TestResponse2] = Eq.fromUniversalEquals
+
+  implicit val eqTestRequest1: Eq[TestRequest1] = Eq.fromUniversalEquals
   
   implicit val eqThrowable: Eq[Throwable] = Eq.fromUniversalEquals
 

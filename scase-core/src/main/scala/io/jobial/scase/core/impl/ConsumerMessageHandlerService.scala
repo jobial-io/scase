@@ -15,10 +15,11 @@ class ConsumerMessageHandlerService[F[_] : Concurrent, M: Unmarshaller](
   def start: F[ServiceState[F]] = {
     for {
       subscription <- consumer.subscribe { messageReceiveResult =>
-        val messageContext = new MessageContext[F, M] {}
+        val messageContext = new MessageContext[F] {}
         for {
           message <- messageReceiveResult.message
-        } yield messageHandler.handle(messageContext)(message)
+          result <- messageHandler.handleMessage(messageContext)(message)
+        } yield result
       }
     } yield
       DefaultServiceState(subscription, this)
