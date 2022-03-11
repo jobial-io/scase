@@ -143,6 +143,21 @@ class JMSMessageSourceServiceConfiguration[M: Unmarshaller](
     } yield client
 }
 
+class JMSMessageDestinationServiceConfiguration[M: Marshaller](
+  requestDestination: Destination
+) {
+
+  def client[F[_] : Concurrent : Timer](
+    implicit session: Session
+  ): F[SenderClient[F, M]] =
+    for {
+      producer <- JMSProducer[F, M](requestDestination)
+      client <- ProducerSenderClient[F, M](
+        producer
+      )
+    } yield client
+}
+
 
 object JMSServiceConfiguration {
 
@@ -209,6 +224,10 @@ object JMSServiceConfiguration {
   def handler[M: Marshaller : Unmarshaller](serviceName: String, requestDestination: Destination) =
     new JMSMessageHandlerServiceConfiguration[M](serviceName, requestDestination)
 
-  def source[M: Unmarshaller](sourceDestination: Destination): JMSMessageSourceServiceConfiguration[M] =
+  def source[M: Unmarshaller](sourceDestination: Destination) =
     new JMSMessageSourceServiceConfiguration[M](sourceDestination)
+
+  def destination[M: Marshaller](requestDestination: Destination) =
+    new JMSMessageDestinationServiceConfiguration[M](requestDestination)
+
 }
