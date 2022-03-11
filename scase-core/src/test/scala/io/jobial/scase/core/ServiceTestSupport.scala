@@ -183,6 +183,16 @@ trait ServiceTestSupport extends AsyncFlatSpec
       _ <- h.stop
     } yield assert(r.asInstanceOf[TestRequest1] === request1)
 
+  def testMessageSourceReceive(
+    senderClient: SenderClient[IO, TestRequest[_ <: TestResponse]],
+    receiverClient: ReceiverClient[IO, TestRequest[_ <: TestResponse]],
+  ) =
+    for {
+      _ <- senderClient ! request1
+      r <- receiverClient.receive
+      _ <- senderClient.stop
+      _ <- receiverClient.stop
+    } yield assert(r.asInstanceOf[TestRequest1] === request1)
 }
 
 trait TestRequestHandler extends RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] with ServiceTestModel {

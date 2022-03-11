@@ -87,4 +87,17 @@ class JMSServiceTest
     } yield r
   }
 
+  "message receiver" should "receive successfully" in {
+    val queueName = s"hello-source-${uuid(5)}"
+    val destinationConfig = JMSServiceConfiguration.destination[TestRequest[_ <: TestResponse]](
+      session.createQueue(queueName))
+    val sourceConfig = JMSServiceConfiguration.source[TestRequest[_ <: TestResponse]](
+      session.createQueue(queueName))
+
+    for {
+      senderClient <- destinationConfig.client[IO]
+      receiverClient <- sourceConfig.client[IO]
+      r <- testMessageSourceReceive(senderClient, receiverClient)
+    } yield r
+  }
 }
