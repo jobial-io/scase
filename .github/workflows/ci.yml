@@ -20,6 +20,13 @@ jobs:
          image: rmohr/activemq:latest
          ports:
          - 61616:61616
+       tr:
+         image: ghcr.io/jobial-io/tr:latest
+         ports:
+           - 7500:7500
+         credentials:
+           username: ${{ github.repository_owner }}
+           password: ${{ secrets.GHCR_PASSWORD }}            
     steps:
     - uses: actions/checkout@v2
     - name: Set up JDK 11
