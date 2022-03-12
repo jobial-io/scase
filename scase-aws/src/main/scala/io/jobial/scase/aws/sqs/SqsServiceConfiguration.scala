@@ -70,14 +70,10 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
 
 }
 
-class SqsMessageHandlerServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
+class SqsMessageHandlerServiceConfiguration[REQ: Marshaller : Unmarshaller](
   val serviceName: String,
   requestQueueName: String,
   cleanup: Boolean
-)(
-  //implicit monitoringPublisher: MonitoringPublisher = noPublisher
-  implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
-  responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
 ) extends ServiceConfiguration {
 
   val requestQueueUrl = requestQueueName
@@ -123,6 +119,10 @@ object SqsServiceConfiguration {
     //implicit monitoringPublisher: MonitoringPublisher = noPublisher
     implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
     responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
-  ): SqsRequestResponseServiceConfiguration[REQ, RESP] =
+  ) =
     SqsRequestResponseServiceConfiguration[REQ, RESP](requestQueueName, requestQueueName, Some(responseQueueName), false)
+
+  def handler[REQ: Marshaller : Unmarshaller](
+    requestQueueName: String
+  ) = new SqsMessageHandlerServiceConfiguration[REQ](requestQueueName, requestQueueName, false)
 }

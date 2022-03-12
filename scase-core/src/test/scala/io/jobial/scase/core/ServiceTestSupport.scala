@@ -185,7 +185,7 @@ trait ServiceTestSupport extends AsyncFlatSpec
 
   def testMessageSourceReceive(
     senderClient: SenderClient[IO, TestRequest[_ <: TestResponse]],
-    receiverClient: ReceiverClient[IO, TestRequest[_ <: TestResponse]],
+    receiverClient: ReceiverClient[IO, TestRequest[_ <: TestResponse]]
   ) =
     for {
       _ <- senderClient ! request1
