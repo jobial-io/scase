@@ -152,3 +152,15 @@ lazy val `scase-jms` = project
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "test->test")
+
+ThisBuild / resolvers += "Mulesoft" at "https://repository.mulesoft.org/nexus/content/repositories/public/"
+
+lazy val `scase-tibco-rv` = project
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "tibco" % "tibrvj" % "7.5.1" % "provided"
+    )
+  )
+  .dependsOn(`scase-core` % "compile->compile;test->test")
+  .dependsOn(`scase-circe` % "test->test")
