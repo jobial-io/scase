@@ -10,17 +10,15 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package io.jobial.scase.core
+package io.jobial.scase.core.impl
 
 import cats.Eq
 import cats.effect.IO
 import cats.effect.concurrent.Deferred
 import cats.implicits._
-import io.jobial.scase.core.impl.{ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService}
+import io.jobial.scase.core._
 import io.jobial.scase.inmemory.InMemoryConsumerProducer
 import io.jobial.scase.marshalling.serialization._
-
-import scala.concurrent.duration.DurationInt
 
 class ConsumerProducerRequestResponseServiceTest
   extends ServiceTestSupport {
