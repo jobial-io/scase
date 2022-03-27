@@ -4,10 +4,10 @@ import cats.effect.Concurrent
 import cats.effect.concurrent.{Deferred, Ref}
 import cats.implicits._
 import cats.{Monad, MonadError}
+import io.jobial.scase.core.SendMessageContext
 import io.jobial.scase.core.{CorrelationIdKey, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSendResult, MessageSubscription, RequestContext, RequestHandler, RequestResponseMapping, SendResponseResult, Service, ServiceState}
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
-
 import scala.concurrent.duration.Duration
 
 
@@ -62,14 +62,19 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshalle
           val processorResult =
             requestHandler.handleRequestOrFail(new RequestContext[F] {
 
-              def reply[REQUEST, RESPONSE](req: REQUEST, r: RESPONSE)
-                (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): SendResponseResult[RESPONSE] = {
+              def reply[REQUEST, RESPONSE](req: REQUEST, r: RESPONSE)(
+                implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE],
+                sendMessageContext: SendMessageContext
+              ): SendResponseResult[RESPONSE] = {
                 logger.debug(s"context sending response ${r.toString.take(500)}")
                 DefaultSendResponseResult[RESPONSE](r)
               }
 
               val requestTimeout = request.requestTimeout.getOrElse(Duration.Inf)
 
+              def receiveResult[REQUEST](r: REQUEST): MessageReceiveResult[F, REQUEST] =
+                request.asInstanceOf[MessageReceiveResult[F, REQUEST]]
+              
             }, Concurrent[F])(message)
 
           val processResultWithErrorHandling = processorResult
