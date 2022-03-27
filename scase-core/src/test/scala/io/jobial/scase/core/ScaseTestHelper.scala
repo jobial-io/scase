@@ -29,7 +29,7 @@ trait ScaseTestHelper {
   
   val ec = fromExecutor(newCachedThreadPool)
   
-  implicit val cs = IO.contextShift(ec)
+  implicit val contextShift = IO.contextShift(ec)
 
   implicit val timer = IO.timer(ec)
 

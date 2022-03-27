@@ -13,13 +13,13 @@ package object core extends Logging {
     /**
      * Syntactic sugar to allow the syntax request.reply(...).
      */
-    def reply[RESPONSE](response: RESPONSE)(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], context: RequestContext[F]) =
+    def reply[RESPONSE](response: RESPONSE)(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], context: RequestContext[F], sendMessageContext: SendMessageContext = SendMessageContext()) =
       context.reply(request, response)
 
     /**
      * Syntactic sugar to allow the syntax request ! response.
      */
-    def ![RESPONSE](response: RESPONSE)(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], context: RequestContext[F]) =
+    def ![RESPONSE](response: RESPONSE)(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], context: RequestContext[F], sendMessageContext: SendMessageContext = SendMessageContext()) =
       reply(response)
   }
 

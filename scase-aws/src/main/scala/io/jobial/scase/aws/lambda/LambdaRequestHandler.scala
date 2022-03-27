@@ -12,22 +12,26 @@
  */
 package io.jobial.scase.aws.lambda
 
+import cats.Monad
 import cats.effect.Concurrent
 import cats.effect.concurrent.Deferred
 import cats.implicits._
 import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
+import io.jobial.scase.core.DefaultMessageReceiveResult
+import io.jobial.scase.core.MessageReceiveResult
+import io.jobial.scase.core.SendMessageContext
 import io.jobial.scase.core.impl.DefaultSendResponseResult
 import io.jobial.scase.core.{RequestContext, RequestHandler, RequestResponseMapping, SendResponseResult}
 import io.jobial.scase.logging.Logging
 import org.apache.commons.io.IOUtils
 import org.joda.time.DateTime
-
 import java.io.{InputStream, OutputStream}
 import scala.collection.concurrent.TrieMap
+import scala.collection.convert.ImplicitConversions.`map AsScala`
 import scala.concurrent.duration.DurationInt
 
 abstract class LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandler with RequestHandler[F, REQ, RESP] with Logging {
-  
+
   def serviceConfiguration: LambdaServiceConfiguration[REQ, RESP]
 
   implicit def concurrent: Concurrent[F]
@@ -56,10 +60,15 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandle
               // TODO: revisit this
               val requestTimeout = 15.minutes
 
-              override def reply[REQUEST, RESPONSE](request: REQUEST, response: RESPONSE)
-                (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]): SendResponseResult[RESPONSE] =
+              override def reply[REQUEST, RESPONSE](request: REQUEST, response: RESPONSE)(
+                implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE],
+                sendMessageContext: SendMessageContext
+              ): SendResponseResult[RESPONSE] =
                 DefaultSendResponseResult[RESPONSE](response)
 
+              override def receiveResult[REQUEST](request: REQUEST): MessageReceiveResult[F, REQUEST] =
+                DefaultMessageReceiveResult(Monad[F].pure(request), context.getClientContext.getEnvironment.toMap, Monad[F].unit, Monad[F].unit)
+              
             }, concurrent)(request)
           // TODO: use redeem when Cats is upgraded, 2.0.0 simply doesn't support mapping errors to an F[B]...
           _ <- processorResult
@@ -81,7 +90,7 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandle
               logger.error(s"sending failure to client for request: $request", t)
               throw t
           }
-      
+
       runResult(result)
     }
   }
