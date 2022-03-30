@@ -13,8 +13,8 @@ import scala.concurrent.duration.Duration
 
 class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
   producersCacheRef: Option[Ref[F, Map[Option[String], MessageProducer[F, Either[Throwable, RESP]]]]],
-  messageConsumer: MessageConsumer[F, REQ],
-  messageProducer: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
+  val messageConsumer: MessageConsumer[F, REQ],
+  val messageProducer: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
   requestHandler: RequestHandler[F, REQ, RESP],
   messageProducerForErrors: Option[MessageProducer[F, REQ]], // TODO: implement this
   autoCommitRequest: Boolean,
