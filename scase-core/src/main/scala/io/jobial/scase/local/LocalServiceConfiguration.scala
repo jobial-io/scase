@@ -13,13 +13,13 @@ import io.jobial.scase.marshalling.serialization._
  * Request-response client and service impl that internally wraps an existing request processor in a consumer-producer service
  * and uses in-memory queues to send requests and responses.
  */
-case class LocalServiceConfiguration[REQ, RESP](
-  serviceName: String
+class LocalServiceConfiguration[REQ, RESP](
+  val serviceName: String
 )(
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher
 ) extends ServiceConfiguration {
 
-  def serviceAndClient[F[_] : Concurrent : Timer](requestHandler: RequestHandler[F, REQ, RESP]) =
+  def service[F[_] : Concurrent : Timer](requestHandler: RequestHandler[F, REQ, RESP]) =
     for {
       requestQueue <- InMemoryConsumerProducer[F, REQ]
       responseQueue <- InMemoryConsumerProducer[F, Either[Throwable, RESP]]
@@ -27,11 +27,29 @@ case class LocalServiceConfiguration[REQ, RESP](
         requestQueue, { _ => Concurrent[F].delay(responseQueue) }: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
         requestHandler
       )
+    } yield service
+
+  def client[F[_] : Concurrent : Timer](service: ConsumerProducerRequestResponseService[F, REQ, RESP]) =
+    for {
+      messageConsumer <- service.messageProducer(None)
       client <- ConsumerProducerRequestResponseClient[F, REQ, RESP](
-        responseQueue,
-        () => requestQueue,
-        Some("")
+        messageConsumer.asInstanceOf[InMemoryConsumerProducer[F, Either[Throwable, RESP]]],
+        () => service.messageConsumer.asInstanceOf[InMemoryConsumerProducer[F, REQ]],
+        None
       )
+    } yield client
+
+  def serviceAndClient[F[_] : Concurrent : Timer](requestHandler: RequestHandler[F, REQ, RESP]) =
+    for {
+      service <- service(requestHandler)
+      client <- client(service)
     } yield (service, client)
 
+}
+
+object LocalServiceConfiguration {
+
+  def apply[REQ, RESP](
+    serviceName: String
+  ) = new LocalServiceConfiguration[REQ, RESP](serviceName)
 }
