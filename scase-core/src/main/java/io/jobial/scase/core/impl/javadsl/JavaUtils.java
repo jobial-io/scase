@@ -1,7 +1,6 @@
 package io.jobial.scase.core.impl.javadsl;
 
 import cats.effect.*;
-import io.jobial.scase.util.Hash;
 import io.jobial.scase.util.Hash$;
 import scala.Function0;
 import scala.Function1;
@@ -18,7 +17,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 public class JavaUtils {
-    
+
     public static <T> CompletableFuture<T> scalaFutureToCompletableFuture(Future<T> f) {
         var r = new CompletableFuture<T>();
 
@@ -28,6 +27,7 @@ public class JavaUtils {
                 if (v1.isSuccess()) r.complete(v1.get());
                 else r.completeExceptionally(v1.failed().get());
 
+                // Never used
                 return null;
             }
         }, executionContext);
@@ -67,15 +67,15 @@ public class JavaUtils {
             }
         };
     }
-    
+
     public static scala.concurrent.duration.Duration javaDurationToScala(Duration duration) {
         return scala.concurrent.duration.Duration.fromNanos(duration.toNanos());
     }
-    
+
     public static <A, B> scala.collection.immutable.Map<A, B> javaMapToScala(Map<A, B> map) {
         return package$.MODULE$.javaMapToScala(map);
     }
-    
+
     public static String uuid(int length) {
         return Hash$.MODULE$.uuid(length, 36);
     }

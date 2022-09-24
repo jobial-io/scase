@@ -35,7 +35,7 @@ class TestException2 extends IllegalStateException {
 
 public class PulsarServiceTest {
 
-    FutureRequestHandler<TestRequest, TestResponse> requestHandler = request -> {
+    FutureRequestHandler<TestRequest, TestResponse> requestHandler = (request, context) -> {
         if (request instanceof TestRequest1) {
             return completedFuture(new TestResponse1((TestRequest1) request, "hello " + ((TestRequest1) request).id()));
         } else if (request instanceof TestRequest2) {
@@ -44,7 +44,7 @@ public class PulsarServiceTest {
         return null;
     };
 
-    FutureRequestHandler<TestRequest, TestResponse> requestHandlerWithError = request -> {
+    FutureRequestHandler<TestRequest, TestResponse> requestHandlerWithError = (request, context) -> {
         if (request instanceof TestRequest1) {
             throw new TestException1();
         } else if (request instanceof TestRequest2) {
