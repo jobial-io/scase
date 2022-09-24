@@ -15,12 +15,6 @@ import java.util.function.Function;
 
 public class JavaUtils {
     
-    public static ContextShift<IO> contextShift = IO.contextShift(ExecutionContext.global());
-
-    public static Concurrent<IO> concurrent = IO$.MODULE$.ioConcurrentEffect(contextShift);
-
-    public static Timer<IO> timer = IO$.MODULE$.timer(ExecutionContext.global());
-
     public static <T> CompletableFuture<T> scalaFutureToCompletableFuture(Future<T> f) {
         var r = new CompletableFuture<T>();
 
@@ -32,17 +26,7 @@ public class JavaUtils {
 
                 return null;
             }
-
-            @Override
-            public <A> Function1<A, Void> compose(Function1<A, Try<T>> g) {
-                return Function1.super.compose(g);
-            }
-
-            @Override
-            public <A> Function1<Try<T>, A> andThen(Function1<Void, A> g) {
-                return Function1.super.andThen(g);
-            }
-        }, ExecutionContext.global());
+        }, executionContext);
 
         return r;
     }
@@ -79,4 +63,13 @@ public class JavaUtils {
             }
         };
     }
+
+    public static ExecutionContext executionContext = ExecutionContext.global();
+
+    public static ContextShift<IO> contextShift = IO.contextShift(executionContext);
+
+    public static Concurrent<IO> concurrent = IO$.MODULE$.ioConcurrentEffect(contextShift);
+
+    public static Timer<IO> timer = IO$.MODULE$.timer(executionContext);
+
 }
