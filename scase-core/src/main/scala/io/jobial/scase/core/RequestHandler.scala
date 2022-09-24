@@ -24,23 +24,10 @@ trait RequestHandler[F[_], REQ, RESP] {
   type Handler = Function[REQ, F[SendResponseResult[RESP]]]
 
   def handleRequest(implicit context: RequestContext[F]): Handler
-
-  /**
-   * Reply is sent through the sender to enforce the response type specific for the request. 
-   * Return type is SendResponseResult to make sure a reply has been sent by processRequest. 
-   *
-   * TODO: get rid of MonadError...
-   */
-  def handleRequestOrFail(implicit context: RequestContext[F], me: MonadError[F, Throwable]): Function[REQ, F[SendResponseResult[RESP]]] =
-    handleRequest
-  //  orElse {
-  //      case request =>
-  //        MonadError[F, Throwable].raiseError(UnknownRequest(request))
-  //    }
-
-  case class UnknownRequest(request: REQ) extends IllegalStateException
-
+  
 }
+
+case class UnknownRequest[REQ](request: REQ) extends IllegalStateException
 
 
 /**

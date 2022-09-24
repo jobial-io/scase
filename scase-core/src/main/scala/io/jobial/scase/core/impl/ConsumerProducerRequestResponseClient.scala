@@ -71,7 +71,7 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
               logger.info(s"waiting on $receiveResultDeferred")
               receiveResultDeferred.get.timeout(requestTimeout).handleErrorWith {
                 case t: TimeoutException =>
-                  Concurrent[F].raiseError(RequestTimeout(this, requestTimeout))
+                  Concurrent[F].raiseError(RequestTimeout(requestTimeout))
                 case t =>
                   Concurrent[F].raiseError(t)
               }

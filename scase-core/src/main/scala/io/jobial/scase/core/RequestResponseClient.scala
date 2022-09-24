@@ -24,5 +24,5 @@ trait RequestResponseClient[F[_], REQ, RESP] {
   def stop: F[Unit]
 }
 
-case class RequestTimeout[F[_]](client: RequestResponseClient[F, _, _], timeout: Duration)
-  extends TimeoutException(s"request timed out in $client after $timeout")
+case class RequestTimeout(timeout: Duration)
+  extends TimeoutException(s"request timed out after $timeout")

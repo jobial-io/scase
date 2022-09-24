@@ -27,7 +27,7 @@ import org.apache.commons.io.IOUtils
 import org.joda.time.DateTime
 import java.io.{InputStream, OutputStream}
 import scala.collection.concurrent.TrieMap
-import scala.collection.convert.ImplicitConversions.`map AsScala`
+import scala.collection.JavaConverters._
 import scala.concurrent.duration.DurationInt
 
 abstract class LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandler with RequestHandler[F, REQ, RESP] with Logging {
@@ -55,7 +55,7 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandle
           request <- Concurrent[F].fromEither(serviceConfiguration.requestUnmarshaller.unmarshalFromText(requestString))
           responseDeferred <- Deferred[F, Either[Throwable, RESP]]
           processorResult: F[SendResponseResult[RESP]] =
-            handleRequestOrFail(new RequestContext[F] {
+            handleRequest(new RequestContext[F] {
 
               // TODO: revisit this
               val requestTimeout = 15.minutes
@@ -67,9 +67,9 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandle
                 DefaultSendResponseResult[RESPONSE](response)
 
               override def receiveResult[REQUEST](request: REQUEST): MessageReceiveResult[F, REQUEST] =
-                DefaultMessageReceiveResult(Monad[F].pure(request), context.getClientContext.getEnvironment.toMap, Monad[F].unit, Monad[F].unit)
+                DefaultMessageReceiveResult(Monad[F].pure(request), context.getClientContext.getEnvironment.asScala.toMap, Monad[F].unit, Monad[F].unit)
               
-            }, concurrent)(request)
+            })(request)
           // TODO: use redeem when Cats is upgraded, 2.0.0 simply doesn't support mapping errors to an F[B]...
           _ <- processorResult
             .flatMap { result =>

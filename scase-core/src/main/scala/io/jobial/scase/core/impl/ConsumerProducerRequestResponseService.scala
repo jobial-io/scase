@@ -60,7 +60,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshalle
           // TODO: make this a Deferred
 
           val processorResult =
-            Concurrent[F].delay(requestHandler.handleRequestOrFail(new RequestContext[F] {
+            Concurrent[F].delay(requestHandler.handleRequest(new RequestContext[F] {
 
               def reply[REQUEST, RESPONSE](req: REQUEST, r: RESPONSE)(
                 implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE],
@@ -75,7 +75,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshalle
               def receiveResult[REQUEST](r: REQUEST): MessageReceiveResult[F, REQUEST] =
                 request.asInstanceOf[MessageReceiveResult[F, REQUEST]]
               
-            }, Concurrent[F])(message)).flatten
+            })(message)).flatten
 
           val processResultWithErrorHandling = processorResult
             .flatMap {
