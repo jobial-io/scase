@@ -1,14 +1,11 @@
 package io.jobial.scase.pulsar.javadsl;
 
 import cats.effect.IO;
-import io.jobial.scase.core.RequestHandler;
-import io.jobial.scase.core.impl.javadsl.ConsumerProducerRequestResponseService;
-import io.jobial.scase.core.impl.javadsl.ReceiverClient;
-import io.jobial.scase.core.impl.javadsl.SenderClient;
+import io.jobial.scase.core.javadsl.ReceiverClient;
 
 import java.util.concurrent.ExecutionException;
 
-import static io.jobial.scase.core.impl.javadsl.JavaUtils.*;
+import static io.jobial.scase.core.javadsl.JavaUtils.*;
 
 public class PulsarMessageSourceServiceConfiguration<M> {
 

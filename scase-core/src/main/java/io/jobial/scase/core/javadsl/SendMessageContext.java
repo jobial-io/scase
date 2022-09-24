@@ -2,7 +2,7 @@ package io.jobial.scase.core.javadsl;
 
 import java.util.Map;
 
-import static io.jobial.scase.core.impl.javadsl.JavaUtils.javaMapToScala;
+import static io.jobial.scase.core.javadsl.JavaUtils.javaMapToScala;
 
 public class SendMessageContext {
 

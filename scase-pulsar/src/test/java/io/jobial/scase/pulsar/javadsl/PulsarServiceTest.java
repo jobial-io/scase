@@ -13,14 +13,14 @@
 package io.jobial.scase.pulsar.javadsl;
 
 import io.jobial.scase.core.*;
-import io.jobial.scase.core.impl.javadsl.FutureRequestHandler;
+import io.jobial.scase.core.javadsl.RequestHandler;
 import io.jobial.scase.core.javadsl.SendRequestContext;
 import io.jobial.scase.marshalling.serialization.javadsl.SerializationMarshalling;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutionException;
 
-import static io.jobial.scase.core.impl.javadsl.JavaUtils.uuid;
+import static io.jobial.scase.core.javadsl.JavaUtils.uuid;
 import static io.jobial.scase.pulsar.javadsl.PulsarServiceConfiguration.*;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -35,7 +35,7 @@ class TestException2 extends IllegalStateException {
 
 public class PulsarServiceTest {
 
-    FutureRequestHandler<TestRequest, TestResponse> requestHandler = (request, context) -> {
+    RequestHandler<TestRequest, TestResponse> requestHandler = (request, context) -> {
         if (request instanceof TestRequest1) {
             return completedFuture(new TestResponse1((TestRequest1) request, "hello " + ((TestRequest1) request).id()));
         } else if (request instanceof TestRequest2) {
@@ -44,7 +44,7 @@ public class PulsarServiceTest {
         return null;
     };
 
-    FutureRequestHandler<TestRequest, TestResponse> requestHandlerWithError = (request, context) -> {
+    RequestHandler<TestRequest, TestResponse> requestHandlerWithError = (request, context) -> {
         if (request instanceof TestRequest1) {
             throw new TestException1();
         } else if (request instanceof TestRequest2) {

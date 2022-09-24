@@ -1,14 +1,11 @@
-package io.jobial.scase.core.impl.javadsl;
+package io.jobial.scase.core.javadsl;
 
 import cats.effect.IO;
-import io.jobial.scase.core.MessageSendResult;
-import io.jobial.scase.core.RequestResponseResult;
 import io.jobial.scase.core.RequestTimeout;
-import io.jobial.scase.core.javadsl.SendMessageContext;
 
 import java.util.concurrent.CompletableFuture;
 
-import static io.jobial.scase.core.impl.javadsl.JavaUtils.ioToCompletableFuture;
+import static io.jobial.scase.core.javadsl.JavaUtils.ioToCompletableFuture;
 
 public class SenderClient<REQ> {
 
