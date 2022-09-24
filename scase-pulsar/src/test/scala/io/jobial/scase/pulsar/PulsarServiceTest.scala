@@ -58,11 +58,25 @@ class PulsarServiceTest
     } yield r
   }
 
+  "stream service" should "reply successfully" in {
+    val responseTopic = s"hello-error-test-response-${uuid(5)}"
+    val serviceConfig = stream[TestRequest[_ <: TestResponse], TestResponse](
+      s"hello-test-${uuid(5)}", responseTopic)
+    val sourceConfig = source[Either[TestResponse, Throwable]](responseTopic)
+
+    for {
+      service <- serviceConfig.service(requestHandler)
+      senderClient <- serviceConfig.client[IO]
+      receiverClient <- sourceConfig.client[IO]
+      r <- testSuccessfulStreamReply(service, senderClient, receiverClient)
+    } yield r
+  }
+
   "stream service" should "reply with error" in {
     val responseTopic = s"hello-error-test-response-${uuid(5)}"
     val serviceConfig = stream[TestRequest[_ <: TestResponse], TestResponse](
       s"hello-error-test-${uuid(5)}", responseTopic)
-    val sourceConfig = source[TestResponse](responseTopic)
+    val sourceConfig = source[Either[TestResponse, Throwable]](responseTopic)
 
     for {
       service <- serviceConfig.service(requestHandlerWithError)
