@@ -24,7 +24,14 @@ import static io.jobial.scase.core.impl.javadsl.JavaUtils.uuid;
 import static io.jobial.scase.pulsar.javadsl.PulsarServiceConfiguration.requestResponse;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.junit.Assert.assertEquals;
+
+class TestException1 extends IllegalStateException {
+}
+
+class TestException2 extends IllegalStateException {
+}
 
 public class PulsarServiceTest {
 
@@ -33,6 +40,15 @@ public class PulsarServiceTest {
             return completedFuture(new TestResponse1((TestRequest1) request, "hello " + ((TestRequest1) request).id()));
         } else if (request instanceof TestRequest2) {
             return completedFuture(new TestResponse2((TestRequest2) request, "hi " + ((TestRequest2) request).id()));
+        }
+        return null;
+    };
+
+    FutureRequestHandler<TestRequest, TestResponse> requestHandlerWithError = request -> {
+        if (request instanceof TestRequest1) {
+            throw new TestException1();
+        } else if (request instanceof TestRequest2) {
+            return failedFuture(new TestException2());
         }
         return null;
     };
@@ -73,6 +89,63 @@ public class PulsarServiceTest {
         }
     }
 
+    @Test(expected = TestException1.class)
+    public void testServiceDirectException() throws Throwable {
+        var serviceConfig =
+                requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest, TestResponse>());
+
+        var service = serviceConfig.service(requestHandlerWithError);
+        var state = service.start();
+        
+        var client = serviceConfig.client();
+        var request = new TestRequest1("world");
+        try {
+            client.sendRequest(request).get();
+        } catch (ExecutionException e) {
+            throw e.getCause();
+        } finally {
+            state.get().stop();
+        }
+    }
+
+    @Test(expected = TestException2.class)
+    public void testServiceFutureWithException() throws Throwable {
+        var serviceConfig =
+                requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest, TestResponse>());
+
+        var service = serviceConfig.service(requestHandlerWithError);
+        var state = service.start();
+
+        var client = serviceConfig.client();
+        var request = new TestRequest2("world");
+        try {
+            client.sendRequest(request).get();
+        } catch (ExecutionException e) {
+            throw e.getCause();
+        } finally {
+            state.get().stop();
+        }
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void testServiceReturnsNull() throws Throwable {
+        var serviceConfig =
+                requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest, TestResponse>());
+
+        var service = serviceConfig.service(requestHandlerWithError);
+        var state = service.start();
+
+        var client = serviceConfig.client();
+        var request = new TestRequest3("world");
+        try {
+            client.sendRequest(request).get();
+        } catch (ExecutionException e) {
+            throw e.getCause();
+        } finally {
+            state.get().stop();
+        }
+    }
+    
     //    <REQ, RESP> void testRequestResponse(FutureRequestHandler<REQ, RESP> testRequestProcessor, REQ request, RESP response) {
 //        PulsarServiceConfiguration serviceConfig = PulsarServiceConfiguration$.MODULE$.<TestRequest<? extends TestResponse>, TestResponse>requestResponse("hello-test-${uuid(6)}");
 //
