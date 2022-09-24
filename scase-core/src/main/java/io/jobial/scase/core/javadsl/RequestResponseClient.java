@@ -1,20 +1,19 @@
-package io.jobial.scase.core.impl.javadsl;
+package io.jobial.scase.core.javadsl;
 
 import cats.effect.IO;
 import io.jobial.scase.core.RequestResponseMapping;
 import io.jobial.scase.core.RequestResponseResult;
 import io.jobial.scase.core.RequestTimeout;
-import io.jobial.scase.core.javadsl.SendRequestContext;
 
 import java.util.concurrent.CompletableFuture;
 
-import static io.jobial.scase.core.impl.javadsl.JavaUtils.ioToCompletableFuture;
+import static io.jobial.scase.core.javadsl.JavaUtils.ioToCompletableFuture;
 
-public class ConsumerProducerRequestResponseClient<REQ, RESP> {
+public class RequestResponseClient<REQ, RESP> {
 
-    private io.jobial.scase.core.impl.ConsumerProducerRequestResponseClient<IO, REQ, RESP> client;
+    private io.jobial.scase.core.RequestResponseClient<IO, REQ, RESP> client;
 
-    public ConsumerProducerRequestResponseClient(io.jobial.scase.core.impl.ConsumerProducerRequestResponseClient<IO, REQ, RESP> client) {
+    public RequestResponseClient(io.jobial.scase.core.RequestResponseClient<IO, REQ, RESP> client) {
         this.client = client;
     }
 

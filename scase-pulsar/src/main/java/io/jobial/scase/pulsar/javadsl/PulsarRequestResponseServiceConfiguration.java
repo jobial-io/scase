@@ -2,12 +2,12 @@ package io.jobial.scase.pulsar.javadsl;
 
 import cats.effect.*;
 import io.jobial.scase.core.RequestHandler;
-import io.jobial.scase.core.impl.javadsl.ConsumerProducerRequestResponseClient;
-import io.jobial.scase.core.impl.javadsl.ConsumerProducerRequestResponseService;
+import io.jobial.scase.core.javadsl.RequestResponseClient;
+import io.jobial.scase.core.javadsl.Service;
 
 import java.util.concurrent.ExecutionException;
 
-import static io.jobial.scase.core.impl.javadsl.JavaUtils.*;
+import static io.jobial.scase.core.javadsl.JavaUtils.*;
 
 public class PulsarRequestResponseServiceConfiguration<REQ, RESP> {
 
@@ -17,15 +17,15 @@ public class PulsarRequestResponseServiceConfiguration<REQ, RESP> {
         this.config = config;
     }
 
-    public ConsumerProducerRequestResponseService<REQ, RESP> service(RequestHandler<IO, REQ, RESP> requestHandler) throws ExecutionException, InterruptedException {
+    public Service service(RequestHandler<IO, REQ, RESP> requestHandler) throws ExecutionException, InterruptedException {
         return ioToCompletableFuture((IO<io.jobial.scase.core.impl.ConsumerProducerRequestResponseService<IO, REQ, RESP>>) config.service(requestHandler, concurrent, new PulsarContext().getContext(), contextShift))
-                .thenApply(r -> new ConsumerProducerRequestResponseService(r))
+                .thenApply(r -> new Service(r))
                 .get();
     }
 
-    public ConsumerProducerRequestResponseClient<REQ, RESP> client() throws ExecutionException, InterruptedException {
+    public RequestResponseClient<REQ, RESP> client() throws ExecutionException, InterruptedException {
         return ioToCompletableFuture((IO<io.jobial.scase.core.impl.ConsumerProducerRequestResponseClient<IO, REQ, RESP>>) config.client(concurrent, timer, new PulsarContext().getContext(), contextShift))
-                .thenApply(r -> new ConsumerProducerRequestResponseClient(r))
+                .thenApply(r -> new RequestResponseClient(r))
                 .get();
     }
 }

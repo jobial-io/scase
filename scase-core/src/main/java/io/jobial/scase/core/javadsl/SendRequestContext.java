@@ -5,8 +5,8 @@ import scala.Some;
 import java.time.Duration;
 import java.util.Map;
 
-import static io.jobial.scase.core.impl.javadsl.JavaUtils.javaDurationToScala;
-import static io.jobial.scase.core.impl.javadsl.JavaUtils.javaMapToScala;
+import static io.jobial.scase.core.javadsl.JavaUtils.javaDurationToScala;
+import static io.jobial.scase.core.javadsl.JavaUtils.javaMapToScala;
 
 public class SendRequestContext {
 

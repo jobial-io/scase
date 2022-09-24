@@ -1,6 +1,7 @@
-package io.jobial.scase.core.impl.javadsl;
+package io.jobial.scase.core.javadsl;
 
 import cats.effect.*;
+import io.jobial.scase.core.javadsl.package$;
 import io.jobial.scase.util.Hash$;
 import scala.Function0;
 import scala.Function1;
@@ -16,7 +17,7 @@ import java.util.function.Function;
 public class JavaUtils {
 
     public static <T> CompletableFuture<T> scalaFutureToCompletableFuture(Future<T> f) {
-        return package$.MODULE$.scalaFutureToCompletableFuture(f, executionContext);
+        return io.jobial.scase.core.javadsl.package$.MODULE$.scalaFutureToCompletableFuture(f, executionContext);
     }
 
     public static <T> CompletableFuture<T> ioToCompletableFuture(IO<T> io) {
@@ -24,11 +25,11 @@ public class JavaUtils {
     }
 
     public static <T> IO<T> completableFutureToIO(final CompletableFuture<T> f) {
-        return package$.MODULE$.completableFutureToIO(f, contextShift);
+        return io.jobial.scase.core.javadsl.package$.MODULE$.completableFutureToIO(f, contextShift);
     }
 
     private static <T> Future<T> completableFutureToScalaFuture(CompletableFuture<T> f) {
-        return package$.MODULE$.completableFutureToScalaFuture(f);
+        return io.jobial.scase.core.javadsl.package$.MODULE$.completableFutureToScalaFuture(f);
     }
     
     public static scala.concurrent.duration.Duration javaDurationToScala(Duration duration) {
@@ -36,7 +37,7 @@ public class JavaUtils {
     }
 
     public static <A, B> scala.collection.immutable.Map<A, B> javaMapToScala(Map<A, B> map) {
-        return package$.MODULE$.javaMapToScala(map);
+        return io.jobial.scase.core.javadsl.package$.MODULE$.javaMapToScala(map);
     }
 
     public static <A, B> Function1<A, B> javaFunctionToScala(Function<A, B> f) {
