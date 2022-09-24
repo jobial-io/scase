@@ -9,7 +9,6 @@ import scala.Function1;
 import java.util.concurrent.CompletableFuture;
 
 import static io.jobial.scase.core.impl.javadsl.JavaUtils.ioToCompletableFuture;
-import static io.jobial.scase.core.javadsl.Defaults.defaultSendRequestContext;
 
 public class ConsumerProducerRequestResponseClient<REQ, RESP> {
 
@@ -22,7 +21,7 @@ public class ConsumerProducerRequestResponseClient<REQ, RESP> {
     private RequestResponseMapping<REQ, RESP> requestResponseMapping = new RequestResponseMapping<REQ, RESP>(){};
     
     public CompletableFuture<RESP> sendRequest(REQ request, SendRequestContext sendRequestContext) {
-        return ioToCompletableFuture(client.sendRequestWithResponseMapping(request, requestResponseMapping, sendRequestContext.getSendRequestContext()).flatMap(new Function1<RequestResponseResult<IO, REQ, RESP>, IO<RESP>>() {
+        return ioToCompletableFuture(client.sendRequestWithResponseMapping(request, requestResponseMapping, sendRequestContext.getContext()).flatMap(new Function1<RequestResponseResult<IO, REQ, RESP>, IO<RESP>>() {
 
             @Override
             public IO<RESP> apply(RequestResponseResult<IO, REQ, RESP> v1) {
