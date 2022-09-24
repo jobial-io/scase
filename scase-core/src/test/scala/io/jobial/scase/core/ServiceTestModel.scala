@@ -20,6 +20,8 @@ case class TestRequest1(id: String) extends TestRequest[TestResponse1]
 
 case class TestRequest2(id: String) extends TestRequest[TestResponse2]
 
+case class TestRequest3(id: String) extends TestRequest[TestResponse2]
+
 sealed trait TestResponse
 
 case class TestResponse1(request: TestRequest1, greeting: String) extends TestResponse
