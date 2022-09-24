@@ -17,6 +17,7 @@ ThisBuild / scalaVersion := "2.13.6"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.13", "2.13.6")
 ThisBuild / version := "0.4.0"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
+ThisBuild / javacOptions ++= Seq("-source", "11", "-target", "11")
 ThisBuild / publishArtifact in(Test, packageBin) := true
 ThisBuild / publishArtifact in(Test, packageSrc) := true
 ThisBuild / publishArtifact in(Test, packageDoc) := true
@@ -136,7 +137,8 @@ lazy val `scase-pulsar` = project
   .settings(
     libraryDependencies ++= Seq(
       "org.apache.pulsar" % "pulsar-client" % PulsarVersion,
-      "org.scala-lang.modules" %% "scala-java8-compat" % ScalaJava8CompatVersion
+      "org.scala-lang.modules" %% "scala-java8-compat" % ScalaJava8CompatVersion,
+      "junit" % "junit" % "4.13.2" % Test
     )
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
