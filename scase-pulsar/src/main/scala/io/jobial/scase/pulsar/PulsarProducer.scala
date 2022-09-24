@@ -48,5 +48,5 @@ class PulsarProducer[F[_] : Concurrent, M](topic: String)(implicit context: Puls
 object PulsarProducer {
 
   def apply[F[_] : Concurrent, M](topic: String)(implicit context: PulsarContext, cs: ContextShift[IO]) =
-    new PulsarProducer[F, M](topic)
+    Concurrent[F].delay(new PulsarProducer[F, M](topic))
 }
