@@ -34,4 +34,8 @@ public class ConsumerProducerRequestResponseClient<REQ, RESP> {
     public CompletableFuture<RESP> sendRequest(REQ request) {
         return sendRequest(request, defaultSendRequestContext);
     }
+
+    public CompletableFuture<RESP> sendRequestWithFullResult(REQ request) {
+        return sendRequest(request, defaultSendRequestContext);
+    }
 }

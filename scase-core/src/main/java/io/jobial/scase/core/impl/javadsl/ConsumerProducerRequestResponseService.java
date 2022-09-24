@@ -14,7 +14,8 @@ public class ConsumerProducerRequestResponseService<REQ, RESP> {
         this.service = service;
     }
     
-    public CompletableFuture start() {
-        return ioToCompletableFuture(service.start());
+    public CompletableFuture<ServiceState> start() {
+        return ioToCompletableFuture(service.start())
+                .thenApply(r -> new ServiceState((io.jobial.scase.core.ServiceState<IO>) r));
     }
 }

@@ -12,35 +12,35 @@
  */
 package io.jobial.scase.pulsar.javadsl;
 
-import io.jobial.scase.core.TestRequest;
-import io.jobial.scase.core.TestRequest1;
-import io.jobial.scase.core.TestResponse;
-import io.jobial.scase.core.TestResponse1;
+import io.jobial.scase.core.*;
 import io.jobial.scase.core.impl.javadsl.FutureRequestHandler;
 import io.jobial.scase.marshalling.serialization.javadsl.SerializationMarshalling;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutionException;
 
+import static io.jobial.scase.pulsar.javadsl.PulsarServiceConfiguration.requestResponse;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.junit.Assert.assertEquals;
 
 public class PulsarServiceTest {
 
-    FutureRequestHandler<TestRequest<? extends TestResponse>, TestResponse> requestHandler = request -> {
+    FutureRequestHandler<TestRequest, TestResponse> requestHandler = request -> {
         if (request instanceof TestRequest1) {
             return completedFuture(new TestResponse1((TestRequest1) request, "hello " + ((TestRequest1) request).id()));
+        } else if (request instanceof TestRequest2) {
+            return completedFuture(new TestResponse2((TestRequest2) request, "hi " + ((TestRequest2) request).id()));
         }
         return null;
     };
 
     @Test
     public void testRequestResponseService() throws ExecutionException, InterruptedException {
-        PulsarRequestResponseServiceConfiguration<TestRequest<? extends TestResponse>, TestResponse> serviceConfig =
-                PulsarServiceConfiguration.requestResponse("hello-test-${uuid(6)}", new SerializationMarshalling());
+        var serviceConfig =
+                requestResponse("hello-test-${uuid(6)}", new SerializationMarshalling<TestRequest, TestResponse>());
 
         var service = serviceConfig.service(requestHandler);
-        service.start();
+        var state = service.start();
 
         var client = serviceConfig.client();
         var request = new TestRequest1("world");
@@ -50,7 +50,9 @@ public class PulsarServiceTest {
 
         assertEquals(response, new TestResponse1(request, "hello world"));
         Thread.sleep(1000);
-
+        state.get().stop().whenComplete((r, error) -> System.out.println("stopped service"));
+        Thread.sleep(1000);
+        
 //            for {
 //                service < -serviceConfig.service(requestHandler)
 //                client < -serviceConfig.client[IO]

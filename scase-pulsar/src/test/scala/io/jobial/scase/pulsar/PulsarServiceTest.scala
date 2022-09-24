@@ -4,6 +4,7 @@ import cats.effect.IO
 import io.circe.generic.auto._
 import io.jobial.scase.core._
 import io.jobial.scase.marshalling.circe._
+import io.jobial.scase.pulsar.PulsarServiceConfiguration.requestResponse
 import io.jobial.scase.util.Hash.uuid
 
 
@@ -13,7 +14,7 @@ class PulsarServiceTest
   implicit val pulsarContext = PulsarContext()
 
   "request-response service" should "reply successfully" in {
-    val serviceConfig = PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"hello-test-${uuid(6)}")
+    val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"hello-test-${uuid(6)}")
 
     for {
       service <- serviceConfig.service(requestHandler)
@@ -23,7 +24,7 @@ class PulsarServiceTest
   }
 
   "another request-response service" should "reply successfully" in {
-    val serviceConfig = PulsarServiceConfiguration.requestResponse[Req, Resp](s"another-test-${uuid(6)}")
+    val serviceConfig = requestResponse[Req, Resp](s"another-test-${uuid(6)}")
 
     for {
       service <- serviceConfig.service(anotherRequestProcessor)
@@ -33,7 +34,7 @@ class PulsarServiceTest
   }
 
   "request" should "time out if service is not started" in {
-    val serviceConfig = PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"hello-timeout-test-${uuid(6)}")
+    val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"hello-timeout-test-${uuid(6)}")
 
     for {
       service <- serviceConfig.service(requestHandler)
@@ -43,7 +44,7 @@ class PulsarServiceTest
   }
 
   "request-response service" should "reply with error" in {
-    val serviceConfig = PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"hello-error-test-${uuid(6)}")
+    val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"hello-error-test-${uuid(6)}")
 
     for {
       service <- serviceConfig.service(requestHandlerWithError)
