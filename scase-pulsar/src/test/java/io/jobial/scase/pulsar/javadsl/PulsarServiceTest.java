@@ -21,7 +21,7 @@ import org.junit.Test;
 import java.util.concurrent.ExecutionException;
 
 import static io.jobial.scase.core.impl.javadsl.JavaUtils.uuid;
-import static io.jobial.scase.pulsar.javadsl.PulsarServiceConfiguration.requestResponse;
+import static io.jobial.scase.pulsar.javadsl.PulsarServiceConfiguration.*;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
@@ -96,7 +96,7 @@ public class PulsarServiceTest {
 
         var service = serviceConfig.service(requestHandlerWithError);
         var state = service.start();
-        
+
         var client = serviceConfig.client();
         var request = new TestRequest1("world");
         try {
@@ -127,23 +127,47 @@ public class PulsarServiceTest {
         }
     }
 
-    @Test(expected = NullPointerException.class)
-    public void testServiceReturnsNull() throws Throwable {
-        var serviceConfig =
-                requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest, TestResponse>());
+//    @Test(expected = NullPointerException.class)
+//    public void testServiceReturnsNull() throws Throwable {
+//        var serviceConfig =
+//                requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest, TestResponse>());
+//
+//        var service = serviceConfig.service(requestHandlerWithError);
+//        var state = service.start();
+//
+//        var client = serviceConfig.client();
+//        var request = new TestRequest3("world");
+//        try {
+//            client.sendRequest(request).get();
+//        } catch (ExecutionException e) {
+//            throw e.getCause();
+//        } finally {
+//            state.get().stop();
+//        }
+//    }
 
-        var service = serviceConfig.service(requestHandlerWithError);
+    @Test
+    public void testStreamService() throws ExecutionException, InterruptedException, RequestTimeout {
+        var responseTopic = "hello-test-response-" + uuid(6);
+        var serviceConfig =
+                stream("hello-test-" + uuid(6), responseTopic, new SerializationMarshalling<TestRequest, TestResponse>());
+
+        var sourceConfig = source(responseTopic, new SerializationMarshalling<TestResponse, TestResponse>());
+
+        var service = serviceConfig.service(requestHandler);
         var state = service.start();
 
-        var client = serviceConfig.client();
-        var request = new TestRequest3("world");
-        try {
-            client.sendRequest(request).get();
-        } catch (ExecutionException e) {
-            throw e.getCause();
-        } finally {
-            state.get().stop();
-        }
-    }
+        var senderClient = serviceConfig.client();
+        var request = new TestRequest1("world");
+        senderClient.send(request)
+                .whenComplete((r, error) -> System.out.println(r))
+                .get();
 
+        var receiverClient = sourceConfig.client();
+        var response = receiverClient.receive().get();
+        assertEquals(response, new TestResponse1(request, "hello world"));
+        Thread.sleep(1000);
+        state.get().stop().whenComplete((r, error) -> System.out.println("stopped service"));
+        Thread.sleep(1000);
+    }
 }

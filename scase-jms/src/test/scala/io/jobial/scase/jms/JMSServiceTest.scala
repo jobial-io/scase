@@ -20,21 +20,6 @@ class JMSServiceTest
   connection.start
   implicit val session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
 
-  "stream service" should "reply successfully" in {
-    val responseDestination = session.createQueue(s"hello-test-response-${uuid(5)}")
-    val serviceConfig = JMSServiceConfiguration.stream[TestRequest[_ <: TestResponse], TestResponse](
-      s"hello-test-${uuid(5)}", session.createQueue(s"hello-test-${uuid(5)}"),
-      responseDestination)
-    val sourceConfig = JMSServiceConfiguration.source[TestResponse](responseDestination)
-
-    for {
-      service <- serviceConfig.service(requestHandler)
-      senderClient <- serviceConfig.client[IO]
-      receiverClient <- sourceConfig.client[IO]
-      r <- testSuccessfulStreamReply(service, senderClient, receiverClient)
-    } yield r
-  }
-
   "request-response service" should "reply successfully" in {
     val serviceConfig = JMSServiceConfiguration.requestResponse[Req, Resp](
       s"another-test-${uuid(5)}", session.createQueue(s"another-test-${uuid(5)}"))
@@ -61,11 +46,26 @@ class JMSServiceTest
     } yield r
   }
 
+  "stream service" should "reply successfully" in {
+    val responseDestination = session.createQueue(s"hello-test-response-${uuid(5)}")
+    val serviceConfig = JMSServiceConfiguration.stream[TestRequest[_ <: TestResponse], TestResponse](
+      s"hello-test-${uuid(5)}", session.createQueue(s"hello-test-${uuid(5)}"),
+      responseDestination)
+    val sourceConfig = JMSServiceConfiguration.source[Either[TestResponse, Throwable]](responseDestination)
+
+    for {
+      service <- serviceConfig.service(requestHandler)
+      senderClient <- serviceConfig.client[IO]
+      receiverClient <- sourceConfig.client[IO]
+      r <- testSuccessfulStreamReply(service, senderClient, receiverClient)
+    } yield r
+  }
+
   "stream service" should "reply with error" in {
     val responseDestination = session.createQueue(s"hello-error-test-response-${uuid(5)}")
     val serviceConfig = JMSServiceConfiguration.stream[TestRequest[_ <: TestResponse], TestResponse](
       s"hello-error-test-${uuid(5)}", session.createQueue(s"hello-error-test-${uuid(5)}"), responseDestination)
-    val sourceConfig = JMSServiceConfiguration.source[TestResponse](responseDestination)
+    val sourceConfig = JMSServiceConfiguration.source[Either[TestResponse, Throwable]](responseDestination)
 
     for {
       service <- serviceConfig.service(requestHandlerWithError)
