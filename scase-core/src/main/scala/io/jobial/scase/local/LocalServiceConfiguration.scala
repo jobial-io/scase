@@ -15,8 +15,6 @@ import io.jobial.scase.marshalling.serialization._
  */
 class LocalServiceConfiguration[REQ, RESP](
   val serviceName: String
-)(
-  //implicit monitoringPublisher: MonitoringPublisher = noPublisher
 ) extends ServiceConfiguration {
 
   def service[F[_] : Concurrent : Timer](requestHandler: RequestHandler[F, REQ, RESP]) =

@@ -54,7 +54,7 @@ public class PulsarServiceTest {
     };
 
     @Test
-    public void testRequestResponseService() throws ExecutionException, InterruptedException {
+    public void testRequestResponseService() throws ExecutionException, InterruptedException, RequestTimeout {
         var serviceConfig =
                 requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest, TestResponse>());
 
@@ -145,102 +145,5 @@ public class PulsarServiceTest {
             state.get().stop();
         }
     }
-    
-    //    <REQ, RESP> void testRequestResponse(FutureRequestHandler<REQ, RESP> testRequestProcessor, REQ request, RESP response) {
-//        PulsarServiceConfiguration serviceConfig = PulsarServiceConfiguration$.MODULE$.<TestRequest<? extends TestResponse>, TestResponse>requestResponse("hello-test-${uuid(6)}");
-//
-//    }
-
-//    for {
-//      testMessageConsumer <- InMemoryConsumerProducer[IO, REQ]
-//      testMessageProducer <- InMemoryConsumerProducer[IO, Either[Throwable, RESP]]
-//      service <- ConsumerProducerRequestResponseService[IO, REQ, RESP](
-//        testMessageConsumer,
-//        { _: Option[String] => IO(testMessageProducer) },
-//        testRequestProcessor
-//      )
-//      s <- service.start
-//      d <- Deferred[IO, Either[Throwable, RESP]]
-//      _ <- testMessageProducer.subscribe({ m =>
-//        println("complete")
-//        for {
-//          message <- m.message
-//          r <- d.complete(message)
-//        } yield r
-//      })
-//      _ <- testMessageConsumer.send(request, Map(ResponseProducerIdKey -> ""))
-//      r <- d.get
-//    } yield assert(r == response)
-//
-//  def testRequestResponseClient[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP : Eq](testRequestProcessor: RequestHandler[IO, REQ, RESP], request: REQUEST, response: Either[Throwable, RESPONSE])(
-//    implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]
-//  ) =
-//    for {
-//      testMessageConsumer <- InMemoryConsumerProducer[IO, REQ]
-//      testMessageProducer <- InMemoryConsumerProducer[IO, Either[Throwable, RESP]]
-//      service <- ConsumerProducerRequestResponseService[IO, REQ, RESP](
-//        testMessageConsumer,
-//        { _: Option[String] => IO(testMessageProducer) },
-//        testRequestProcessor
-//      )
-//      s <- service.start
-//      client <- ConsumerProducerRequestResponseClient[IO, REQ, RESP](
-//        testMessageProducer,
-//        () => testMessageConsumer,
-//        None
-//      )
-//      r1 <- client ? request
-//      r <- {
-//        implicit val c = client
-//        // We do it this way to test if the implicit request sending is working, obviously we could also use client.sendRequest here 
-//        for {
-//          r <- request
-//        } yield r
-//      }
-//    } yield assert(Right(r) === response)
-//
-//  "request-response service" should "reply successfully" in {
-//    testRequestResponse(
-//      new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
-//        override def handleRequest(implicit context: RequestContext[IO]): Handler = {
-//          case r: TestRequest1 =>
-//            println("replying...")
-//            r.reply(response1)
-//        }
-//      },
-//      request1,
-//      Right(response1)
-//    )
-//  }
-//
-//  "request-response service" should "reply with error" in {
-//    testRequestResponse(
-//      new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
-//        override def handleRequest(implicit context: RequestContext[IO]): Handler = {
-//          case r: TestRequest1 =>
-//            println("replying...")
-//            r.reply(response1)
-//          case r: TestRequest2 =>
-//            IO.raiseError(TestException("exception!!!"))
-//        }
-//      },
-//      request2,
-//      Left(TestException("exception!!!"))
-//    )
-//  }
-//
-//  "request-response client" should "get reply successfully" in {
-//    testRequestResponseClient(
-//      new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
-//        override def handleRequest(implicit context: RequestContext[IO]) = {
-//          case r: TestRequest1 =>
-//            println("replying...")
-//            r.reply(response1)
-//        }
-//      },
-//      request1,
-//      Right(response1)
-//    )
-//  }
 
 }
