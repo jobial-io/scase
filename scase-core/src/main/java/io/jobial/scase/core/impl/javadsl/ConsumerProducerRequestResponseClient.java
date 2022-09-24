@@ -3,7 +3,7 @@ package io.jobial.scase.core.impl.javadsl;
 import cats.effect.IO;
 import io.jobial.scase.core.RequestResponseMapping;
 import io.jobial.scase.core.RequestResponseResult;
-import io.jobial.scase.core.SendRequestContext;
+import io.jobial.scase.core.javadsl.SendRequestContext;
 import scala.Function1;
 
 import java.util.concurrent.CompletableFuture;
@@ -22,7 +22,7 @@ public class ConsumerProducerRequestResponseClient<REQ, RESP> {
     private RequestResponseMapping<REQ, RESP> requestResponseMapping = new RequestResponseMapping<REQ, RESP>(){};
     
     public CompletableFuture<RESP> sendRequest(REQ request, SendRequestContext sendRequestContext) {
-        return ioToCompletableFuture(client.sendRequestWithResponseMapping(request, requestResponseMapping, sendRequestContext).flatMap(new Function1<RequestResponseResult<IO, REQ, RESP>, IO<RESP>>() {
+        return ioToCompletableFuture(client.sendRequestWithResponseMapping(request, requestResponseMapping, sendRequestContext.getSendRequestContext()).flatMap(new Function1<RequestResponseResult<IO, REQ, RESP>, IO<RESP>>() {
 
             @Override
             public IO<RESP> apply(RequestResponseResult<IO, REQ, RESP> v1) {
@@ -32,10 +32,10 @@ public class ConsumerProducerRequestResponseClient<REQ, RESP> {
     }
 
     public CompletableFuture<RESP> sendRequest(REQ request) {
-        return sendRequest(request, defaultSendRequestContext);
+        return sendRequest(request, new SendRequestContext());
     }
 
     public CompletableFuture<RESP> sendRequestWithFullResult(REQ request) {
-        return sendRequest(request, defaultSendRequestContext);
+        return sendRequest(request, new SendRequestContext());
     }
 }

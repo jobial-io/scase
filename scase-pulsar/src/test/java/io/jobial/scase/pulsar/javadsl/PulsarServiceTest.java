@@ -14,12 +14,15 @@ package io.jobial.scase.pulsar.javadsl;
 
 import io.jobial.scase.core.*;
 import io.jobial.scase.core.impl.javadsl.FutureRequestHandler;
+import io.jobial.scase.core.javadsl.SendRequestContext;
 import io.jobial.scase.marshalling.serialization.javadsl.SerializationMarshalling;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutionException;
 
+import static io.jobial.scase.core.impl.javadsl.JavaUtils.uuid;
 import static io.jobial.scase.pulsar.javadsl.PulsarServiceConfiguration.requestResponse;
+import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.junit.Assert.assertEquals;
 
@@ -37,7 +40,7 @@ public class PulsarServiceTest {
     @Test
     public void testRequestResponseService() throws ExecutionException, InterruptedException {
         var serviceConfig =
-                requestResponse("hello-test-${uuid(6)}", new SerializationMarshalling<TestRequest, TestResponse>());
+                requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest, TestResponse>());
 
         var service = serviceConfig.service(requestHandler);
         var state = service.start();
@@ -52,14 +55,25 @@ public class PulsarServiceTest {
         Thread.sleep(1000);
         state.get().stop().whenComplete((r, error) -> System.out.println("stopped service"));
         Thread.sleep(1000);
-        
-//            for {
-//                service < -serviceConfig.service(requestHandler)
-//                client < -serviceConfig.client[IO]
-//                r < -testSuccessfulReply(service, client)
-//            } yield r
     }
-//    <REQ, RESP> void testRequestResponse(FutureRequestHandler<REQ, RESP> testRequestProcessor, REQ request, RESP response) {
+
+    @Test(expected = RequestTimeout.class)
+    public void testRequestTimeoutIfServiceIsNotStarted() throws Throwable {
+        var serviceConfig =
+                requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest, TestResponse>());
+
+        var service = serviceConfig.service(requestHandler);
+
+        var client = serviceConfig.client();
+        var request = new TestRequest1("world");
+        try {
+            client.sendRequest(request, new SendRequestContext(ofSeconds(1))).get();
+        } catch (ExecutionException e) {
+            throw e.getCause();
+        }
+    }
+
+    //    <REQ, RESP> void testRequestResponse(FutureRequestHandler<REQ, RESP> testRequestProcessor, REQ request, RESP response) {
 //        PulsarServiceConfiguration serviceConfig = PulsarServiceConfiguration$.MODULE$.<TestRequest<? extends TestResponse>, TestResponse>requestResponse("hello-test-${uuid(6)}");
 //
 //    }
