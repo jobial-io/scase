@@ -34,7 +34,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ, RESP: Marsh
             producerCache <- producersCacheRef.get
             producer <- producerCache.get(request.responseProducerId) match {
               case Some(producer) =>
-                Monad[F].pure(producer)
+                pure(producer)
               case None =>
                 responseProducer(request.responseProducerId)
             }
@@ -47,29 +47,27 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ, RESP: Marsh
           // Just call the provided function for a new producer...
           responseProducer(request.responseProducerId)
       }
-      _ <- debug[F](s"found response producer $producer for request in service: ${request.toString.take(500)}")
+      _ <- debug(s"found response producer $producer for request in service: ${request.toString.take(500)}")
       // TODO: make this a Deferred
       resultAfterSend <- res match {
         case Right(r) =>
           for {
-            _ <- debug[F](s"sending success for request: ${request.toString.take(500)} on $producer")
+            _ <- debug(s"sending success for request: ${request.toString.take(500)} on $producer")
             sendResult <- producer.send(Right(r), responseAttributes)
             // commit request after result is written
-            _ <-
-              if (autoCommitRequest)
-                debug[F](s"service committing request: ${request.toString.take(500)} on $producer") >>
-                  request.commit
-              else Monad[F].unit
+            _ <- whenA(autoCommitRequest)(
+              debug(s"service committing request: ${request.toString.take(500)} on $producer") >>
+                request.commit
+            )
           } yield sendResult
         case Left(t) =>
           for {
-            _ <- error[F](s"sending failure for request: ${request.toString.take(500)}", t)
+            _ <- error(s"sending failure for request: ${request.toString.take(500)}", t)
             sendResult <- producer.send(Left(t), responseAttributes)
-            _ <-
-              if (autoCommitFailedRequest)
-                debug[F](s"service committing request: ${request.toString.take(500)}") >>
-                  request.commit
-              else Monad[F].unit
+            _ <- whenA(autoCommitFailedRequest)(
+              debug(s"service committing request: ${request.toString.take(500)}") >>
+                request.commit
+            )
           } yield sendResult
       }
     } yield resultAfterSend
@@ -77,7 +75,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ, RESP: Marsh
 
 }
 
-object ConsumerProducerRequestResponseService {
+object ConsumerProducerRequestResponseService extends CatsUtils with Logging {
 
   def apply[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
     requestConsumer: MessageConsumer[F, REQ],
@@ -96,7 +94,7 @@ object ConsumerProducerRequestResponseService {
       if (reuseProducers)
         Ref.of[F, Map[Option[String], MessageProducer[F, Either[Throwable, RESP]]]](Map()).map(Some(_))
       else
-        Monad[F].pure(None)
+        pure(None)
 
     for {
       responseProducersCacheRef <- createProducerCache

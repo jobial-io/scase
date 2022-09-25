@@ -51,7 +51,7 @@ class SqsProducer[F[_] : Concurrent, M](
       r <- sendMessage(queueUrl, Marshaller[M].marshalToText(message), attributes).to[F]
     } yield {
       logger.info(s"successfully sent to queue $queueUrl ${message.toString.take(200)}")
-      DefaultMessageSendResult[F, M](Monad[F].unit, Monad[F].unit)
+      DefaultMessageSendResult[F, M](unit, unit)
     }
 
     r handleErrorWith { t =>
@@ -61,7 +61,7 @@ class SqsProducer[F[_] : Concurrent, M](
     }
   }
 
-  def stop = Monad[F].unit
+  def stop = unit
 }
 
 object SqsProducer {

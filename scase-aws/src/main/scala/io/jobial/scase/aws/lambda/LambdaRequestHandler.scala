@@ -20,6 +20,7 @@ import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
 import io.jobial.scase.core.DefaultMessageReceiveResult
 import io.jobial.scase.core.MessageReceiveResult
 import io.jobial.scase.core.SendMessageContext
+import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultSendResponseResult
 import io.jobial.scase.core.{RequestContext, RequestHandler, RequestResponseMapping, SendResponseResult}
 import io.jobial.scase.logging.Logging
@@ -30,7 +31,11 @@ import scala.collection.concurrent.TrieMap
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.DurationInt
 
-abstract class LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandler with RequestHandler[F, REQ, RESP] with Logging {
+abstract class LambdaRequestHandler[F[_], REQ, RESP]
+  extends RequestStreamHandler
+    with RequestHandler[F, REQ, RESP]
+    with CatsUtils
+    with Logging {
 
   def serviceConfiguration: LambdaServiceConfiguration[REQ, RESP]
 
@@ -50,7 +55,7 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandle
 
       val result =
         for {
-          _ <- info[F](s"received request: ${requestString.take(500)}")
+          _ <- info(s"received request: ${requestString.take(500)}")
           request <- Concurrent[F].fromEither(serviceConfiguration.requestUnmarshaller.unmarshalFromText(requestString))
           responseDeferred <- Deferred[F, Either[Throwable, RESP]]
           processorResult: F[SendResponseResult[RESP]] =
@@ -66,7 +71,7 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandle
                 DefaultSendResponseResult[RESPONSE](response)
 
               override def receiveResult[REQUEST](request: REQUEST): MessageReceiveResult[F, REQUEST] =
-                DefaultMessageReceiveResult(Monad[F].pure(request), context.getClientContext.getEnvironment.asScala.toMap, Monad[F].unit, Monad[F].unit)
+                DefaultMessageReceiveResult(pure(request), context.getClientContext.getEnvironment.asScala.toMap, unit, unit)
 
             })(request)
           // TODO: use redeem when Cats is upgraded, 2.0.0 simply doesn't support mapping errors to an F[B]...
@@ -75,7 +80,7 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandle
               responseDeferred.complete(Right(result.response))
             }
             .handleError { t =>
-              error[F](s"request processing failed: $request", t) >>
+              error(s"request processing failed: $request", t) >>
                 responseDeferred.complete(Left(t))
             }
           // send response when ready

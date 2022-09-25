@@ -4,17 +4,19 @@ import cats.Monad
 import cats.effect.Concurrent
 import cats.effect.concurrent.Ref
 import cats.implicits._
+import io.jobial.scase.core.DefaultMessageReceiveResult
+import io.jobial.scase.core.MessageReceiveResult
+import io.jobial.scase.core.ReceiveTimeout
+import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
-import io.jobial.scase.core.{DefaultMessageReceiveResult, MessageReceiveResult, ReceiveTimeout}
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
-
 import javax.jms._
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.FiniteDuration
 
 class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]])(implicit session: Session)
-  extends DefaultMessageConsumer[F, M] with Logging {
+  extends DefaultMessageConsumer[F, M] with CatsUtils with Logging {
 
   val consumer = session.createConsumer(destination)
 
@@ -40,8 +42,8 @@ class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscripti
 
   def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]) =
     for {
-      jmsMessage <- Concurrent[F].delay(Option(consumer.receive(timeout.map(_.toMillis).getOrElse(Long.MaxValue))))
-      _ <- debug[F](s"received message ${jmsMessage.toString.take(200)} on $destination")
+      jmsMessage <- delay(Option(consumer.receive(timeout.map(_.toMillis).getOrElse(Long.MaxValue))))
+      _ <- debug(s"received message ${jmsMessage.toString.take(200)} on $destination")
       result <- (for {
         jmsMessage <- jmsMessage
         message = unmarshalMessage(jmsMessage)
@@ -49,19 +51,19 @@ class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscripti
         case Right(message) =>
           val attributes = extractAttributes(jmsMessage)
           val messageReceiveResult = DefaultMessageReceiveResult(
-            Monad[F].pure(message),
+            pure(message),
             attributes,
-            commit = Concurrent[F].delay(session.commit),
-            rollback = Concurrent[F].delay(session.rollback)
+            commit = delay(session.commit),
+            rollback = delay(session.rollback)
           )
-          Concurrent[F].pure(messageReceiveResult)
+          pure(messageReceiveResult)
         case Left(error) =>
-          Concurrent[F].raiseError(error)
+          raiseError(error)
 
-      }).getOrElse(Concurrent[F].raiseError(ReceiveTimeout(timeout)))
+      }).getOrElse(raiseError(ReceiveTimeout(timeout)))
     } yield result
 
-  def stop = Concurrent[F].delay(consumer.close())
+  def stop = delay(consumer.close())
 }
 
 object JMSConsumer {

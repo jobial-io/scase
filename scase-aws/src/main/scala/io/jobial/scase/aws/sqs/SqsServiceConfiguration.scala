@@ -3,8 +3,10 @@ package io.jobial.scase.aws.sqs
 import cats.effect.{Concurrent, ContextShift, IO, Timer}
 import cats.implicits._
 import io.jobial.scase.aws.client.AwsContext
+import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.{ConsumerMessageHandlerService, ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService, ProducerSenderClient, ResponseProducerIdNotFound}
 import io.jobial.scase.core.{MessageHandler, MessageProducer, RequestHandler, RequestResponseClient, SenderClient, ServiceConfiguration}
+import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 import io.jobial.scase.util.Hash.uuid
 
@@ -17,7 +19,7 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher
   implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
   responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
-) extends ServiceConfiguration {
+) extends ServiceConfiguration with CatsUtils with Logging {
 
   val requestQueueUrl = requestQueueName
 
@@ -36,7 +38,7 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
               responseProducer <- SqsProducer[F, Either[Throwable, RESP]](responseQueueUrl, cleanup = true)
             } yield responseProducer
           case None =>
-            Concurrent[F].raiseError(ResponseProducerIdNotFound("Not found response producer id in request"))
+            raiseError(ResponseProducerIdNotFound("Not found response producer id in request"))
         }
       }: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
       requestHandler

@@ -1,6 +1,5 @@
 package io.jobial.scase.core.impl
 
-import cats.Monad
 import cats.effect.Concurrent
 import cats.effect.concurrent.Deferred
 import cats.effect.concurrent.Ref
@@ -43,7 +42,7 @@ class ConsumerProducerStreamService[F[_] : Concurrent, REQ, RESP: Marshaller](
                   producerCache <- producersCacheRef.get
                   producer <- producerCache.get(request.responseProducerId) match {
                     case Some(producer) =>
-                      Monad[F].pure(producer)
+                      pure(producer)
                     case None =>
                       responseProducer(request.responseProducerId)
                   }
@@ -56,18 +55,18 @@ class ConsumerProducerStreamService[F[_] : Concurrent, REQ, RESP: Marshaller](
                 // Just call the provided function for a new producer...
                 responseProducer(request.responseProducerId)
             }
-            _ <- debug[F](s"sending success for request: ${request.toString.take(500)} on $producer")
-            _ <- debug[F](s"found response producer $producer for request in service: ${request.toString.take(500)}")
+            _ <- debug(s"sending success for request: ${request.toString.take(500)} on $producer")
+            _ <- debug(s"found response producer $producer for request in service: ${request.toString.take(500)}")
             sendResult <- producer.send(r, responseAttributes)
             // commit request after result is written
-            _ <- if (autoCommitRequest) {
-              debug[F](s"service committing request: ${request.toString.take(500)} on $producer") >>
+            _ <- whenA(autoCommitRequest)(
+              debug(s"service committing request: ${request.toString.take(500)} on $producer") >>
                 request.commit
-            } else Monad[F].unit
+            )
           } yield sendResult
         case Left(t) =>
           for {
-            _ <- error[F](s"sending failure for request: ${request.toString.take(500)}", t)
+            _ <- error(s"sending failure for request: ${request.toString.take(500)}", t)
             producer <- errorProducersCacheRef match {
               case Some(producersCacheRef) =>
                 // Producers are cached...
@@ -75,7 +74,7 @@ class ConsumerProducerStreamService[F[_] : Concurrent, REQ, RESP: Marshaller](
                   producerCache <- producersCacheRef.get
                   producer <- producerCache.get(request.responseProducerId) match {
                     case Some(producer) =>
-                      Monad[F].pure(producer)
+                      pure(producer)
                     case None =>
                       errorProducer(request.responseProducerId)
                   }
@@ -88,13 +87,13 @@ class ConsumerProducerStreamService[F[_] : Concurrent, REQ, RESP: Marshaller](
                 // Just call the provided function for a new producer...
                 errorProducer(request.responseProducerId)
             }
-            _ <- debug[F](s"found response producer $producer for request in service: ${request.toString.take(500)}")
+            _ <- debug(s"found response producer $producer for request in service: ${request.toString.take(500)}")
             sendResult <- producer.send(t, responseAttributes)
             _ <-
               if (autoCommitFailedRequest)
-                debug[F](s"service committing request: ${request.toString.take(500)}") >>
+                debug(s"service committing request: ${request.toString.take(500)}") >>
                   request.commit
-              else Monad[F].unit
+              else unit
           } yield sendResult
       }
     } yield resultAfterSend
@@ -102,7 +101,7 @@ class ConsumerProducerStreamService[F[_] : Concurrent, REQ, RESP: Marshaller](
 
 }
 
-object ConsumerProducerStreamService {
+object ConsumerProducerStreamService extends CatsUtils with Logging {
 
   def apply[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
     requestConsumer: MessageConsumer[F, REQ],
@@ -120,7 +119,7 @@ object ConsumerProducerStreamService {
       if (reuseProducers)
         Ref.of[F, Map[Option[String], MessageProducer[F, R]]](Map()).map(Some(_))
       else
-        Monad[F].pure(None)
+        pure(None)
 
     for {
       responseProducersCacheRef <- createProducerCache[RESP]

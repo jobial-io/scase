@@ -19,7 +19,7 @@ class ProducerSenderClient[F[_] : Concurrent, REQ: Marshaller](
     val correlationId = randomUUID.toString
 
     for {
-      _ <- info[F](s"sending request with correlation id $correlationId on $messageProducer")
+      _ <- info(s"sending request with correlation id $correlationId on $messageProducer")
       sendResult <- messageProducer.send(
         request,
         Map(
@@ -35,10 +35,10 @@ class ProducerSenderClient[F[_] : Concurrent, REQ: Marshaller](
 case class DefaultMessageSendResult[F[_] : Monad, M](commit: F[Unit], rollback: F[Unit])
   extends MessageSendResult[F, M]
 
-object ProducerSenderClient {
+object ProducerSenderClient extends CatsUtils {
 
   def apply[F[_] : Concurrent, REQ: Marshaller](
     messageProducer: MessageProducer[F, REQ],
     responseProducerId: Option[String] = None
-  ) = Concurrent[F].delay(new ProducerSenderClient(messageProducer, responseProducerId))
+  ) = delay(new ProducerSenderClient(messageProducer, responseProducerId))
 }

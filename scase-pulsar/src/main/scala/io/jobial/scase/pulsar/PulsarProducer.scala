@@ -26,8 +26,8 @@ class PulsarProducer[F[_] : Concurrent, M](topic: String)(implicit context: Puls
       .batchingMaxPublishDelay(1, TimeUnit.MILLISECONDS)
       .enableBatching(true)
       .create
-  
-        
+
+
   override def send(message: M, attributes: Map[String, String])(implicit m: Marshaller[M]): F[MessageSendResult[F, M]] =
     for {
       r <- fromFuture(toScala(producer
@@ -36,18 +36,18 @@ class PulsarProducer[F[_] : Concurrent, M](topic: String)(implicit context: Puls
         .value(Marshaller[M].marshal(message))
         .sendAsync()
       ))
-      _ <- debug[F](s"sent message ${message.toString.take(200)} on $topic")
+      _ <- debug(s"sent message ${message.toString.take(200)} on $topic")
     } yield new MessageSendResult[F, M] {
-      def commit = Monad[F].unit
+      def commit = unit
 
-      def rollback = Monad[F].unit
+      def rollback = unit
     }
 
-  def stop = Concurrent[F].delay(producer.close())
+  def stop = delay(producer.close())
 }
 
-object PulsarProducer {
+object PulsarProducer extends CatsUtils {
 
   def apply[F[_] : Concurrent, M](topic: String)(implicit context: PulsarContext) =
-    Concurrent[F].delay(new PulsarProducer[F, M](topic))
+    delay(new PulsarProducer[F, M](topic))
 }

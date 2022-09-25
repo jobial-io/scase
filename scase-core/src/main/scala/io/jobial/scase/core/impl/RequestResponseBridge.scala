@@ -1,6 +1,5 @@
 package io.jobial.scase.core.impl
 
-import cats.Monad
 import cats.effect.Concurrent
 import cats.effect.concurrent.Ref
 import cats.implicits._
@@ -17,7 +16,7 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
   stopped: Ref[F, Boolean]
 )(
   implicit requestResponseMapping: RequestResponseMapping[SOURCEREQ, SOURCERESP]
-) extends Logging {
+) extends CatsUtils with Logging {
 
 
   // TODO: return state here instead?
@@ -41,11 +40,11 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
                           response <- filteredResponse.message
                         } yield request ! response
                       case None =>
-                        Concurrent[F].raiseError[SendResponseResult[SOURCERESP]](new RuntimeException)
+                        raiseError[F, SendResponseResult[SOURCERESP]](new RuntimeException)
                     }
                   } yield sendResult
                 case None =>
-                  Concurrent[F].raiseError(new RuntimeException)
+                  raiseError(new RuntimeException)
               }
             } yield sendResult
         }
@@ -56,7 +55,7 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
   def stop = stopped.set(true)
 }
 
-object RequestResponseBridge {
+object RequestResponseBridge extends CatsUtils with Logging {
 
   def apply[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERESP: Marshaller, DESTREQ: Unmarshaller, DESTRESP: Marshaller](
     source: RequestHandler[F, SOURCEREQ, SOURCERESP] => F[Service[F]],
@@ -90,8 +89,8 @@ object RequestResponseBridge {
         r <- destination.sendRequest(destRequest)
       } yield r
     },
-    { result => Monad[F].pure(Some(result))},
-    { (_, result) => Monad[F].pure(Some(result.response))},
+    { result => pure(Some(result)) },
+    { (_, result) => pure(Some(result.response)) },
     stopped
   )
 
