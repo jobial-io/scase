@@ -4,7 +4,6 @@ import cats.effect.*;
 import io.jobial.scase.util.Hash$;
 import scala.Function0;
 import scala.Function1;
-import scala.Unit;
 import scala.concurrent.ExecutionContext;
 import scala.concurrent.ExecutionContext$;
 import scala.concurrent.Future;
@@ -14,7 +13,6 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class JavaUtils {
 

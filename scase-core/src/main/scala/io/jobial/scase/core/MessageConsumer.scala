@@ -1,9 +1,6 @@
 package io.jobial.scase.core
 
-import cats.effect.Concurrent
 import io.jobial.scase.marshalling.Unmarshaller
-
-import scala.concurrent.TimeoutException
 import scala.concurrent.duration._
 
 trait MessageReceiveResult[F[_], M] {

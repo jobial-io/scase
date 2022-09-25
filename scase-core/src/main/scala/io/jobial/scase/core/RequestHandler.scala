@@ -1,7 +1,5 @@
 package io.jobial.scase.core
 
-import cats.MonadError
-
 import scala.concurrent.duration._
 
 trait SendResponseResult[+RESP] {
