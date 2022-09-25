@@ -8,10 +8,10 @@ import com.amazonaws.services.sqs.model.{Message, ReceiveMessageResult}
 import io.jobial.scase.aws.client.AwsContext
 import io.jobial.scase.aws.client.IdentityMap.identityTrieMap
 import io.jobial.scase.core._
+import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
-
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
@@ -29,15 +29,14 @@ class SqsConsumer[F[_] : Concurrent, M](
 )(
   implicit val awsContext: AwsContext
 ) extends DefaultMessageConsumer[F, M]
+  with CatsUtils
   with Logging {
 
   import awsContext.sqsClient._
 
-  // TODO: clean effect type up here
   override def initialize =
-    Concurrent[F].liftIO(for {
-      _ <- createQueueIfNotExists(queueUrl)
-      _ <- if (cleanup) IO(sys.addShutdownHook({ () =>
+    liftIO(createQueueIfNotExists(queueUrl)) >>
+      whenA(cleanup)(delay(sys.addShutdownHook({ () =>
         try {
           logger.debug(s"deleting queue $queueUrl")
           deleteQueue(queueUrl).unsafeRunSync()
@@ -45,11 +44,12 @@ class SqsConsumer[F[_] : Concurrent, M](
           case t: Throwable =>
             throw new RuntimeException(s"error deleting queue $queueUrl", t)
         }
-      })) else IO()
-      _ <- debug[IO](s"created queue $queueUrl")
-      _ <- messageRetentionPeriod.map(setMessageRetentionPeriod(queueUrl, _)).getOrElse(IO())
-      _ <- visibilityTimeout.map(setVisibilityTimeout(queueUrl, _)).getOrElse(IO())
-    } yield ())
+      }))) >>
+      debug(s"created queue $queueUrl") >>
+      // TODO: only do this when first created
+      liftIO(messageRetentionPeriod.map(setMessageRetentionPeriod(queueUrl, _)).getOrElse(IO())) >>
+      liftIO(visibilityTimeout.map(setVisibilityTimeout(queueUrl, _)).getOrElse(IO())) >>
+      debug(s"initialized SQS consumer $this")
 
   def receiveMessagesFromQueue(timeout: Option[FiniteDuration]) =
     (for {
@@ -61,8 +61,7 @@ class SqsConsumer[F[_] : Concurrent, M](
             newMessages <-
               debug(s"waiting for messages on $queueUrl") >>
                 // TODO: handle timeout more precisely
-                // TODO: clean up effect type here
-                Concurrent[F].liftIO(receiveMessage(queueUrl, 10, timeout.map(_.toSeconds.toInt).getOrElse(Int.MaxValue)).map(_.getMessages.asScala))
+                liftIO(receiveMessage(queueUrl, 10, timeout.map(_.toSeconds.toInt).getOrElse(Int.MaxValue)).map(_.getMessages.asScala))
             _ <- debug(s"received messages ${newMessages.toString.take(500)} on queue $queueUrl")
           } yield newMessages
         else

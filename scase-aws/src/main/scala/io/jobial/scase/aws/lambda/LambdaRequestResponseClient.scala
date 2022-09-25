@@ -51,16 +51,15 @@ case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP:
       DefaultRequestResponseResult(
         DefaultMessageSendResult[F, REQUEST](unit, unit),
         DefaultMessageReceiveResult[F, RESPONSE](
-          Concurrent[F].liftIO(
-            for {
-              response <- invoke(functionName, Marshaller[REQ].marshalToText(request))
-              m <- Unmarshaller[RESP].unmarshalFromText(new String(response.getPayload.array, StandardCharsets.UTF_8)) match {
-                case Right(r) =>
-                  IO(r.asInstanceOf[RESPONSE])
-                case Left(t) =>
-                  raiseError[IO, RESPONSE](t)
-              }
-            } yield m),
+          for {
+            response <- liftIO(invoke(functionName, Marshaller[REQ].marshalToText(request)))
+            m <- Unmarshaller[RESP].unmarshalFromText(new String(response.getPayload.array, StandardCharsets.UTF_8)) match {
+              case Right(r) =>
+                pure(r.asInstanceOf[RESPONSE])
+              case Left(t) =>
+                raiseError(t)
+            }
+          } yield m,
           Map(), // TODO: propagate attributes here
           unit,
           unit

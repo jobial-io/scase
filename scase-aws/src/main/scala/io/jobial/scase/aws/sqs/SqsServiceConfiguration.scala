@@ -26,8 +26,7 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
   val responseQueueUrl = responseQueueName.getOrElse(s"$requestQueueName-response-${uuid(8)}")
 
   def service[F[_] : Concurrent](requestHandler: RequestHandler[F, REQ, RESP])(
-    implicit awsContext: AwsContext = AwsContext(),
-    cs: ContextShift[IO]
+    implicit awsContext: AwsContext = AwsContext()
   ) = for {
     requestConsumer <- SqsConsumer[F, REQ](requestQueueUrl, cleanup = false)
     service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
@@ -46,8 +45,7 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
   } yield service
 
   def client[F[_] : Concurrent : Timer](
-    implicit awsContext: AwsContext = AwsContext(),
-    cs: ContextShift[IO]
+    implicit awsContext: AwsContext = AwsContext()
   ): F[RequestResponseClient[F, REQ, RESP]] = {
     for {
       consumer <- SqsConsumer[F, Either[Throwable, RESP]](responseQueueUrl)
@@ -61,8 +59,7 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
   }
 
   def senderClient[F[_] : Concurrent : Timer](
-    implicit awsContext: AwsContext = AwsContext(),
-    cs: ContextShift[IO]
+    implicit awsContext: AwsContext = AwsContext()
   ): F[SenderClient[F, REQ]] = {
     for {
       producer <- SqsProducer[F, REQ](requestQueueUrl)
@@ -81,8 +78,7 @@ class SqsMessageHandlerServiceConfiguration[REQ: Marshaller : Unmarshaller](
   val requestQueueUrl = requestQueueName
 
   def service[F[_] : Concurrent](messageHandler: MessageHandler[F, REQ])(
-    implicit awsContext: AwsContext = AwsContext(),
-    cs: ContextShift[IO]
+    implicit awsContext: AwsContext = AwsContext()
   ) = for {
     requestConsumer <- SqsConsumer[F, REQ](requestQueueUrl, cleanup = false)
     service = new ConsumerMessageHandlerService[F, REQ](
@@ -92,8 +88,7 @@ class SqsMessageHandlerServiceConfiguration[REQ: Marshaller : Unmarshaller](
   } yield service
 
   def client[F[_] : Concurrent](
-    implicit awsContext: AwsContext = AwsContext(),
-    cs: ContextShift[IO]
+    implicit awsContext: AwsContext = AwsContext()
   ): F[SenderClient[F, REQ]] = {
     for {
       producer <- SqsProducer[F, REQ](requestQueueUrl)

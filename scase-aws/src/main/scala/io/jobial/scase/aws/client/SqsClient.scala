@@ -13,27 +13,20 @@
 package io.jobial.scase.aws.client
 
 import cats.effect.Concurrent
-import cats.effect.ContextShift
-import cats.effect.IO
-import cats.effect.IO.raiseError
-import cats.effect.implicits._
+import cats.effect.Timer
 import cats.implicits._
-import com.amazon.sqs.javamessaging.{AmazonSQSExtendedClient, ExtendedClientConfiguration}
+import com.amazon.sqs.javamessaging.AmazonSQSExtendedClient
+import com.amazon.sqs.javamessaging.ExtendedClientConfiguration
+import com.amazonaws.services.sqs.AmazonSQSAsync
+import com.amazonaws.services.sqs.AmazonSQSAsyncClientBuilder
 import com.amazonaws.services.sqs.buffered.AmazonSQSBufferedAsyncClient
 import com.amazonaws.services.sqs.model._
-import com.amazonaws.services.sqs.{AmazonSQSAsync, AmazonSQSAsyncClientBuilder}
-import io.jobial.scase.core.impl.CatsUtils
-import io.jobial.scase.logging.Logging
 import java.util
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{Duration, DurationInt}
+import scala.concurrent.duration.Duration
+import scala.concurrent.duration.DurationInt
 
-trait SqsClient[F[_]] extends S3Client[F] with CatsUtils with Logging {
-
-  implicit def contextShift: ContextShift[F]
-
-  implicit def concurrent: Concurrent[F]
+trait SqsClient[F[_]] extends S3Client[F] {
 
   // TODO: find way to share sqs client and/or inject config; by default, each client creates hundreds of threads
   //  - see https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/services/sqs/AmazonSQSAsyncClient.html 
@@ -100,13 +93,13 @@ trait SqsClient[F[_]] extends S3Client[F] with CatsUtils with Logging {
     sqs.setQueueAttributes(new SetQueueAttributesRequest().withQueueUrl(queueUrl)
       .addAttributesEntry(QueueAttributeName.ReceiveMessageWaitTimeSeconds.toString, defaultMaxReceiveMessageWaitTime.toString))
 
-  def setMessageRetentionPeriod(queueUrl: String, messageRetentionPeriod: Duration) = IO {
+  def setMessageRetentionPeriod(queueUrl: String, messageRetentionPeriod: Duration) = delay {
     sqs.setQueueAttributes(new SetQueueAttributesRequest().withQueueUrl(queueUrl)
       .addAttributesEntry(QueueAttributeName.MessageRetentionPeriod
         .toString, messageRetentionPeriod.toSeconds.toString))
   }
 
-  def setVisibilityTimeout(queueUrl: String, visibilityTimeout: Duration) = IO {
+  def setVisibilityTimeout(queueUrl: String, visibilityTimeout: Duration) = delay {
     // TODO: report this bug
     assert(!sqs.isInstanceOf[AmazonSQSBufferedAsyncClient] || visibilityTimeout > (0.seconds),
       "Cannot set visibility timeout to 0 seconds on a buffered client due to a bug which casues hanging in receiveMessages")
@@ -146,13 +139,13 @@ trait SqsClient[F[_]] extends S3Client[F] with CatsUtils with Logging {
 
 object SqsClient {
 
-  def apply[F[_] : ContextShift : Concurrent](implicit context: AwsContext) = {
+  def apply[F[_] : Timer : Concurrent](implicit context: AwsContext) = {
     new SqsClient[F] {
       val awsContext = context
 
-      val contextShift = ContextShift[F]
-
       val concurrent = Concurrent[F]
+
+      val timer = Timer[F]
     }
   }
 }

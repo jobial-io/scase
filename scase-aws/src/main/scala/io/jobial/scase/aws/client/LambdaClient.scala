@@ -12,30 +12,29 @@
  */
 package io.jobial.scase.aws.client
 
-import cats.effect.IO
+import cats.effect.Concurrent
+import cats.effect.Timer
+import com.amazonaws.services.lambda.AWSLambdaAsync
+import com.amazonaws.services.lambda.AWSLambdaAsyncClientBuilder
 import com.amazonaws.services.lambda.model.InvokeRequest
-import com.amazonaws.services.lambda.{AWSLambdaAsync, AWSLambdaAsyncClientBuilder}
-
-import scala.concurrent.ExecutionContext
+import cats.implicits._
 
 trait LambdaClient[F[_]] extends AwsClient[F] {
   lazy val lambda = buildAwsAsyncClient[AWSLambdaAsyncClientBuilder, AWSLambdaAsync](AWSLambdaAsyncClientBuilder.standard)
 
-  def invoke(functionName: String, payload: String)(implicit ec: ExecutionContext) =
-    IO.fromFuture(IO {
-      for {
-        result <- lambda.invokeAsync(new InvokeRequest()
-          .withFunctionName(functionName)
-          .withPayload(payload)
-        )
-        //    result <-
-        //      // TODO: review if this is correct...
-        //      if (Option(result.getFunctionError).isDefined)
-        //        failed(unmarshalException(result))
-        //      else
-        //        successful(result)
-      } yield result
-    })(IO.contextShift(ec))
+  def invoke(functionName: String, payload: String) =
+    for {
+      result <- fromJavaFuture(lambda.invokeAsync(new InvokeRequest()
+        .withFunctionName(functionName)
+        .withPayload(payload)))
+      //    result <-
+      //      // TODO: review if this is correct...
+      //      if (Option(result.getFunctionError).isDefined)
+      //        failed(unmarshalException(result))
+      //      else
+      //        successful(result)
+    } yield result
+
 
 
   //  private def unmarshalException(result: InvokeResult) = {
@@ -53,8 +52,12 @@ trait LambdaClient[F[_]] extends AwsClient[F] {
 
 object LambdaClient {
 
-  def apply[F[_]](implicit context: AwsContext) =
+  def apply[F[_] : Concurrent : Timer](implicit context: AwsContext) =
     new LambdaClient[F] {
       def awsContext = context
+
+      val concurrent = Concurrent[F]
+
+      val timer = Timer[F]
     }
 }

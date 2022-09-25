@@ -12,19 +12,16 @@
  */
 package io.jobial.scase.aws.client
 
-import cats.effect.{IO, Timer}
-import com.amazonaws.services.cloudformation.model._
-import com.amazonaws.services.cloudformation.{AmazonCloudFormation, AmazonCloudFormationClientBuilder}
 import cats.implicits._
+import com.amazonaws.services.cloudformation.model._
+import com.amazonaws.services.cloudformation.AmazonCloudFormation
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder
 import io.jobial.scase.util.Hash.uuid
-
-import scala.concurrent.duration.DurationInt
-import scala.util.{Success, Try}
 
 trait CloudformationClient[F[_]] extends AwsClient[F] {
   lazy val cloudformation = buildAwsClient[AmazonCloudFormationClientBuilder, AmazonCloudFormation](AmazonCloudFormationClientBuilder.standard)
-  
-  def createStack(stackName: String, templateUrl: Option[String], templateBody: Option[String]) = IO {
+
+  def createStack(stackName: String, templateUrl: Option[String], templateBody: Option[String]) = delay {
     val request = new CreateStackRequest().withStackName(stackName)
       .withCapabilities("CAPABILITY_NAMED_IAM")
 
@@ -33,7 +30,7 @@ trait CloudformationClient[F[_]] extends AwsClient[F] {
     cloudformation.createStack(request)
   }
 
-  def updateStack(stackName: String, templateUrl: Option[String], templateBody: Option[String]) = IO {
+  def updateStack(stackName: String, templateUrl: Option[String], templateBody: Option[String]) = delay {
     val request = new UpdateStackRequest().withStackName(stackName)
       .withCapabilities("CAPABILITY_NAMED_IAM")
 
@@ -43,15 +40,15 @@ trait CloudformationClient[F[_]] extends AwsClient[F] {
     cloudformation.updateStack(request)
   }
 
-  def deleteStack(stackName: String) = IO {
+  def deleteStack(stackName: String) = delay {
     cloudformation.deleteStack(new DeleteStackRequest().withStackName(stackName))
   }
 
-  def describeStackResources(stackName: String) = IO {
+  def describeStackResources(stackName: String) = delay {
     cloudformation.describeStackResources(new DescribeStackResourcesRequest().withStackName(stackName)).getStackResources
   }
 
-  def createChangeSet(stackName: String, templateUrl: Option[String], templateBody: Option[String], changeSetName: Option[String] = None) = IO {
+  def createChangeSet(stackName: String, templateUrl: Option[String], templateBody: Option[String], changeSetName: Option[String] = None) = delay {
     val request = new CreateChangeSetRequest()
       .withStackName(stackName)
       .withChangeSetName(changeSetName.getOrElse(s"$stackName-${uuid()}"))
@@ -63,27 +60,16 @@ trait CloudformationClient[F[_]] extends AwsClient[F] {
     cloudformation.createChangeSet(request)
   }
 
-  def describeChangeSet(changeSetName: String) = IO {
+  def describeChangeSet(changeSetName: String) = delay {
     cloudformation.describeChangeSet(new DescribeChangeSetRequest().withChangeSetName(changeSetName))
   }
 
-  def createChangeSetAndWaitForComplete(stackName: String, templateUrl: Option[String], templateBody: Option[String])(implicit timer: Timer[IO]) = {
-    def waitForComplete(changeSetName: String): IO[DescribeChangeSetResult] =
-      for {
-        changeSet <- describeChangeSet(changeSetName)
-        result <-
-          if (changeSet.getStatus === "CREATE_COMPLETE" || changeSet.getStatus === "FAILED")
-            IO(changeSet)
-          else for {
-            // Wait for change set to complete...
-            _ <- IO.sleep(3.seconds)
-            r <- waitForComplete(changeSetName)
-          } yield r
-      } yield result
-
+  def createChangeSetAndWaitForComplete(stackName: String, templateUrl: Option[String], templateBody: Option[String]) = {
     for {
       changeSet <- createChangeSet(stackName, templateUrl, templateBody)
-      describeResult <- waitForComplete(changeSet.getId)
+      describeResult <- waitFor(describeChangeSet(changeSet.getId)) { changeSet =>
+        pure(changeSet.getStatus === "CREATE_COMPLETE" || changeSet.getStatus === "FAILED")
+      }
     } yield describeResult
   }
 }
