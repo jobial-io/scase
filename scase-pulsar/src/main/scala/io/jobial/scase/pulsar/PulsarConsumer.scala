@@ -4,16 +4,16 @@ import cats.Monad
 import cats.effect.Concurrent
 import cats.effect.Timer
 import cats.effect.concurrent.Ref
-import cats.effect.implicits.catsEffectSyntaxConcurrent
 import cats.implicits._
-import io.jobial.scase.core.impl.CatsUtils
-import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.core.DefaultMessageReceiveResult
 import io.jobial.scase.core.MessageReceiveResult
 import io.jobial.scase.core.ReceiveTimeout
+import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
 import java.util.UUID.randomUUID
+import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
 import scala.compat.java8.FutureConverters.toScala
 import scala.concurrent.TimeoutException
@@ -44,15 +44,15 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](topic: String, val subscripti
 
   def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]) =
     for {
-      pulsarMessage <- {
-        val r = fromFuture(toScala(consumer.receiveAsync))
-        timeout.map(t => r.timeout(t) handleErrorWith {
-          case t: TimeoutException =>
-            debug[F](s"Receive timed out after $timeout") >>
-              Concurrent[F].raiseError(ReceiveTimeout(timeout, t))
-          case t =>
-            Concurrent[F].raiseError(t)
-        }).getOrElse(r)
+      pulsarMessage <- fromFuture(toScala {
+        val f = consumer.receiveAsync
+        timeout.map(t => f.orTimeout(t.toNanos, TimeUnit.NANOSECONDS)).getOrElse(f)
+      }).handleErrorWith {
+        case t: TimeoutException =>
+          debug[F](s"Receive timed out after $timeout") >>
+            Concurrent[F].raiseError(ReceiveTimeout(timeout, t))
+        case t =>
+          Concurrent[F].raiseError(t)
       }
       _ <- debug[F](s"received message ${new String(pulsarMessage.getData).take(200)} on $topic")
       unmarshalledMessage = Unmarshaller[M].unmarshal(pulsarMessage.getData)
