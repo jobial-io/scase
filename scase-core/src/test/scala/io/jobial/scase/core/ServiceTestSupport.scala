@@ -111,7 +111,7 @@ trait ServiceTestSupport extends AsyncFlatSpec
       _ = println(s"xxxsent $r1")
       m2 <- responseReceiverClient.receive
       _ = println(s"xxxreceived $m2")
-      _ <- errorReceiverClient.receive(2.second).map(_ => fail()).handleErrorWith { case t: RequestTimeout => t.printStackTrace(); error[IO](s"receiver received error", t) }
+      _ <- errorReceiverClient.receive(2.second).map(_ => fail()).handleErrorWith { case t: ReceiveTimeout => t.printStackTrace(); error[IO](s"receiver received error", t) }
     } yield assert(
       response1 === m1 && response1 === m2
     )
@@ -151,7 +151,7 @@ trait ServiceTestSupport extends AsyncFlatSpec
   def testRequestResponseTimeout(client: RequestResponseClient[IO, TestRequest[_ <: TestResponse], TestResponse]) = {
     implicit val sendRequestContext = SendRequestContext(requestTimeout = Some(1.second))
 
-    recoverToSucceededIf[TimeoutException] {
+    recoverToSucceededIf[RequestTimeout] {
       for {
         _ <- (client ? request1).handleErrorWith { t =>
           for {
@@ -201,7 +201,7 @@ trait ServiceTestSupport extends AsyncFlatSpec
   ) = {
     implicit val sendRequestContext = SendRequestContext(requestTimeout = Some(1.second))
 
-    recoverToSucceededIf[ReceiveTimeout[IO]] {
+    recoverToSucceededIf[ReceiveTimeout] {
       for {
         _ <- senderClient ! request1
         _ <- receiverClient.receive(1.second).map(_ => fail("expected exception"))

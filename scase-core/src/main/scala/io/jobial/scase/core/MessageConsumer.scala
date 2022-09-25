@@ -51,10 +51,15 @@ trait MessageConsumer[F[_], M] {
   def stop: F[Unit]
 }
 
-case class ReceiveTimeout[F[_]](
-  consumer: MessageConsumer[F, _],
-  timeout: Option[Duration]
-) extends TimeoutException(s"receive timed out in $consumer after $timeout")
+case class ReceiveTimeout(
+  timeout: Option[Duration],
+  cause: Throwable
+) extends IllegalStateException(s"receive timed out after $timeout", cause)
+
+object ReceiveTimeout {
+
+  def apply(timeout: Option[Duration]): ReceiveTimeout = ReceiveTimeout(timeout, null)
+}
 
 case class CouldNotFindMessageToCommit[M](
   message: M

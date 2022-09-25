@@ -25,6 +25,7 @@ trait CatsUtils {
         }
     }
 
-  def whenA[F[_]: Monad, A](cond: Boolean)(f: => F[A]): F[Unit] =
+  def whenA[F[_] : Monad, A](cond: Boolean)(f: => F[A]): F[Unit] =
     if (cond) Monad[F].void(f) else Monad[F].unit
+
 }

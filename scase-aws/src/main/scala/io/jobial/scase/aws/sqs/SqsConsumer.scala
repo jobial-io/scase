@@ -125,7 +125,7 @@ class SqsConsumer[F[_] : Concurrent, M](
           //                            logger.error(s"could not process received message $sqsMessage", t)
           //                        }
           case None =>
-            Concurrent[F].raiseError(ReceiveTimeout(this, timeout))
+            Concurrent[F].raiseError(ReceiveTimeout(timeout))
         }
       }
     } yield result

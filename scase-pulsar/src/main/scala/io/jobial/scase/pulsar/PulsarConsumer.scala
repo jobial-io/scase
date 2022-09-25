@@ -20,7 +20,7 @@ import scala.concurrent.TimeoutException
 import scala.concurrent.duration.FiniteDuration
 
 
-class PulsarConsumer[F[_] : Concurrent: Timer, M](topic: String, val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]])(implicit context: PulsarContext)
+class PulsarConsumer[F[_] : Concurrent : Timer, M](topic: String, val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]])(implicit context: PulsarContext)
   extends DefaultMessageConsumer[F, M] with CatsUtils with Logging {
 
   val subscriptionName = s"$topic-subscription-${randomUUID}"
@@ -35,15 +35,21 @@ class PulsarConsumer[F[_] : Concurrent: Timer, M](topic: String, val subscriptio
       .topic(topic)
       .subscriptionName(subscriptionName)
       .subscribe
-  
+
+  sys.addShutdownHook(new Thread {
+    override def run() =
+      if (consumer.isConnected)
+        consumer.unsubscribe()
+  })
+
   def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]) =
     for {
       pulsarMessage <- {
         val r = fromFuture(toScala(consumer.receiveAsync))
         timeout.map(t => r.timeout(t) handleErrorWith {
-          case t: TimeoutException => 
+          case t: TimeoutException =>
             debug[F](s"Receive timed out after $timeout") >>
-              Concurrent[F].raiseError(ReceiveTimeout(this, timeout))
+              Concurrent[F].raiseError(ReceiveTimeout(timeout, t))
           case t =>
             Concurrent[F].raiseError(t)
         }).getOrElse(r)
@@ -53,19 +59,25 @@ class PulsarConsumer[F[_] : Concurrent: Timer, M](topic: String, val subscriptio
       result <- unmarshalledMessage match {
         case Right(message) =>
           val attributes = pulsarMessage.getProperties.asScala.toMap
-          Monad[F].pure(DefaultMessageReceiveResult(Monad[F].pure(message), attributes, Monad[F].unit, Monad[F].unit))
+          Monad[F].pure(
+            DefaultMessageReceiveResult(Monad[F].pure(message), attributes,
+              commit = Concurrent[F].delay(consumer.acknowledge(pulsarMessage)),
+              rollback = Concurrent[F].delay(consumer.negativeAcknowledge(pulsarMessage))
+            )
+          )
         case Left(error) =>
           Concurrent[F].raiseError(error)
       }
     } yield result
 
-  // TODO: get rid of subscription
-  def stop = Concurrent[F].delay(consumer.close())
+  def stop =
+    Concurrent[F].delay(consumer.unsubscribe()) >>
+      Concurrent[F].delay(consumer.close())
 }
 
 object PulsarConsumer {
 
-  def apply[F[_] : Concurrent: Timer, M](topic: String)(implicit context: PulsarContext): F[PulsarConsumer[F, M]] =
+  def apply[F[_] : Concurrent : Timer, M](topic: String)(implicit context: PulsarContext): F[PulsarConsumer[F, M]] =
     for {
       subscriptions <- Ref.of[F, List[MessageReceiveResult[F, M] => F[_]]](List())
     } yield new PulsarConsumer[F, M](topic, subscriptions)

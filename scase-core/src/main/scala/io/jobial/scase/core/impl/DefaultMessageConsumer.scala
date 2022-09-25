@@ -29,7 +29,7 @@ abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsu
     } yield {
       logger.info(s"finished receiving messages in $this")
     }) handleErrorWith {
-      case t: ReceiveTimeout[F] =>
+      case t: ReceiveTimeout =>
         continueIfNotCancelled
       case t =>
         error[F](s"stopped receiving messages on consumer $this", t)

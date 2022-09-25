@@ -58,7 +58,7 @@ class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscripti
         case Left(error) =>
           Concurrent[F].raiseError(error)
 
-      }).getOrElse(Concurrent[F].raiseError(ReceiveTimeout(this, timeout)))
+      }).getOrElse(Concurrent[F].raiseError(ReceiveTimeout(timeout)))
     } yield result
 
   def stop = Concurrent[F].delay(consumer.close())
