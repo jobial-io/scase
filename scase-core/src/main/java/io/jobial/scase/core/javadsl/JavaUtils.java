@@ -80,5 +80,7 @@ public class JavaUtils {
     public static Concurrent<IO> concurrent = IO$.MODULE$.ioConcurrentEffect(contextShift);
 
     public static Timer<IO> timer = IO$.MODULE$.timer(executionContext);
+    
+    
 
 }

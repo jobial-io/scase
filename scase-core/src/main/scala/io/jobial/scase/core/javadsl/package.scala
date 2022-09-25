@@ -3,6 +3,7 @@ package io.jobial.scase.core
 import cats.effect.ContextShift
 import cats.effect.IO
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 import java.util.function.BiConsumer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future

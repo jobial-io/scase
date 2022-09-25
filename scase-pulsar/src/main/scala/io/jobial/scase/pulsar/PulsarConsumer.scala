@@ -35,11 +35,10 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](topic: String, val subscripti
       .subscriptionName(subscriptionName)
       .subscribe
 
-  sys.addShutdownHook(new Thread {
-    override def run() =
-      if (consumer.isConnected)
-        consumer.unsubscribe()
-  })
+  sys.addShutdownHook { () =>
+    if (consumer.isConnected)
+      consumer.unsubscribe()
+  }
 
   def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]) =
     for {

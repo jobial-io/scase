@@ -12,19 +12,27 @@
  */
 package io.jobial.scase.aws.client
 
+import cats.effect.Concurrent
+import cats.effect.Timer
 import java.util.concurrent.{ExecutionException, ExecutorService, Executors}
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.client.builder.{AwsAsyncClientBuilder, AwsSyncClientBuilder, ExecutorFactory}
 import com.amazonaws.endpointdiscovery.DaemonThreadFactory
-
+import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.logging.Logging
 import scala.concurrent.Future.failed
 import scala.concurrent.{ExecutionContext, Future}
 
-trait AwsClient[F[_]] {
+trait AwsClient[F[_]] extends CatsUtils with Logging {
 
   def awsContext: AwsContext
-  
+
+  protected implicit def concurrent: Concurrent[F]
+
+  protected implicit def timer: Timer[F]
+
+
   /**
    * Clients are supposed to be thread safe: https://forums.aws.amazon.com/message.jspa?messageID=191621
    */
@@ -65,20 +73,10 @@ trait AwsClient[F[_]] {
 
     val b3 = b2.withClientConfiguration(new ClientConfiguration().withMaxConnections(100))
       .withExecutorFactory(new ExecutorFactory {
-        def newExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory) 
+        def newExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory)
       })
 
     b3.build
-  }
-
-  implicit def toScalaFuture[T](f: java.util.concurrent.Future[T])(implicit ec: ExecutionContext) = Future {
-    // unfortunately we cannot do any better here...
-    f.get
-  } recoverWith {
-    case t: ExecutionException =>
-      failed(t.getCause)
-    case t =>
-      failed(t)
   }
 
 }

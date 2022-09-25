@@ -12,23 +12,28 @@
  */
 package io.jobial.scase.aws.client
 
-import cats.effect.IO
+import cats.effect.Concurrent
+import cats.effect.Timer
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
-import com.amazonaws.services.securitytoken.{AWSSecurityTokenService, AWSSecurityTokenServiceClientBuilder}
-import io.jobial.scase.logging.Logging
+import com.amazonaws.services.securitytoken.AWSSecurityTokenService
+import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder
 
-trait StsClient[F[_]] extends AwsClient[F] with Logging {
+trait StsClient[F[_]] extends AwsClient[F] {
 
   lazy val sts = buildAwsClient[AWSSecurityTokenServiceClientBuilder, AWSSecurityTokenService](AWSSecurityTokenServiceClientBuilder.standard)
 
   def getAccountId =
-    IO(sts.getCallerIdentity(new GetCallerIdentityRequest).getAccount)
+    delay(sts.getCallerIdentity(new GetCallerIdentityRequest).getAccount)
 }
 
 object StsClient {
 
-  def apply[F[_]](implicit context: AwsContext) =
+  def apply[F[_] : Concurrent : Timer](implicit context: AwsContext) =
     new StsClient[F] {
       def awsContext = context
+
+      val concurrent = Concurrent[F]
+
+      val timer = Timer[F]
     }
 }
