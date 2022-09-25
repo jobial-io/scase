@@ -22,12 +22,19 @@ public class PulsarMessageHandlerServiceConfiguration<M> {
         this.config = config;
     }
 
+    public Service service(MessageHandler<IO, M> messageHandler, PulsarContext pulsarContext) throws ExecutionException, InterruptedException {
+        return JavaUtils.service(config.service(messageHandler, concurrent, timer, pulsarContext.getContext())).get();
+    }
+
     public Service service(MessageHandler<IO, M> messageHandler) throws ExecutionException, InterruptedException {
-        return JavaUtils.service(config.service(messageHandler, concurrent, timer, new PulsarContext().getContext())).get();
+        return service(messageHandler, new PulsarContext());
+    }
+
+    public SenderClient<M> client(PulsarContext pulsarContext) throws ExecutionException, InterruptedException {
+        return JavaUtils.<M>senderClient(config.client(concurrent, timer, pulsarContext.getContext())).get();
     }
 
     public SenderClient<M> client() throws ExecutionException, InterruptedException {
-        return JavaUtils.<M>senderClient(config.client(concurrent, timer, new PulsarContext().getContext())).get();
+        return client(new PulsarContext());
     }
-
 }
