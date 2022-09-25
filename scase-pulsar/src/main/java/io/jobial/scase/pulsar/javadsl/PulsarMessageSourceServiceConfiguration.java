@@ -1,6 +1,6 @@
 package io.jobial.scase.pulsar.javadsl;
 
-import cats.effect.IO;
+import io.jobial.scase.core.javadsl.JavaUtils;
 import io.jobial.scase.core.javadsl.ReceiverClient;
 
 import java.util.concurrent.ExecutionException;
@@ -16,8 +16,6 @@ public class PulsarMessageSourceServiceConfiguration<M> {
     }
 
     public ReceiverClient<M> client() throws ExecutionException, InterruptedException {
-        return ioToCompletableFuture((IO<io.jobial.scase.core.impl.ConsumerReceiverClient<IO, M>>) config.client(concurrent, timer, new PulsarContext().getContext(), contextShift))
-                .thenApply(r -> new ReceiverClient(r))
-                .get();
+        return JavaUtils.<M>receiverClient(config.client(concurrent, timer, new PulsarContext().getContext(), contextShift)).get();
     }
 }

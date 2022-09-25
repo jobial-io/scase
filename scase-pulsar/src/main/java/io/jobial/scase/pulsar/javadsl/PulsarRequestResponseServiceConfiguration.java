@@ -2,6 +2,7 @@ package io.jobial.scase.pulsar.javadsl;
 
 import cats.effect.*;
 import io.jobial.scase.core.RequestHandler;
+import io.jobial.scase.core.javadsl.JavaUtils;
 import io.jobial.scase.core.javadsl.RequestResponseClient;
 import io.jobial.scase.core.javadsl.Service;
 
@@ -18,14 +19,10 @@ public class PulsarRequestResponseServiceConfiguration<REQ, RESP> {
     }
 
     public Service service(RequestHandler<IO, REQ, RESP> requestHandler) throws ExecutionException, InterruptedException {
-        return ioToCompletableFuture((IO<io.jobial.scase.core.impl.ConsumerProducerRequestResponseService<IO, REQ, RESP>>) config.service(requestHandler, concurrent, new PulsarContext().getContext(), contextShift))
-                .thenApply(r -> new Service(r))
-                .get();
+        return JavaUtils.service(config.service(requestHandler, concurrent, new PulsarContext().getContext(), contextShift)).get();
     }
 
     public RequestResponseClient<REQ, RESP> client() throws ExecutionException, InterruptedException {
-        return ioToCompletableFuture((IO<io.jobial.scase.core.impl.ConsumerProducerRequestResponseClient<IO, REQ, RESP>>) config.client(concurrent, timer, new PulsarContext().getContext(), contextShift))
-                .thenApply(r -> new RequestResponseClient(r))
-                .get();
+        return JavaUtils.<REQ, RESP>requestResponseClient(config.client(concurrent, timer, new PulsarContext().getContext(), contextShift)).get();
     }
 }

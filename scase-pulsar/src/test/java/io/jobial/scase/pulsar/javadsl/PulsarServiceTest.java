@@ -17,6 +17,7 @@ import io.jobial.scase.core.javadsl.RequestHandler;
 import io.jobial.scase.core.javadsl.SendRequestContext;
 import io.jobial.scase.marshalling.serialization.javadsl.SerializationMarshalling;
 import org.junit.Test;
+import scala.util.Either;
 
 import java.util.concurrent.ExecutionException;
 
@@ -148,24 +149,21 @@ public class PulsarServiceTest {
 
     @Test
     public void testStreamService() throws ExecutionException, InterruptedException, RequestTimeout {
-        var responseTopic = "hello-test-response-" + uuid(6);
         var serviceConfig =
-                stream("hello-test-" + uuid(6), responseTopic, new SerializationMarshalling<TestRequest>(), new SerializationMarshalling<TestResponse>());
-
-        var sourceConfig = source(responseTopic, new SerializationMarshalling<TestResponse>());
+                stream("hello-test-" + uuid(6), "hello-test-response-" + uuid(6), new SerializationMarshalling<TestRequest>(), new SerializationMarshalling<TestResponse>());
 
         var service = serviceConfig.service(requestHandler);
         var state = service.start();
 
-        var senderClient = serviceConfig.client();
+        var senderClient = serviceConfig.senderClient();
+        var receiverClient = serviceConfig.receiverClient();
         var request = new TestRequest1("world");
         senderClient.send(request)
                 .whenComplete((r, error) -> System.out.println(r))
                 .get();
 
-        var receiverClient = sourceConfig.client();
         var response = receiverClient.receive().get();
-        assertEquals(response, new TestResponse1(request, "hello world"));
+        assertEquals(response.right().get(), new TestResponse1(request, "hello world"));
         Thread.sleep(1000);
         state.get().stop().whenComplete((r, error) -> System.out.println("stopped service"));
         Thread.sleep(1000);

@@ -17,7 +17,7 @@ import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
 import com.amazonaws.services.securitytoken.{AWSSecurityTokenService, AWSSecurityTokenServiceClientBuilder}
 import io.jobial.scase.logging.Logging
 
-trait StsClient extends AwsClient with Logging {
+trait StsClient[F[_]] extends AwsClient[F] with Logging {
 
   lazy val sts = buildAwsClient[AWSSecurityTokenServiceClientBuilder, AWSSecurityTokenService](AWSSecurityTokenServiceClientBuilder.standard)
 
@@ -27,8 +27,8 @@ trait StsClient extends AwsClient with Logging {
 
 object StsClient {
 
-  def apply(implicit context: AwsContext) =
-    new StsClient {
+  def apply[F[_]](implicit context: AwsContext) =
+    new StsClient[F] {
       def awsContext = context
     }
 }

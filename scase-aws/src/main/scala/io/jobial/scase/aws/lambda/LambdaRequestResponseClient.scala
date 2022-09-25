@@ -13,13 +13,13 @@
 package io.jobial.scase.aws.lambda
 
 import cats.Monad
+import cats.effect.IO.raiseError
 import cats.effect.{Concurrent, IO}
 import cats.implicits._
 import io.jobial.scase.aws.client.AwsContext
 import io.jobial.scase.core.impl.{DefaultMessageSendResult, DefaultRequestResponseResult, DefaultSendResponseResult}
 import io.jobial.scase.core.{DefaultMessageReceiveResult, MessageReceiveResult, RequestResponseClient, RequestResponseMapping, RequestResponseResult, SendRequestContext}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
-
 import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext
 
@@ -50,7 +50,7 @@ case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP:
                 case Right(r) =>
                   IO(r.asInstanceOf[RESPONSE])
                 case Left(t) =>
-                  IO.raiseError(t)
+                  raiseError(t)
               }
             } yield m),
           Map(), // TODO: propagate attributes here

@@ -37,9 +37,9 @@ public class PulsarServiceConfiguration {
     public static <REQ, RESP> PulsarStreamServiceConfiguration<REQ, RESP> stream(
             String requestTopic,
             String responseTopic,
+            Duration batchingMaxPublishDelay,
             Marshalling<REQ> requestMarshalling,
-            Marshalling<RESP> responseMarshalling,
-            Duration batchingMaxPublishDelay
+            Marshalling<RESP> responseMarshalling
     ) {
         return new PulsarStreamServiceConfiguration(PulsarServiceConfiguration$.MODULE$.<REQ, RESP>stream(
                 requestTopic,
@@ -49,8 +49,8 @@ public class PulsarServiceConfiguration {
                 requestMarshalling.unmarshaller(),
                 responseMarshalling.marshaller(),
                 responseMarshalling.unmarshaller(),
-                responseMarshalling.eitherMarshaller(),
-                responseMarshalling.eitherUnmarshaller()
+                responseMarshalling.throwableMarshaller(),
+                responseMarshalling.throwableUnmarshaller()
         ));
     }
 
@@ -60,12 +60,45 @@ public class PulsarServiceConfiguration {
             Marshalling<REQ> requestMarshalling,
             Marshalling<RESP> responseMarshalling
     ) {
+        return stream(requestTopic, responseTopic, Duration.ofMillis(1), requestMarshalling, responseMarshalling);
+    }
+
+    public static <REQ, RESP> PulsarStreamServiceWithErrorTopicConfiguration<REQ, RESP> stream(
+            String requestTopic,
+            String responseTopic,
+            String errorTopic,
+            Duration batchingMaxPublishDelay,
+            Marshalling<REQ> requestMarshalling,
+            Marshalling<RESP> responseMarshalling
+    ) {
+        return new PulsarStreamServiceWithErrorTopicConfiguration(PulsarServiceConfiguration$.MODULE$.<REQ, RESP>stream(
+                requestTopic,
+                responseTopic,
+                errorTopic,
+                scala.concurrent.duration.Duration.fromNanos(batchingMaxPublishDelay.toNanos()),
+                requestMarshalling.marshaller(),
+                requestMarshalling.unmarshaller(),
+                responseMarshalling.marshaller(),
+                responseMarshalling.unmarshaller(),
+                responseMarshalling.throwableMarshaller(),
+                responseMarshalling.throwableUnmarshaller()
+        ));
+    }
+
+    public static <REQ, RESP> PulsarStreamServiceWithErrorTopicConfiguration<REQ, RESP> stream(
+            String requestTopic,
+            String responseTopic,
+            String errorTopic,
+            Marshalling<REQ> requestMarshalling,
+            Marshalling<RESP> responseMarshalling
+    ) {
         return stream(
                 requestTopic,
                 responseTopic,
+                errorTopic,
+                Duration.ofMillis(1),
                 requestMarshalling,
-                responseMarshalling,
-                Duration.ofMillis(1)
+                responseMarshalling
         );
     }
 

@@ -23,7 +23,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
 
-trait S3Client extends AwsClient {
+trait S3Client[F[_]] extends AwsClient[F] {
 
   lazy val s3 = buildAwsClient[AmazonS3ClientBuilder, AmazonS3](AmazonS3ClientBuilder.standard)
 
@@ -113,8 +113,8 @@ trait S3Client extends AwsClient {
 
 object S3Client {
 
-  def apply(implicit context: AwsContext) =
-    new S3Client {
+  def apply[F[_]](implicit context: AwsContext) =
+    new S3Client[F] {
       def awsContext = context
     }
 }

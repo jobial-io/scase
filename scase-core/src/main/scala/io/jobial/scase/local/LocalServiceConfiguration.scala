@@ -29,10 +29,10 @@ class LocalServiceConfiguration[REQ, RESP](
 
   def client[F[_] : Concurrent : Timer](service: ConsumerProducerRequestResponseService[F, REQ, RESP]) =
     for {
-      messageConsumer <- service.messageProducer(None)
+      messageConsumer <- service.responseProducer(None)
       client <- ConsumerProducerRequestResponseClient[F, REQ, RESP](
         messageConsumer.asInstanceOf[InMemoryConsumerProducer[F, Either[Throwable, RESP]]],
-        () => service.messageConsumer.asInstanceOf[InMemoryConsumerProducer[F, REQ]],
+        () => service.requestConsumer.asInstanceOf[InMemoryConsumerProducer[F, REQ]],
         None
       )
     } yield client

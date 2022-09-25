@@ -14,19 +14,21 @@ package io.jobial.scase.core
 
 import cats.Eq
 import cats.effect.IO
+import cats.effect.IO.raiseError
 import cats.effect.concurrent.Deferred
 import cats.tests.StrictCatsEquality
+import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
 import org.scalatest.Assertion
 import org.scalatest.flatspec.AsyncFlatSpec
-
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration._
 
 trait ServiceTestSupport extends AsyncFlatSpec
   with StrictCatsEquality
   with ScaseTestHelper
-  with ServiceTestModel {
+  with ServiceTestModel
+  with Logging {
 
   val requestHandler = new TestRequestHandler {}
 
@@ -46,7 +48,7 @@ trait ServiceTestSupport extends AsyncFlatSpec
         println("replying...")
         r ! response1
       case r: TestRequest2 =>
-        IO.raiseError(TestException("exception!!!"))
+        raiseError(TestException("exception!!!"))
     }
   }
 
@@ -81,7 +83,7 @@ trait ServiceTestSupport extends AsyncFlatSpec
   def testSuccessfulStreamReply[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP : Unmarshaller : Eq](
     senderClient: SenderClient[IO, REQ],
     request1: REQUEST, response1: RESPONSE,
-    receiverClient: ReceiverClient[IO, Either[RESPONSE, Throwable]]
+    receiverClient: ReceiverClient[IO, Either[Throwable, RESPONSE]]
   ): IO[Assertion] =
     for {
       _ <- senderClient.send(request1)
@@ -90,13 +92,34 @@ trait ServiceTestSupport extends AsyncFlatSpec
       _ <- senderClient ! request1
       m2 <- receiverClient.receive
     } yield assert(
-      response1 === m1.left.get && response1 === m2.left.get
+      response1 === m1.right.get && response1 === m2.right.get
+    )
+
+  def testSuccessfulStreamReply[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP : Unmarshaller : Eq](
+    senderClient: SenderClient[IO, REQ],
+    request1: REQUEST, response1: RESPONSE,
+    responseReceiverClient: ReceiverClient[IO, RESPONSE],
+    errorReceiverClient: ReceiverClient[IO, Throwable]
+  ): IO[Assertion] =
+    for {
+      _ <- senderClient.send(request1)
+      _ = println(s"xxxsent $request1")
+      r1 <- responseReceiverClient.receiveWithContext
+      _ = println(s"xxxreceived $r1")
+      m1 <- r1.message
+      _ <- senderClient ! request1
+      _ = println(s"xxxsent $r1")
+      m2 <- responseReceiverClient.receive
+      _ = println(s"xxxreceived $m2")
+      _ <- errorReceiverClient.receive(2.second).handleErrorWith(t => error[IO](s"receiver received error", t))
+    } yield assert(
+      response1 === m1 && response1 === m2
     )
 
   def testSuccessfulStreamReply(
     service: Service[IO],
     senderClient: SenderClient[IO, TestRequest[_ <: TestResponse]],
-    receiverClient: ReceiverClient[IO, Either[TestResponse, Throwable]]
+    receiverClient: ReceiverClient[IO, Either[Throwable, TestResponse]]
   )(implicit u: Unmarshaller[TestResponse]): IO[Assertion] = {
     for {
       h <- service.start
@@ -104,6 +127,23 @@ trait ServiceTestSupport extends AsyncFlatSpec
       r2 <- testSuccessfulStreamReply(senderClient, request2, response2, receiverClient)
       _ <- senderClient.stop
       _ <- receiverClient.stop
+      _ <- h.stop
+    } yield r1
+  }
+
+  def testSuccessfulStreamReply(
+    service: Service[IO],
+    senderClient: SenderClient[IO, TestRequest[_ <: TestResponse]],
+    responseReceiverClient: ReceiverClient[IO, TestResponse],
+    errorReceiverClient: ReceiverClient[IO, Throwable]
+  )(implicit u: Unmarshaller[TestResponse]): IO[Assertion] = {
+    for {
+      h <- service.start
+      r1 <- testSuccessfulStreamReply(senderClient, request1, response1, responseReceiverClient, errorReceiverClient)
+      r2 <- testSuccessfulStreamReply(senderClient, request2, response2, responseReceiverClient, errorReceiverClient)
+      _ <- senderClient.stop
+      _ <- responseReceiverClient.stop
+      _ <- errorReceiverClient.stop
       _ <- h.stop
     } yield r1
   }
@@ -116,7 +156,7 @@ trait ServiceTestSupport extends AsyncFlatSpec
         _ <- (client ? request1).handleErrorWith { t =>
           for {
             _ <- client.stop
-            _ <- IO.raiseError(t)
+            _ <- raiseError(t)
           } yield ()
         }
       } yield succeed
@@ -136,7 +176,7 @@ trait ServiceTestSupport extends AsyncFlatSpec
           for {
             _ <- senderClient.stop
             _ <- receiverClient.stop
-            _ <- IO.raiseError(t)
+            _ <- raiseError(t)
           } yield ()
         }
       } yield succeed
@@ -157,7 +197,7 @@ trait ServiceTestSupport extends AsyncFlatSpec
   def testStreamErrorReply(
     service: Service[IO],
     senderClient: SenderClient[IO, TestRequest[_ <: TestResponse]],
-    receiverClient: ReceiverClient[IO, Either[TestResponse, Throwable]]
+    receiverClient: ReceiverClient[IO, Either[Throwable, TestResponse]]
   ) = {
     implicit val sendRequestContext = SendRequestContext(requestTimeout = Some(1.second))
 

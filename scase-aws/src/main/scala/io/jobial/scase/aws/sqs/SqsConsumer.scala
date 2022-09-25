@@ -33,6 +33,7 @@ class SqsConsumer[F[_] : Concurrent, M](
 
   import awsContext.sqsClient._
 
+  // TODO: clean effect type up here
   override def initialize =
     Concurrent[F].liftIO(for {
       _ <- createQueueIfNotExists(queueUrl)
@@ -45,7 +46,7 @@ class SqsConsumer[F[_] : Concurrent, M](
             throw new RuntimeException(s"error deleting queue $queueUrl", t)
         }
       })) else IO()
-      _ = logger.debug(s"created queue $queueUrl")
+      _ <- debug[IO](s"created queue $queueUrl")
       _ <- messageRetentionPeriod.map(setMessageRetentionPeriod(queueUrl, _)).getOrElse(IO())
       _ <- visibilityTimeout.map(setVisibilityTimeout(queueUrl, _)).getOrElse(IO())
     } yield ())
@@ -57,12 +58,12 @@ class SqsConsumer[F[_] : Concurrent, M](
       newMessages <-
         if (receivedMessages.isEmpty)
           for {
-            newMessages <- Concurrent[F].delay {
-              logger.debug(s"waiting for messages on $queueUrl")
-              // TODO: handle timeout more precisely
-              receiveMessage(queueUrl, 10, timeout.map(_.toSeconds.toInt).getOrElse(Int.MaxValue)).getMessages.asScala
-            }
-            _ = logger.debug(s"received messages ${newMessages.toString.take(500)} on queue $queueUrl")
+            newMessages <-
+              debug[F](s"waiting for messages on $queueUrl") >>
+                // TODO: handle timeout more precisely
+                // TODO: clean up effect type here
+                Concurrent[F].liftIO(receiveMessage(queueUrl, 10, timeout.map(_.toSeconds.toInt).getOrElse(Int.MaxValue)).map(_.getMessages.asScala))
+            _ <- debug[F](s"received messages ${newMessages.toString.take(500)} on queue $queueUrl")
           } yield newMessages
         else
           Monad[F].pure(List())
@@ -102,7 +103,7 @@ class SqsConsumer[F[_] : Concurrent, M](
                     o <- outstandingMessagesRef.get
                     r <- o.get(unmarshalledMessage) match {
                       case Some(receiptHandle) =>
-                        logger.debug(s"deleted message ${unmarshalledMessage.toString.take(500)}")
+                        debug[F](s"deleted message ${unmarshalledMessage.toString.take(500)}") >>
                         Concurrent[F].delay(deleteMessage(queueUrl, receiptHandle))
                       case _ =>
                         Concurrent[F].raiseError(CouldNotFindMessageToCommit(unmarshalledMessage))

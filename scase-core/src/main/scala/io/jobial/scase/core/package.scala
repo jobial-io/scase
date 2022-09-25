@@ -6,7 +6,7 @@ import io.jobial.scase.logging.Logging
 import shapeless._
 import cats.implicits._
 
-package object core extends Logging {
+package object core {
 
   implicit class RequestExtension[F[_], REQUEST](request: REQUEST) {
 

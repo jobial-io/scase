@@ -32,7 +32,7 @@ abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsu
       case t: ReceiveTimeout[F] =>
         continueIfNotCancelled
       case t =>
-        Concurrent[F].delay(logger.error(s"stopped receiving messages on consumer $this", t))
+        error[F](s"stopped receiving messages on consumer $this", t)
     }
   }
 

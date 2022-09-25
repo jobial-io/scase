@@ -21,10 +21,9 @@ import io.jobial.scase.util.Hash.uuid
 import scala.concurrent.duration.DurationInt
 import scala.util.{Success, Try}
 
-trait CloudformationClient extends AwsClient {
+trait CloudformationClient[F[_]] extends AwsClient[F] {
   lazy val cloudformation = buildAwsClient[AmazonCloudFormationClientBuilder, AmazonCloudFormation](AmazonCloudFormationClientBuilder.standard)
-
-
+  
   def createStack(stackName: String, templateUrl: Option[String], templateBody: Option[String]) = IO {
     val request = new CreateStackRequest().withStackName(stackName)
       .withCapabilities("CAPABILITY_NAMED_IAM")

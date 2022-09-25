@@ -11,161 +11,71 @@ import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
 import scala.concurrent.duration.Duration
 
 
-class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
-  producersCacheRef: Option[Ref[F, Map[Option[String], MessageProducer[F, Either[Throwable, RESP]]]]],
-  val messageConsumer: MessageConsumer[F, REQ],
-  val messageProducer: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
-  requestHandler: RequestHandler[F, REQ, RESP],
-  messageProducerForErrors: Option[MessageProducer[F, REQ]], // TODO: implement this
-  autoCommitRequest: Boolean,
-  autoCommitFailedRequest: Boolean,
-  defaultProducerId: Option[String]
+class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ, RESP: Marshaller](
+  val responseProducersCacheRef: Option[Ref[F, Map[Option[String], MessageProducer[F, Either[Throwable, RESP]]]]],
+  val requestConsumer: MessageConsumer[F, REQ],
+  val responseProducer: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
+  val requestHandler: RequestHandler[F, REQ, RESP],
+  val autoCommitRequest: Boolean,
+  val autoCommitFailedRequest: Boolean,
+  val defaultProducerId: Option[String]
 )(
-  implicit responseMarshaller: Marshaller[Either[Throwable, RESP]]
-  //sourceContext: SourceContext
-) extends DefaultService[F] with Logging {
+  implicit val requestUnmarshaller: Unmarshaller[REQ],
+  responseMarshaller: Marshaller[Either[Throwable, RESP]]
+) extends DefaultService[F] with ConsumerProducerService[F, REQ, RESP] with Logging {
 
-  private def handleRequest(request: MessageReceiveResult[F, REQ]) = {
-    logger.debug(s"received request in service: ${request.toString.take(500)}")
-    val r: F[MessageSendResult[F, Either[Throwable, RESP]]] = {
-      //      request.responseProducerId.orElse(defaultProducerId) match {
-      //        case Some(responseProducerId) =>
-      logger.debug(s"found response producer id ${request.responseProducerId} in request")
-
-      for {
-        producer <- producersCacheRef match {
-          case Some(producersCacheRef) =>
-            // Producers are cached...
-            for {
-              producerCache <- producersCacheRef.get
-              producer <- producerCache.get(request.responseProducerId) match {
-                case Some(producer) =>
-                  Monad[F].pure(producer)
-                case None =>
-                  messageProducer(request.responseProducerId)
-              }
-              _ <- producersCacheRef.update {
-                producersCache =>
-                  producersCache + (request.responseProducerId -> producer)
-              }
-            } yield producer
-          case None =>
-            // Just call the provided function for a new producer...
-            messageProducer(request.responseProducerId)
-        }
-        response <- Deferred[F, Either[Throwable, RESP]]
-        message <- request.message
-        processorResult <- {
-          logger.debug(s"found response producer $producer for request in service: ${request.toString.take(500)}")
-          // TODO: make this a Deferred
-
-          val processorResult =
-            Concurrent[F].delay(requestHandler.handleRequest(new RequestContext[F] {
-
-              def reply[REQUEST, RESPONSE](req: REQUEST, r: RESPONSE)(
-                implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE],
-                sendMessageContext: SendMessageContext
-              ): SendResponseResult[RESPONSE] = {
-                logger.debug(s"context sending response ${r.toString.take(500)}")
-                DefaultSendResponseResult[RESPONSE](r)
-              }
-
-              val requestTimeout = request.requestTimeout.getOrElse(Duration.Inf)
-
-              def receiveResult[REQUEST](r: REQUEST): MessageReceiveResult[F, REQUEST] =
-                request.asInstanceOf[MessageReceiveResult[F, REQUEST]]
-              
-            })(message)).flatten
-
-          val processResultWithErrorHandling = processorResult
-            .flatMap {
-              result =>
-                response.complete(Right(result.response))
-            }
-            .handleErrorWith {
-              case t =>
-                logger.error(s"request processing failed: ${request.toString.take(500)}", t)
-                response.complete(Left(t))
-            }
-
-          // TODO: handle handleRequest timeout
-
-          val responseAttributes = request.correlationId.map(correlationId => Map(CorrelationIdKey -> correlationId)).getOrElse(Map())
-
-          // send response when ready
+  override def sendResult(request: MessageReceiveResult[F, REQ], response: Deferred[F, Either[Throwable, RESP]], responseAttributes: Map[String, String]): F[MessageSendResult[F, _]] =
+    for {
+      res <- response.get
+      producer <- responseProducersCacheRef match {
+        case Some(producersCacheRef) =>
+          // Producers are cached...
           for {
-            r <- processResultWithErrorHandling
-            res <- response.get
-            resultAfterSend <- res match {
-              case Right(r) =>
-                logger.debug(s"sending success to client for request: ${request.toString.take(500)} on $producer")
-                for {
-                  sendResult <- producer.send(Right(r), responseAttributes)
-                  // commit request after result is written
-                  _ <- if (autoCommitRequest) {
-                    logger.debug(s"service committing request: ${request.toString.take(500)} on $producer")
-                    request.commit
-                  } else Monad[F].unit
-                } yield sendResult
-              case Left(t) =>
-                logger.error(s"sending failure to client for request: ${request.toString.take(500)}", t)
-                for {
-                  sendResult <- producer.send(Left(t), responseAttributes)
-                  _ <- if (autoCommitFailedRequest) {
-                    logger.debug(s"service committing request: ${request.toString.take(500)}")
-                    request.commit
-                  } else Monad[F].unit
-                } yield sendResult
+            producerCache <- producersCacheRef.get
+            producer <- producerCache.get(request.responseProducerId) match {
+              case Some(producer) =>
+                Monad[F].pure(producer)
+              case None =>
+                responseProducer(request.responseProducerId)
             }
-          } yield resultAfterSend
-        }
-      } yield processorResult
-      //        case None =>
-      //          logger.error(s"response producer id not found for request: ${request.toString.take(500)}")
-      //          MonadError[F, Throwable].raiseError(ResponseProducerIdNotFound(s"$this"))
-      //      }
-    }
-    r
-  }
+            _ <- producersCacheRef.update {
+              producersCache =>
+                producersCache + (request.responseProducerId -> producer)
+            }
+          } yield producer
+        case None =>
+          // Just call the provided function for a new producer...
+          responseProducer(request.responseProducerId)
+      }
+      _ <- debug[F](s"found response producer $producer for request in service: ${request.toString.take(500)}")
+      // TODO: make this a Deferred
+      resultAfterSend <- res match {
+        case Right(r) =>
+          for {
+            _ <- debug[F](s"sending success for request: ${request.toString.take(500)} on $producer")
+            sendResult <- producer.send(Right(r), responseAttributes)
+            // commit request after result is written
+            _ <-
+              if (autoCommitRequest)
+                debug[F](s"service committing request: ${request.toString.take(500)} on $producer") >>
+                  request.commit
+              else Monad[F].unit
+          } yield sendResult
+        case Left(t) =>
+          for {
+            _ <- error[F](s"sending failure for request: ${request.toString.take(500)}", t)
+            sendResult <- producer.send(Left(t), responseAttributes)
+            _ <-
+              if (autoCommitFailedRequest)
+                debug[F](s"service committing request: ${request.toString.take(500)}") >>
+                  request.commit
+              else Monad[F].unit
+          } yield sendResult
+      }
+    } yield resultAfterSend
 
-  def start = {
-    logger.info(s"starting service for processor $requestHandler")
-
-    for {
-      subscription <- messageConsumer.subscribe(handleRequest)
-    } yield {
-      logger.info(s"started service for processor $requestHandler")
-      DefaultServiceState(subscription, this)
-    }
-  }
 
 }
-
-case class DefaultServiceState[F[_] : Monad, M](
-  subscription: MessageSubscription[F, M],
-  service: Service[F]
-) extends ServiceState[F]
-  with Logging {
-
-  def stop =
-    for {
-      r <- subscription.cancel
-      _ <- subscription.join
-    } yield {
-      logger.info(s"Shutting down $service")
-      //service.executionContext.shutdown
-      this
-    }
-
-  def join =
-    for {
-      _ <- subscription.join
-    } yield {
-      this
-    }
-}
-
-case class DefaultSendResponseResult[RESPONSE](response: RESPONSE) extends SendResponseResult[RESPONSE]
 
 object ConsumerProducerRequestResponseService {
 
@@ -173,7 +83,7 @@ object ConsumerProducerRequestResponseService {
     requestConsumer: MessageConsumer[F, REQ],
     responseProducer: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
     requestHandler: RequestHandler[F, REQ, RESP],
-    messageProducerForErrors: Option[MessageProducer[F, REQ]] = None, // TODO: implement this
+    errorProducer: Option[Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]]] = None, // TODO: implement this
     autoCommitRequest: Boolean = true,
     autoCommitFailedRequest: Boolean = true,
     reuseProducers: Boolean = true,
@@ -181,23 +91,23 @@ object ConsumerProducerRequestResponseService {
   )(
     implicit responseMarshaller: Marshaller[Either[Throwable, RESP]]
     //sourceContext: SourceContext
-  ): F[ConsumerProducerRequestResponseService[F, REQ, RESP]] =
+  ): F[ConsumerProducerRequestResponseService[F, REQ, RESP]] = {
+    def createProducerCache =
+      if (reuseProducers)
+        Ref.of[F, Map[Option[String], MessageProducer[F, Either[Throwable, RESP]]]](Map()).map(Some(_))
+      else
+        Monad[F].pure(None)
+
     for {
-      producersCacheRef <-
-        if (reuseProducers)
-          Ref.of[F, Map[Option[String], MessageProducer[F, Either[Throwable, RESP]]]](Map()).map(Some(_))
-        else
-          Monad[F].pure(None)
+      responseProducersCacheRef <- createProducerCache
     } yield new ConsumerProducerRequestResponseService(
-      producersCacheRef,
+      responseProducersCacheRef,
       requestConsumer,
       responseProducer,
       requestHandler,
-      messageProducerForErrors,
       autoCommitRequest,
       autoCommitFailedRequest,
       defaultProducerId
     )
+  }
 }
-
-case class ResponseProducerIdNotFound(message: String) extends IllegalStateException(message)

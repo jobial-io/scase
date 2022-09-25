@@ -40,7 +40,7 @@ class SqsProducer[F[_] : Concurrent, M](
             throw new RuntimeException(s"error deleting queue $queueUrl", t)
         }
       })) else IO()
-      _ = logger.debug(s"created queue $queueUrl")
+      _ <- debug[IO](s"created queue $queueUrl")
       _ <- messageRetentionPeriod.map(setMessageRetentionPeriod(queueUrl, _)).getOrElse(IO())
       _ <- visibilityTimeout.map(setVisibilityTimeout(queueUrl, _)).getOrElse(IO())
     } yield ())

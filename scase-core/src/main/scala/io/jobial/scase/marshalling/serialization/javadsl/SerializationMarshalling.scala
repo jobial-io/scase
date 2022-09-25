@@ -10,4 +10,8 @@ class SerializationMarshalling[M] extends Marshalling[M] with io.jobial.scase.ma
   def eitherMarshaller[Either[Throwable, M]] = javaSerializationWithGzipObjectMarshaller[Either[Throwable, M]]
 
   def eitherUnmarshaller[Either[Throwable, M]] = javaSerializationWithGzipObjectUnmarshaller[Either[Throwable, M]]
+
+  def throwableMarshaller[Throwable] = javaSerializationWithGzipObjectMarshaller[Throwable]
+
+  def throwableUnmarshaller[Throwable] = javaSerializationWithGzipObjectUnmarshaller[Throwable]
 }
