@@ -21,14 +21,14 @@ public class PulsarStreamServiceConfiguration<REQ, RESP> {
     }
 
     public Service service(RequestHandler<IO, REQ, RESP> requestHandler) throws ExecutionException, InterruptedException {
-        return JavaUtils.service(config.service(requestHandler, concurrent, new PulsarContext().getContext(), contextShift)).get();
+        return JavaUtils.service(config.service(requestHandler, concurrent, timer, new PulsarContext().getContext())).get();
     }
 
     public SenderClient<REQ> senderClient() throws ExecutionException, InterruptedException {
-        return JavaUtils.<REQ>senderClient(config.senderClient(concurrent, timer, new PulsarContext().getContext(), contextShift)).get();
+        return JavaUtils.<REQ>senderClient(config.senderClient(concurrent, timer, new PulsarContext().getContext())).get();
     }
 
     public ReceiverClient<Either<Throwable, RESP>> receiverClient() throws ExecutionException, InterruptedException {
-        return JavaUtils.<Either<Throwable, RESP>>receiverClient(config.receiverClient(concurrent, timer, new PulsarContext().getContext(), contextShift)).get();
+        return JavaUtils.<Either<Throwable, RESP>>receiverClient(config.receiverClient(concurrent, timer, new PulsarContext().getContext())).get();
     }
 }

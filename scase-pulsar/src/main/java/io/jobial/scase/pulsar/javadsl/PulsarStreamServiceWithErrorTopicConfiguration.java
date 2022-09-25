@@ -20,18 +20,18 @@ public class PulsarStreamServiceWithErrorTopicConfiguration<REQ, RESP> {
     }
 
     public Service service(RequestHandler<IO, REQ, RESP> requestHandler) throws ExecutionException, InterruptedException {
-        return JavaUtils.service(config.service(requestHandler, concurrent, new PulsarContext().getContext(), contextShift)).get();
+        return JavaUtils.service(config.service(requestHandler, concurrent, timer, new PulsarContext().getContext())).get();
     }
 
     public SenderClient<REQ> senderClient() throws ExecutionException, InterruptedException {
-        return JavaUtils.<REQ>senderClient(config.senderClient(concurrent, timer, new PulsarContext().getContext(), contextShift)).get();
+        return JavaUtils.<REQ>senderClient(config.senderClient(concurrent, timer, new PulsarContext().getContext())).get();
     }
 
     public ReceiverClient<RESP> responseReceiverClient() throws ExecutionException, InterruptedException {
-        return JavaUtils.<RESP>receiverClient(config.responseReceiverClient(concurrent, timer, new PulsarContext().getContext(), contextShift)).get();
+        return JavaUtils.<RESP>receiverClient(config.responseReceiverClient(concurrent, timer, new PulsarContext().getContext())).get();
     }
 
     public ReceiverClient<Throwable> errorReceiverClient() throws ExecutionException, InterruptedException {
-        return JavaUtils.<Throwable>receiverClient(config.errorReceiverClient(concurrent, timer, new PulsarContext().getContext(), contextShift)).get();
+        return JavaUtils.<Throwable>receiverClient(config.errorReceiverClient(concurrent, timer, new PulsarContext().getContext())).get();
     }
 }

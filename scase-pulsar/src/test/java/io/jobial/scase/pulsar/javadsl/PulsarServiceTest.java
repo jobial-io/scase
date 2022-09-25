@@ -17,12 +17,12 @@ import io.jobial.scase.core.javadsl.RequestHandler;
 import io.jobial.scase.core.javadsl.SendRequestContext;
 import io.jobial.scase.marshalling.serialization.javadsl.SerializationMarshalling;
 import org.junit.Test;
-import scala.util.Either;
 
 import java.util.concurrent.ExecutionException;
 
 import static io.jobial.scase.core.javadsl.JavaUtils.uuid;
-import static io.jobial.scase.pulsar.javadsl.PulsarServiceConfiguration.*;
+import static io.jobial.scase.pulsar.javadsl.PulsarServiceConfiguration.requestResponse;
+import static io.jobial.scase.pulsar.javadsl.PulsarServiceConfiguration.stream;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;

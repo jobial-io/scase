@@ -1,24 +1,22 @@
 package io.jobial.scase.pulsar
 
 import cats.effect.Concurrent
-import cats.effect.ContextShift
-import cats.effect.IO
 import cats.effect.Timer
 import cats.implicits._
-import io.jobial.scase.core.SenderClient
-import io.jobial.scase.core.impl.ConsumerProducerStreamService
-import io.jobial.scase.core.impl.ProducerSenderClient
-import io.jobial.scase.core.impl.ConsumerMessageHandlerService
-import io.jobial.scase.core.impl.ConsumerProducerRequestResponseClient
-import io.jobial.scase.core.impl.ConsumerProducerRequestResponseService
-import io.jobial.scase.core.impl.ConsumerReceiverClient
-import io.jobial.scase.core.impl.ResponseProducerIdNotFound
 import io.jobial.scase.core.MessageHandler
 import io.jobial.scase.core.MessageProducer
 import io.jobial.scase.core.ReceiverClient
 import io.jobial.scase.core.RequestHandler
 import io.jobial.scase.core.RequestResponseClient
+import io.jobial.scase.core.SenderClient
 import io.jobial.scase.core.ServiceConfiguration
+import io.jobial.scase.core.impl.ConsumerMessageHandlerService
+import io.jobial.scase.core.impl.ConsumerProducerRequestResponseClient
+import io.jobial.scase.core.impl.ConsumerProducerRequestResponseService
+import io.jobial.scase.core.impl.ConsumerProducerStreamService
+import io.jobial.scase.core.impl.ConsumerReceiverClient
+import io.jobial.scase.core.impl.ProducerSenderClient
+import io.jobial.scase.core.impl.ResponseProducerIdNotFound
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
 import io.jobial.scase.pulsar.PulsarServiceConfiguration.destination
@@ -32,11 +30,9 @@ class PulsarMessageHandlerServiceConfiguration[M: Marshaller : Unmarshaller](
   requestTopic: String
 ) extends ServiceConfiguration {
 
-  def service[F[_] : Concurrent](messageHandler: MessageHandler[F, M])
-    (
-      implicit context: PulsarContext,
-      cs: ContextShift[IO]
-    ) =
+  def service[F[_] : Concurrent : Timer](messageHandler: MessageHandler[F, M])(
+    implicit context: PulsarContext
+  ) =
     for {
       consumer <- PulsarConsumer[F, M](requestTopic)
       service = new ConsumerMessageHandlerService(
@@ -46,8 +42,7 @@ class PulsarMessageHandlerServiceConfiguration[M: Marshaller : Unmarshaller](
     } yield service
 
   def client[F[_] : Concurrent : Timer](
-    implicit context: PulsarContext,
-    cs: ContextShift[IO]
+    implicit context: PulsarContext
   ) = destination[M](requestTopic).client[F]
 
 }
@@ -63,9 +58,8 @@ class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, 
   responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
 ) extends ServiceConfiguration {
 
-  def service[F[_] : Concurrent](requestHandler: RequestHandler[F, REQ, RESP])(
-    implicit context: PulsarContext,
-    cs: ContextShift[IO]
+  def service[F[_] : Concurrent: Timer](requestHandler: RequestHandler[F, REQ, RESP])(
+    implicit context: PulsarContext
   ) =
     for {
       consumer <- PulsarConsumer[F, REQ](requestTopic)
@@ -83,8 +77,7 @@ class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, 
     } yield service
 
   def client[F[_] : Concurrent : Timer](
-    implicit context: PulsarContext,
-    cs: ContextShift[IO]
+    implicit context: PulsarContext
   ): F[RequestResponseClient[F, REQ, RESP]] = {
     for {
       producer <- PulsarProducer[F, REQ](requestTopic)
@@ -111,19 +104,16 @@ class PulsarStreamServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Mar
   responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
 ) extends ServiceConfiguration {
 
-  def service[F[_] : Concurrent](requestHandler: RequestHandler[F, REQ, RESP])(
-    implicit context: PulsarContext,
-    cs: ContextShift[IO]
+  def service[F[_] : Concurrent: Timer](requestHandler: RequestHandler[F, REQ, RESP])(
+    implicit context: PulsarContext
   ) = requestResponse[REQ, RESP](requestTopic, Some(responseTopic)).service(requestHandler)
 
   def senderClient[F[_] : Concurrent : Timer](
-    implicit context: PulsarContext,
-    cs: ContextShift[IO]
+    implicit context: PulsarContext
   ) = destination[REQ](requestTopic).client[F]
 
   def receiverClient[F[_] : Concurrent : Timer](
-    implicit context: PulsarContext,
-    cs: ContextShift[IO]
+    implicit context: PulsarContext
   ) = source[Either[Throwable, RESP]](responseTopic).client[F]
 
 }
@@ -140,9 +130,8 @@ class PulsarStreamServiceWithErrorTopicConfiguration[REQ: Marshaller : Unmarshal
   errorUnmarshaller: Unmarshaller[Throwable]
 ) extends ServiceConfiguration {
 
-  def service[F[_] : Concurrent](requestHandler: RequestHandler[F, REQ, RESP])(
-    implicit context: PulsarContext,
-    cs: ContextShift[IO]
+  def service[F[_] : Concurrent: Timer](requestHandler: RequestHandler[F, REQ, RESP])(
+    implicit context: PulsarContext
   ) =
     for {
       consumer <- PulsarConsumer[F, REQ](requestTopic)
@@ -164,18 +153,15 @@ class PulsarStreamServiceWithErrorTopicConfiguration[REQ: Marshaller : Unmarshal
     } yield service
 
   def senderClient[F[_] : Concurrent : Timer](
-    implicit context: PulsarContext,
-    cs: ContextShift[IO]
+    implicit context: PulsarContext
   ) = destination[REQ](requestTopic).client[F]
 
   def responseReceiverClient[F[_] : Concurrent : Timer](
-    implicit context: PulsarContext,
-    cs: ContextShift[IO]
+    implicit context: PulsarContext
   ) = source[RESP](responseTopic).client[F]
 
   def errorReceiverClient[F[_] : Concurrent : Timer](
-    implicit context: PulsarContext,
-    cs: ContextShift[IO]
+    implicit context: PulsarContext
   ) = source[Throwable](responseTopic).client[F]
 }
 
@@ -184,8 +170,7 @@ class PulsarMessageSourceServiceConfiguration[M: Unmarshaller](
   sourceTopic: String
 ) {
   def client[F[_] : Concurrent : Timer](
-    implicit context: PulsarContext,
-    cs: ContextShift[IO]
+    implicit context: PulsarContext
   ): F[ReceiverClient[F, M]] =
     for {
       consumer <- PulsarConsumer[F, M](sourceTopic)
@@ -198,8 +183,7 @@ class PulsarMessageDestinationServiceConfiguration[M: Marshaller](
 ) {
 
   def client[F[_] : Concurrent : Timer](
-    implicit context: PulsarContext,
-    cs: ContextShift[IO]
+    implicit context: PulsarContext
   ): F[SenderClient[F, M]] =
     for {
       producer <- PulsarProducer[F, M](topic)
