@@ -2,16 +2,12 @@ package io.jobial.scase.marshalling.serialization.javadsl
 
 import io.jobial.scase.marshalling.javadsl.Marshalling
 
-class SerializationMarshalling[REQ, RESP] extends Marshalling[REQ, RESP] with io.jobial.scase.marshalling.serialization.SerializationMarshalling {
-  def requestMarshaller[REQ] = javaSerializationWithGzipObjectMarshaller[REQ]
+class SerializationMarshalling[M] extends Marshalling[M] with io.jobial.scase.marshalling.serialization.SerializationMarshalling {
+  def marshaller[M] = javaSerializationWithGzipObjectMarshaller[M]
 
-  def requestUnmarshaller[REQ] = javaSerializationWithGzipObjectUnmarshaller[REQ]
+  def unmarshaller[M] = javaSerializationWithGzipObjectUnmarshaller[M]
 
-  def responseMarshaller[RESP] = javaSerializationWithGzipObjectMarshaller[RESP]
+  def eitherMarshaller[Either[Throwable, M]] = javaSerializationWithGzipObjectMarshaller[Either[Throwable, M]]
 
-  def responseUnmarshaller[RESP] = javaSerializationWithGzipObjectUnmarshaller[RESP]
-
-  def responseOrThrowableMarshaller[Either[Throwable, RESP]] = javaSerializationWithGzipObjectMarshaller[Either[Throwable, RESP]]
-
-  def responseOrThrowableUnmarshaller[Either[Throwable, RESP]] = javaSerializationWithGzipObjectUnmarshaller[Either[Throwable, RESP]]
+  def eitherUnmarshaller[Either[Throwable, M]] = javaSerializationWithGzipObjectUnmarshaller[Either[Throwable, M]]
 }

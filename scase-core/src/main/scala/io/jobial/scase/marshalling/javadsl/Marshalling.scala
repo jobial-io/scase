@@ -3,17 +3,13 @@ package io.jobial.scase.marshalling.javadsl
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
 
-trait Marshalling[REQ, RESP] {
+trait Marshalling[M] {
 
-  def requestMarshaller[REQ]: Marshaller[REQ]
+  def marshaller[M]: Marshaller[M]
 
-  def requestUnmarshaller[REQ]: Unmarshaller[REQ]
+  def unmarshaller[M]: Unmarshaller[M]
+  
+  def eitherMarshaller[Either[Throwable, M]]: Marshaller[Either[Throwable, M]]
 
-  def responseMarshaller[RESP]: Marshaller[RESP]
-
-  def responseUnmarshaller[RESP]: Unmarshaller[RESP]
-
-  def responseOrThrowableMarshaller[Either[Throwable, RESP]]: Marshaller[Either[Throwable, RESP]]
-
-  def responseOrThrowableUnmarshaller[Either[Throwable, RESP]]: Unmarshaller[Either[Throwable, RESP]]
+  def eitherUnmarshaller[Either[Throwable, M]]: Unmarshaller[Either[Throwable, M]]
 }

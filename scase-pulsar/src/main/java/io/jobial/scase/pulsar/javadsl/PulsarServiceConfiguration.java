@@ -10,62 +10,72 @@ public class PulsarServiceConfiguration {
 
     public static <REQ, RESP> PulsarRequestResponseServiceConfiguration<REQ, RESP> requestResponse(
             String requestTopic,
-            Marshalling<REQ, RESP> marshalling,
+            Marshalling<REQ> requestMarshalling,
+            Marshalling<RESP> responseMarshalling,
             Duration batchingMaxPublishDelay
     ) {
         return new PulsarRequestResponseServiceConfiguration(PulsarServiceConfiguration$.MODULE$.<REQ, RESP>requestResponse(
                 requestTopic,
                 scala.concurrent.duration.Duration.fromNanos(batchingMaxPublishDelay.toNanos()),
-                marshalling.requestMarshaller(),
-                marshalling.requestUnmarshaller(),
-                marshalling.responseMarshaller(),
-                marshalling.responseUnmarshaller(),
-                marshalling.responseOrThrowableMarshaller(),
-                marshalling.responseOrThrowableUnmarshaller()
+                requestMarshalling.marshaller(),
+                requestMarshalling.unmarshaller(),
+                responseMarshalling.marshaller(),
+                responseMarshalling.unmarshaller(),
+                responseMarshalling.eitherMarshaller(),
+                responseMarshalling.eitherUnmarshaller()
         ));
     }
 
     public static <REQ, RESP> PulsarRequestResponseServiceConfiguration<REQ, RESP> requestResponse(
             String requestTopic,
-            Marshalling<REQ, RESP> marshalling
+            Marshalling<REQ> requestMarshalling,
+            Marshalling<RESP> responseMarshalling
     ) {
-        return requestResponse(requestTopic, marshalling, Duration.ofMillis(1));
+        return requestResponse(requestTopic, requestMarshalling, responseMarshalling, Duration.ofMillis(1));
     }
 
     public static <REQ, RESP> PulsarStreamServiceConfiguration<REQ, RESP> stream(
             String requestTopic,
             String responseTopic,
-            Duration batchingMaxPublishDelay,
-            Marshalling<REQ, RESP> marshalling
+            Marshalling<REQ> requestMarshalling,
+            Marshalling<RESP> responseMarshalling,
+            Duration batchingMaxPublishDelay
     ) {
         return new PulsarStreamServiceConfiguration(PulsarServiceConfiguration$.MODULE$.<REQ, RESP>stream(
                 requestTopic,
                 responseTopic,
                 scala.concurrent.duration.Duration.fromNanos(batchingMaxPublishDelay.toNanos()),
-                marshalling.requestMarshaller(),
-                marshalling.requestUnmarshaller(),
-                marshalling.responseMarshaller(),
-                marshalling.responseUnmarshaller(),
-                marshalling.responseOrThrowableMarshaller(),
-                marshalling.responseOrThrowableUnmarshaller()
+                requestMarshalling.marshaller(),
+                requestMarshalling.unmarshaller(),
+                responseMarshalling.marshaller(),
+                responseMarshalling.unmarshaller(),
+                responseMarshalling.eitherMarshaller(),
+                responseMarshalling.eitherUnmarshaller()
         ));
     }
 
     public static <REQ, RESP> PulsarStreamServiceConfiguration<REQ, RESP> stream(
             String requestTopic,
             String responseTopic,
-            Marshalling<REQ, RESP> marshalling
+            Marshalling<REQ> requestMarshalling,
+            Marshalling<RESP> responseMarshalling
     ) {
-        return stream(requestTopic, responseTopic, Duration.ofMillis(1), marshalling);
+        return stream(
+                requestTopic,
+                responseTopic,
+                requestMarshalling,
+                responseMarshalling,
+                Duration.ofMillis(1)
+        );
     }
 
     public static <M> PulsarMessageSourceServiceConfiguration<M> source(
             String topic,
-            Marshalling<M, M> marshalling
+            Marshalling<M> marshalling
     ) {
         return new PulsarMessageSourceServiceConfiguration(PulsarServiceConfiguration$.MODULE$.<M>source(
                 topic,
-                marshalling.responseUnmarshaller()
+                marshalling.unmarshaller()
         ));
     }
 }

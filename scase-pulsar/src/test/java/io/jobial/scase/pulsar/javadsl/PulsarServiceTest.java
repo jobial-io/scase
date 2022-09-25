@@ -56,7 +56,7 @@ public class PulsarServiceTest {
     @Test
     public void testRequestResponseService() throws ExecutionException, InterruptedException, RequestTimeout {
         var serviceConfig =
-                requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest, TestResponse>());
+                requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest>(), new SerializationMarshalling<TestResponse>());
 
         var service = serviceConfig.service(requestHandler);
         var state = service.start();
@@ -76,7 +76,7 @@ public class PulsarServiceTest {
     @Test(expected = RequestTimeout.class)
     public void testRequestTimeoutIfServiceIsNotStarted() throws Throwable {
         var serviceConfig =
-                requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest, TestResponse>());
+                requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest>(), new SerializationMarshalling<TestResponse>());
 
         var service = serviceConfig.service(requestHandler);
 
@@ -92,7 +92,7 @@ public class PulsarServiceTest {
     @Test(expected = TestException1.class)
     public void testServiceDirectException() throws Throwable {
         var serviceConfig =
-                requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest, TestResponse>());
+                requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest>(), new SerializationMarshalling<TestResponse>());
 
         var service = serviceConfig.service(requestHandlerWithError);
         var state = service.start();
@@ -111,7 +111,7 @@ public class PulsarServiceTest {
     @Test(expected = TestException2.class)
     public void testServiceFutureWithException() throws Throwable {
         var serviceConfig =
-                requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest, TestResponse>());
+                requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest>(), new SerializationMarshalling<TestResponse>());
 
         var service = serviceConfig.service(requestHandlerWithError);
         var state = service.start();
@@ -130,7 +130,7 @@ public class PulsarServiceTest {
     @Test(expected = NullPointerException.class)
     public void testServiceReturnsNull() throws Throwable {
         var serviceConfig =
-                requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest, TestResponse>());
+                requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest>(), new SerializationMarshalling<TestResponse>());
 
         var service = serviceConfig.service(requestHandlerWithError);
         var state = service.start();
@@ -150,9 +150,9 @@ public class PulsarServiceTest {
     public void testStreamService() throws ExecutionException, InterruptedException, RequestTimeout {
         var responseTopic = "hello-test-response-" + uuid(6);
         var serviceConfig =
-                stream("hello-test-" + uuid(6), responseTopic, new SerializationMarshalling<TestRequest, TestResponse>());
+                stream("hello-test-" + uuid(6), responseTopic, new SerializationMarshalling<TestRequest>(), new SerializationMarshalling<TestResponse>());
 
-        var sourceConfig = source(responseTopic, new SerializationMarshalling<TestResponse, TestResponse>());
+        var sourceConfig = source(responseTopic, new SerializationMarshalling<TestResponse>());
 
         var service = serviceConfig.service(requestHandler);
         var state = service.start();
