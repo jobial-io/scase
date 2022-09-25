@@ -2,15 +2,19 @@ package io.jobial.scase.core.javadsl;
 
 import cats.effect.*;
 import io.jobial.scase.util.Hash$;
+import scala.Function0;
 import scala.Function1;
+import scala.Unit;
 import scala.concurrent.ExecutionContext;
 import scala.concurrent.ExecutionContext$;
 import scala.concurrent.Future;
+import scala.runtime.BoxedUnit;
 
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class JavaUtils {
 
@@ -40,6 +44,10 @@ public class JavaUtils {
 
     public static <A, B> Function1<A, B> javaFunctionToScala(Function<A, B> f) {
         return package$.MODULE$.javaFunctionToScala(f);
+    }
+
+    public static Function0<BoxedUnit> javaRunnableToScala(Runnable f) {
+        return package$.MODULE$.javaRunnableToScala(f);
     }
 
     public static String uuid(int length) {

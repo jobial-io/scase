@@ -111,7 +111,7 @@ trait ServiceTestSupport extends AsyncFlatSpec
       _ = println(s"xxxsent $r1")
       m2 <- responseReceiverClient.receive
       _ = println(s"xxxreceived $m2")
-      _ <- errorReceiverClient.receive(2.second).handleErrorWith(t => error[IO](s"receiver received error", t))
+      _ <- errorReceiverClient.receive(2.second).map(_ => fail()).handleErrorWith { case t: RequestTimeout => t.printStackTrace(); error[IO](s"receiver received error", t) }
     } yield assert(
       response1 === m1 && response1 === m2
     )
