@@ -47,4 +47,7 @@ package object javadsl {
   def javaFunctionToScala[A, B](f: java.util.function.Function[A, B]) = {
     a: A => f(a)
   }
+
+  def javaRunnableToScala(f: java.lang.Runnable): () => Unit =
+    () => f.run()
 }

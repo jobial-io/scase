@@ -1,6 +1,5 @@
 package io.jobial.scase.core
 
-import scala.concurrent.TimeoutException
 import scala.concurrent.duration.Duration
 
 
@@ -24,5 +23,10 @@ trait RequestResponseClient[F[_], REQ, RESP] {
   def stop: F[Unit]
 }
 
-case class RequestTimeout(timeout: Duration)
-  extends TimeoutException(s"request timed out after $timeout")
+case class RequestTimeout(timeout: Duration, cause: Throwable)
+  extends IllegalStateException(s"request timed out after $timeout", cause)
+
+object RequestTimeout {
+  
+  def apply(timeout: Duration): RequestTimeout = RequestTimeout(timeout, null)
+}

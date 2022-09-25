@@ -162,7 +162,7 @@ class PulsarStreamServiceWithErrorTopicConfiguration[REQ: Marshaller : Unmarshal
 
   def errorReceiverClient[F[_] : Concurrent : Timer](
     implicit context: PulsarContext
-  ) = source[Throwable](responseTopic).client[F]
+  ) = source[Throwable](errorTopic).client[F]
 }
 
 

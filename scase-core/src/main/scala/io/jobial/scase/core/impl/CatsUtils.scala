@@ -1,5 +1,6 @@
 package io.jobial.scase.core.impl
 
+import cats.Monad
 import cats.effect.Concurrent
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -24,4 +25,6 @@ trait CatsUtils {
         }
     }
 
+  def whenA[F[_]: Monad, A](cond: Boolean)(f: => F[A]): F[Unit] =
+    if (cond) Monad[F].void(f) else Monad[F].unit
 }
