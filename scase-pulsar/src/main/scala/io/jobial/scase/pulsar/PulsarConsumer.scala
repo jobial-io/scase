@@ -1,6 +1,5 @@
 package io.jobial.scase.pulsar
 
-import cats.Monad
 import cats.effect.Concurrent
 import cats.effect.Timer
 import cats.effect.concurrent.Ref
@@ -49,30 +48,30 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](topic: String, val subscripti
         timeout.map(t => f.orTimeout(t.toNanos, TimeUnit.NANOSECONDS)).getOrElse(f)
       }).handleErrorWith {
         case t: TimeoutException =>
-          debug[F](s"Receive timed out after $timeout") >>
-            Concurrent[F].raiseError(ReceiveTimeout(timeout, t))
+          debug(s"Receive timed out after $timeout") >>
+            raiseError(ReceiveTimeout(timeout, t))
         case t =>
-          Concurrent[F].raiseError(t)
+          raiseError(t)
       }
-      _ <- debug[F](s"received message ${new String(pulsarMessage.getData).take(200)} on $topic")
+      _ <- debug(s"received message ${new String(pulsarMessage.getData).take(200)} on $topic")
       unmarshalledMessage = Unmarshaller[M].unmarshal(pulsarMessage.getData)
       result <- unmarshalledMessage match {
         case Right(message) =>
           val attributes = pulsarMessage.getProperties.asScala.toMap
-          Monad[F].pure(
-            DefaultMessageReceiveResult(Monad[F].pure(message), attributes,
-              commit = Concurrent[F].delay(consumer.acknowledge(pulsarMessage)),
-              rollback = Concurrent[F].delay(consumer.negativeAcknowledge(pulsarMessage))
+          pure(
+            DefaultMessageReceiveResult(pure(message), attributes,
+              commit = delay(consumer.acknowledge(pulsarMessage)),
+              rollback = delay(consumer.negativeAcknowledge(pulsarMessage))
             )
           )
         case Left(error) =>
-          Concurrent[F].raiseError(error)
+          raiseError(error)
       }
     } yield result
 
   def stop =
-    Concurrent[F].delay(consumer.unsubscribe()) >>
-      Concurrent[F].delay(consumer.close())
+    delay(consumer.unsubscribe()) >>
+      delay(consumer.close())
 }
 
 object PulsarConsumer {

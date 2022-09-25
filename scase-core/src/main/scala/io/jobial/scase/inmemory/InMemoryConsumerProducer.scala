@@ -1,15 +1,22 @@
 package io.jobial.scase.inmemory
 
 import cats.Monad
-import cats.effect.concurrent.{Deferred, Ref, Semaphore}
+import cats.effect.concurrent.Deferred
+import cats.effect.concurrent.Ref
+import cats.effect.concurrent.Semaphore
 import cats.effect.implicits.catsEffectSyntaxConcurrent
-import cats.effect.{Concurrent, Timer}
+import cats.effect.Concurrent
+import cats.effect.Timer
 import cats.implicits._
+import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
-import io.jobial.scase.core.{DefaultMessageReceiveResult, MessageProducer, MessageReceiveResult, MessageSendResult}
+import io.jobial.scase.core.DefaultMessageReceiveResult
+import io.jobial.scase.core.MessageProducer
+import io.jobial.scase.core.MessageReceiveResult
+import io.jobial.scase.core.MessageSendResult
 import io.jobial.scase.logging.Logging
-import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
-
+import io.jobial.scase.marshalling.Marshaller
+import io.jobial.scase.marshalling.Unmarshaller
 import scala.concurrent.duration.FiniteDuration
 
 
@@ -17,7 +24,7 @@ class InMemoryConsumerProducer[F[_] : Concurrent : Timer, M](
   val messages: Ref[F, List[MessageReceiveResult[F, M]]],
   val receives: Ref[F, List[Deferred[F, MessageReceiveResult[F, M]]]],
   val receivedMessagesSemaphore: Semaphore[F]
-) extends DefaultMessageConsumer[F, M] with MessageProducer[F, M] with Logging {
+) extends DefaultMessageConsumer[F, M] with MessageProducer[F, M] with CatsUtils with Logging {
 
   protected def sendReceive: F[Unit] = {
     for {
@@ -26,7 +33,7 @@ class InMemoryConsumerProducer[F[_] : Concurrent : Timer, M](
       messageReceiveResult <- messages.modify(r => if (r.isEmpty) (Nil, None) else (r.tail, r.headOption))
       _ <- (receive, messageReceiveResult) match {
         case (Some(receive), Some(messageReceiveResult)) =>
-          info[F](s"completing send $receive on queue with $messageReceiveResult") >>
+          info(s"completing send $receive on queue with $messageReceiveResult") >>
             receive.complete(messageReceiveResult) >>
             receivedMessagesSemaphore.release >>
             sendReceive
@@ -38,7 +45,7 @@ class InMemoryConsumerProducer[F[_] : Concurrent : Timer, M](
     } yield ()
   } handleErrorWith { t =>
     receivedMessagesSemaphore.release >>
-      Concurrent[F].raiseError[Unit](t)
+      raiseError(t)
   }
 
   /**
@@ -48,22 +55,22 @@ class InMemoryConsumerProducer[F[_] : Concurrent : Timer, M](
    */
   def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M]): F[MessageSendResult[F, M]] =
     for {
-      _ <- messages.update(m => m :+ DefaultMessageReceiveResult[F, M](Monad[F].pure(message), attributes, Monad[F].unit, Monad[F].unit))
+      _ <- messages.update(m => m :+ DefaultMessageReceiveResult[F, M](pure(message), attributes, unit, unit))
       _ <- sendReceive
     } yield new MessageSendResult[F, M] {
-      def commit = Monad[F].unit
+      def commit = unit
 
-      def rollback = Monad[F].unit
+      def rollback = unit
     }
 
-  def stop = Monad[F].unit
+  def stop = unit
 
   def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]) =
     for {
       receive <- Deferred[F, MessageReceiveResult[F, M]]
       _ <- receives.update(receives => receives :+ receive)
       _ <- sendReceive
-      _ <- info[F](s"waiting on receive $receive")
+      _ <- info(s"waiting on receive $receive")
       result <- timeout.map(receive.get.timeout(_)).getOrElse(receive.get)
     } yield result
 }

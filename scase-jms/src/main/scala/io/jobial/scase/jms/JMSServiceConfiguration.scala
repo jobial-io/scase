@@ -1,13 +1,28 @@
 package io.jobial.scase.jms
 
-import cats.effect.{Concurrent, ContextShift, IO, Timer}
+import cats.effect.Concurrent
+import cats.effect.Timer
 import cats.implicits._
-import io.jobial.scase.core.impl.{ConsumerMessageHandlerService, ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService, ConsumerReceiverClient, ProducerSenderClient, ResponseProducerIdNotFound}
-import io.jobial.scase.core.{MessageHandler, MessageProducer, ReceiverClient, RequestHandler, RequestResponseClient, SenderClient, ServiceConfiguration}
-import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
+import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.core.impl.ConsumerMessageHandlerService
+import io.jobial.scase.core.impl.ConsumerProducerRequestResponseClient
+import io.jobial.scase.core.impl.ConsumerProducerRequestResponseService
+import io.jobial.scase.core.impl.ConsumerReceiverClient
+import io.jobial.scase.core.impl.ProducerSenderClient
+import io.jobial.scase.core.impl.ResponseProducerIdNotFound
+import io.jobial.scase.core.MessageHandler
+import io.jobial.scase.core.MessageProducer
+import io.jobial.scase.core.ReceiverClient
+import io.jobial.scase.core.RequestHandler
+import io.jobial.scase.core.RequestResponseClient
+import io.jobial.scase.core.SenderClient
+import io.jobial.scase.core.ServiceConfiguration
+import io.jobial.scase.logging.Logging
+import io.jobial.scase.marshalling.Marshaller
+import io.jobial.scase.marshalling.Unmarshaller
 import io.jobial.scase.util.Hash.uuid
-
-import javax.jms.{Destination, Session}
+import javax.jms.Destination
+import javax.jms.Session
 
 class JMSRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
   val serviceName: String,
@@ -18,7 +33,7 @@ class JMSRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RES
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher
   implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
   responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
-) extends ServiceConfiguration {
+) extends ServiceConfiguration with CatsUtils with Logging {
 
   def service[F[_] : Concurrent](requestHandler: RequestHandler[F, REQ, RESP])(
     implicit session: Session
@@ -33,7 +48,7 @@ class JMSRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RES
                 case Some(responseDestinationName) =>
                   Concurrent[F].delay(createDestination(session, responseDestinationName))
                 case None =>
-                  Concurrent[F].raiseError(ResponseProducerIdNotFound("Not found response producer id in request"))
+                  raiseError(ResponseProducerIdNotFound("Not found response producer id in request"))
               }
             producer <- JMSProducer[F, Either[Throwable, RESP]](destination)
           } yield producer

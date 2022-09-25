@@ -10,6 +10,7 @@ import io.jobial.scase.core.RequestHandler
 import io.jobial.scase.core.RequestResponseClient
 import io.jobial.scase.core.SenderClient
 import io.jobial.scase.core.ServiceConfiguration
+import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.ConsumerMessageHandlerService
 import io.jobial.scase.core.impl.ConsumerProducerRequestResponseClient
 import io.jobial.scase.core.impl.ConsumerProducerRequestResponseService
@@ -17,6 +18,7 @@ import io.jobial.scase.core.impl.ConsumerProducerStreamService
 import io.jobial.scase.core.impl.ConsumerReceiverClient
 import io.jobial.scase.core.impl.ProducerSenderClient
 import io.jobial.scase.core.impl.ResponseProducerIdNotFound
+import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
 import io.jobial.scase.pulsar.PulsarServiceConfiguration.destination
@@ -56,9 +58,9 @@ class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, 
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher
   implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
   responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
-) extends ServiceConfiguration {
+) extends ServiceConfiguration with CatsUtils with Logging {
 
-  def service[F[_] : Concurrent: Timer](requestHandler: RequestHandler[F, REQ, RESP])(
+  def service[F[_] : Concurrent : Timer](requestHandler: RequestHandler[F, REQ, RESP])(
     implicit context: PulsarContext
   ) =
     for {
@@ -69,7 +71,7 @@ class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, 
             case Some(responseTopic) =>
               PulsarProducer[F, Either[Throwable, RESP]](responseTopic).map(p => p: MessageProducer[F, Either[Throwable, RESP]])
             case None =>
-              Concurrent[F].raiseError(ResponseProducerIdNotFound("Not found response producer id in request"))
+              raiseError(ResponseProducerIdNotFound("Not found response producer id in request"))
           }
         }: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
         requestHandler
@@ -104,7 +106,7 @@ class PulsarStreamServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Mar
   responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
 ) extends ServiceConfiguration {
 
-  def service[F[_] : Concurrent: Timer](requestHandler: RequestHandler[F, REQ, RESP])(
+  def service[F[_] : Concurrent : Timer](requestHandler: RequestHandler[F, REQ, RESP])(
     implicit context: PulsarContext
   ) = requestResponse[REQ, RESP](requestTopic, Some(responseTopic)).service(requestHandler)
 
@@ -130,7 +132,7 @@ class PulsarStreamServiceWithErrorTopicConfiguration[REQ: Marshaller : Unmarshal
   errorUnmarshaller: Unmarshaller[Throwable]
 ) extends ServiceConfiguration {
 
-  def service[F[_] : Concurrent: Timer](requestHandler: RequestHandler[F, REQ, RESP])(
+  def service[F[_] : Concurrent : Timer](requestHandler: RequestHandler[F, REQ, RESP])(
     implicit context: PulsarContext
   ) =
     for {

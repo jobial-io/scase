@@ -22,13 +22,14 @@ import com.amazon.sqs.javamessaging.{AmazonSQSExtendedClient, ExtendedClientConf
 import com.amazonaws.services.sqs.buffered.AmazonSQSBufferedAsyncClient
 import com.amazonaws.services.sqs.model._
 import com.amazonaws.services.sqs.{AmazonSQSAsync, AmazonSQSAsyncClientBuilder}
+import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.logging.Logging
 import java.util
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{Duration, DurationInt}
 
-trait SqsClient[F[_]] extends S3Client[F] with Logging {
+trait SqsClient[F[_]] extends S3Client[F] with CatsUtils with Logging {
 
   implicit def contextShift: ContextShift[F]
 
@@ -46,7 +47,7 @@ trait SqsClient[F[_]] extends S3Client[F] with Logging {
 
   val defaultMaxReceiveMessageWaitTime = 20
 
-  def createQueue(queueName: String) = IO {
+  def createQueue(queueName: String) = delay {
     logger.info(s"creating SQS queue $queueName")
     val request = new CreateQueueRequest(queueName)
       .addAttributesEntry("ReceiveMessageWaitTimeSeconds", defaultMaxReceiveMessageWaitTime.toString)
@@ -59,7 +60,7 @@ trait SqsClient[F[_]] extends S3Client[F] with Logging {
     createQueue(queueName).map(_.getQueueUrl) handleErrorWith {
       case e: AmazonSQSException =>
         if (e.getErrorCode().equals("QueueAlreadyExists"))
-          IO(sqs.getQueueUrl(queueName).getQueueUrl).map { queueUrl =>
+          delay(sqs.getQueueUrl(queueName).getQueueUrl).map { queueUrl =>
             enableLongPolling(queueUrl)
             queueUrl
           }
@@ -71,7 +72,7 @@ trait SqsClient[F[_]] extends S3Client[F] with Logging {
   def sendMessage(queueUrl: String, message: String, attributes: Map[String, String] = Map())(implicit awsContext: AwsContext = AwsContext()) = {
     {
       for {
-        request <- Concurrent[F].delay {
+        request <- delay {
           new SendMessageRequest()
             .withQueueUrl(queueUrl)
             .withMessageBody(message)
@@ -81,14 +82,14 @@ trait SqsClient[F[_]] extends S3Client[F] with Logging {
             }.toMap.asJava)
             )
         }
-        r <- debug[F](s"message attributes: ${request.getMessageAttributes.asScala}") >>
-          debug[F](s"calling sendMessage on queue $queueUrl with ${request.toString.take(200)}") >>
-          Concurrent[F].delay(sqsExtended.getOrElse(sqs).sendMessage(request))
+        r <- debug(s"message attributes: ${request.getMessageAttributes.asScala}") >>
+          debug(s"calling sendMessage on queue $queueUrl with ${request.toString.take(200)}") >>
+          delay(sqsExtended.getOrElse(sqs).sendMessage(request))
       } yield r
     } handleErrorWith {
       case t =>
-        error[F](s"sendMessage failed on queue $queueUrl: ", t) >>
-          Concurrent[F].raiseError(t)
+        error(s"sendMessage failed on queue $queueUrl: ", t) >>
+          raiseError(t)
     }
   }
 
@@ -117,7 +118,7 @@ trait SqsClient[F[_]] extends S3Client[F] with Logging {
 
   // TODO: using async client
   def receiveMessage(queueUrl: String, maxNumberOfMessages: Int = 10, maxReceiveMessageWaitTime: Int = defaultMaxReceiveMessageWaitTime) =
-    Concurrent[F].delay {
+    delay {
       sqsExtended.getOrElse(sqs).receiveMessage(new ReceiveMessageRequest()
         .withQueueUrl(queueUrl)
         .withAttributeNames("All")
@@ -133,11 +134,11 @@ trait SqsClient[F[_]] extends S3Client[F] with Logging {
   def changeMessageVisibility(queueUrl: String, receiptHandle: String, visibilityTimeout: Int) =
     sqsExtended.getOrElse(sqs).changeMessageVisibility(queueUrl, receiptHandle, visibilityTimeout)
 
-  def deleteQueue(queueUrl: String) = IO {
+  def deleteQueue(queueUrl: String) = delay {
     sqs.deleteQueue(queueUrl)
   } handleErrorWith {
     case t =>
-      error[IO](s"deleting queue failed for $queueUrl: ", t) >>
+      error(s"deleting queue failed for $queueUrl: ", t) >>
         raiseError(t)
   }
 

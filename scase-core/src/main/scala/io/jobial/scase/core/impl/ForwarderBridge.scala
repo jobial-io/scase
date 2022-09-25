@@ -1,6 +1,5 @@
 package io.jobial.scase.core.impl
 
-import cats.Monad
 import cats.effect.Concurrent
 import cats.effect.concurrent.Ref
 import cats.implicits._
@@ -15,12 +14,12 @@ class ForwarderBridge[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
   destination: MessageReceiveResult[F, RESP] => F[MessageSendResult[F, RESP]],
   filter: MessageReceiveResult[F, REQ] => F[Option[MessageReceiveResult[F, RESP]]],
   stopped: Ref[F, Boolean]
-) extends Logging {
+) extends CatsUtils with Logging {
 
   def continueForwarding =
     for {
       stopped <- stopped.get
-      r <- if (stopped) Monad[F].unit else forward
+      r <- whenA(!stopped)(forward)
     } yield r
 
   def forward: F[Unit] =
@@ -31,12 +30,12 @@ class ForwarderBridge[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
         case Some(filteredReceiveResult) =>
           destination(filteredReceiveResult)
         case None =>
-          Monad[F].unit
+          unit
       }
       r <- continueForwarding
     } yield r) handleErrorWith {
       case t: Throwable =>
-        error[F](s"error while forwarding in $this", t) >>
+        error(s"error while forwarding in $this", t) >>
           continueForwarding
     }
 
@@ -45,7 +44,7 @@ class ForwarderBridge[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
   def stop = stopped.set(true)
 }
 
-object ForwarderBridge {
+object ForwarderBridge extends CatsUtils with Logging {
 
   def apply[F[_] : Concurrent, M: Unmarshaller : Marshaller](
     source: ReceiverClient[F, M],
@@ -59,6 +58,6 @@ object ForwarderBridge {
         sendResult <- destination.send(message)(SendMessageContext(r.attributes))
       } yield sendResult
     }, { r =>
-      Monad[F].pure(Some(DefaultMessageReceiveResult(r.message, r.attributes, Monad[F].unit, Monad[F].unit)))
+      pure(Some(DefaultMessageReceiveResult(r.message, r.attributes, unit, unit)))
     }, stopped)
 }

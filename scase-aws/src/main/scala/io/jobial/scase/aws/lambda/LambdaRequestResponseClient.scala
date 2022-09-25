@@ -13,13 +13,21 @@
 package io.jobial.scase.aws.lambda
 
 import cats.Monad
-import cats.effect.IO.raiseError
-import cats.effect.{Concurrent, IO}
+import cats.effect.Concurrent
+import cats.effect.IO
 import cats.implicits._
 import io.jobial.scase.aws.client.AwsContext
-import io.jobial.scase.core.impl.{DefaultMessageSendResult, DefaultRequestResponseResult, DefaultSendResponseResult}
-import io.jobial.scase.core.{DefaultMessageReceiveResult, MessageReceiveResult, RequestResponseClient, RequestResponseMapping, RequestResponseResult, SendRequestContext}
-import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
+import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.core.impl.DefaultMessageSendResult
+import io.jobial.scase.core.impl.DefaultRequestResponseResult
+import io.jobial.scase.core.DefaultMessageReceiveResult
+import io.jobial.scase.core.RequestResponseClient
+import io.jobial.scase.core.RequestResponseMapping
+import io.jobial.scase.core.RequestResponseResult
+import io.jobial.scase.core.SendRequestContext
+import io.jobial.scase.logging.Logging
+import io.jobial.scase.marshalling.Marshaller
+import io.jobial.scase.marshalling.Unmarshaller
 import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext
 
@@ -29,7 +37,7 @@ case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP:
 )(
   implicit val awsContext: AwsContext,
   ec: ExecutionContext
-) extends RequestResponseClient[F, REQ, RESP] {
+) extends RequestResponseClient[F, REQ, RESP] with CatsUtils with Logging {
 
   import awsContext.lambdaClient._
 
@@ -39,9 +47,9 @@ case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP:
   )(
     implicit sendRequestContext: SendRequestContext
   ): F[RequestResponseResult[F, REQUEST, RESPONSE]] =
-    Monad[F].pure {
+    pure {
       DefaultRequestResponseResult(
-        DefaultMessageSendResult[F, REQUEST](Monad[F].unit, Monad[F].unit),
+        DefaultMessageSendResult[F, REQUEST](unit, unit),
         DefaultMessageReceiveResult[F, RESPONSE](
           Concurrent[F].liftIO(
             for {
@@ -50,16 +58,16 @@ case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP:
                 case Right(r) =>
                   IO(r.asInstanceOf[RESPONSE])
                 case Left(t) =>
-                  raiseError(t)
+                  raiseError[IO, RESPONSE](t)
               }
             } yield m),
           Map(), // TODO: propagate attributes here
-          Monad[F].unit,
-          Monad[F].unit
+          unit,
+          unit
         )
       )
     }
 
-  def stop = Monad[F].unit
+  def stop = unit
 }
 

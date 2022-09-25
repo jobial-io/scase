@@ -1,22 +1,20 @@
 package io.jobial.scase.logging
 
-import cats.Monad
-import cats.effect.Concurrent
-import cats.effect.IO
+import cats.effect.Sync
 import com.typesafe.scalalogging.LazyLogging
 
 
 trait Logging extends LazyLogging {
-  
-  def trace[F[_]: Monad](msg: => String) = Monad[F].pure(logger.trace(msg))
 
-  def debug[F[_]: Monad](msg: => String) = Monad[F].pure(logger.debug(msg))
+  def trace[F[_] : Sync](msg: => String) = Sync[F].delay(logger.trace(msg))
 
-  def info[F[_]: Monad](msg: => String) = Monad[F].pure(logger.info(msg))
+  def debug[F[_] : Sync](msg: => String) = Sync[F].delay(logger.debug(msg))
 
-  def warn[F[_]: Monad](msg: => String) = Monad[F].pure(logger.warn(msg))
+  def info[F[_] : Sync](msg: => String) = Sync[F].delay(logger.info(msg))
 
-  def error[F[_]: Monad](msg: => String) = Monad[F].pure(logger.error(msg))
+  def warn[F[_] : Sync](msg: => String) = Sync[F].delay(logger.warn(msg))
 
-  def error[F[_]: Monad](msg: => String, t: Throwable) = Monad[F].pure(logger.error(msg, t))
+  def error[F[_] : Sync](msg: => String) = Sync[F].delay(logger.error(msg))
+
+  def error[F[_] : Sync](msg: => String, t: Throwable) = Sync[F].delay(logger.error(msg, t))
 }

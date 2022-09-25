@@ -59,14 +59,14 @@ class SqsConsumer[F[_] : Concurrent, M](
         if (receivedMessages.isEmpty)
           for {
             newMessages <-
-              debug[F](s"waiting for messages on $queueUrl") >>
+              debug(s"waiting for messages on $queueUrl") >>
                 // TODO: handle timeout more precisely
                 // TODO: clean up effect type here
                 Concurrent[F].liftIO(receiveMessage(queueUrl, 10, timeout.map(_.toSeconds.toInt).getOrElse(Int.MaxValue)).map(_.getMessages.asScala))
-            _ <- debug[F](s"received messages ${newMessages.toString.take(500)} on queue $queueUrl")
+            _ <- debug(s"received messages ${newMessages.toString.take(500)} on queue $queueUrl")
           } yield newMessages
         else
-          Monad[F].pure(List())
+          pure(List())
       message <- receivedMessagesRef.modify { r =>
         val allMessages = r ++ newMessages
         if (allMessages.isEmpty)
@@ -78,7 +78,7 @@ class SqsConsumer[F[_] : Concurrent, M](
     } yield message) handleErrorWith { t =>
       for {
         _ <- receivedMessagesSemaphore.release
-        _ <- Concurrent[F].raiseError[Option[Message]](t)
+        _ <- raiseError[F, Option[Message]](t)
       } yield None
     }
 
@@ -95,7 +95,7 @@ class SqsConsumer[F[_] : Concurrent, M](
               _ <- outstandingMessagesRef.update(_ + ((unmarshalledMessage, sqsMessage.getReceiptHandle)))
             } yield
               DefaultMessageReceiveResult[F, M](
-                message = Monad[F].pure(unmarshalledMessage),
+                message = pure(unmarshalledMessage),
                 // TODO: add standard attributes returned by getAttributes...
                 attributes = sqsMessage.getMessageAttributes.asScala.toMap.filter(e => Option(e._2.getStringValue).isDefined).mapValues(_.getStringValue).toMap,
                 commit =
@@ -103,14 +103,14 @@ class SqsConsumer[F[_] : Concurrent, M](
                     o <- outstandingMessagesRef.get
                     r <- o.get(unmarshalledMessage) match {
                       case Some(receiptHandle) =>
-                        debug[F](s"deleted message ${unmarshalledMessage.toString.take(500)}") >>
-                        Concurrent[F].delay(deleteMessage(queueUrl, receiptHandle))
+                        debug(s"deleted message ${unmarshalledMessage.toString.take(500)}") >>
+                          delay(deleteMessage(queueUrl, receiptHandle))
                       case _ =>
-                        Concurrent[F].raiseError(CouldNotFindMessageToCommit(unmarshalledMessage))
+                        raiseError(CouldNotFindMessageToCommit(unmarshalledMessage))
                     }
                     _ <- outstandingMessagesRef.update(_ - unmarshalledMessage)
                   } yield (),
-                rollback = Monad[F].unit
+                rollback = unit
                 //                                outstandingMessages.remove(unmarshalledMessage) match {
                 //                                  case Some(receiptHandle) =>
                 //                                    // if the process fails at this point it will still roll back after the visibility timeout
@@ -125,12 +125,12 @@ class SqsConsumer[F[_] : Concurrent, M](
           //                            logger.error(s"could not process received message $sqsMessage", t)
           //                        }
           case None =>
-            Concurrent[F].raiseError(ReceiveTimeout(timeout))
+            raiseError(ReceiveTimeout(timeout))
         }
       }
     } yield result
 
-  def stop = Monad[F].unit
+  def stop = unit
 }
 
 object SqsConsumer {

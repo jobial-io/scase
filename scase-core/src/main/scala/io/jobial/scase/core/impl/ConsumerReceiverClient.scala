@@ -35,9 +35,9 @@ class ConsumerReceiverClient[F[_] : Concurrent, M: Unmarshaller](
   def stop = messageConsumer.stop
 }
 
-object ConsumerReceiverClient {
+object ConsumerReceiverClient extends CatsUtils {
 
   def apply[F[_] : Concurrent, M: Unmarshaller](
     messageConsumer: MessageConsumer[F, M]
-  ) = Concurrent[F].delay(new ConsumerReceiverClient(messageConsumer))
+  ) = delay(new ConsumerReceiverClient(messageConsumer))
 }
