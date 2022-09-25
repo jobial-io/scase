@@ -1,25 +1,27 @@
 package io.jobial.scase.pulsar
 
 import cats.Monad
-import cats.effect.IO.fromFuture
-import cats.effect.IO.raiseError
-import cats.effect.concurrent.{Deferred, Ref}
-import cats.effect.{Concurrent, ContextShift, IO, Sync}
+import cats.effect.Concurrent
+import cats.effect.Timer
+import cats.effect.concurrent.Ref
+import cats.effect.implicits.catsEffectSyntaxConcurrent
 import cats.implicits._
-import io.jobial.scase.core.{DefaultMessageReceiveResult, MessageReceiveResult, ReceiveTimeout}
+import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
+import io.jobial.scase.core.DefaultMessageReceiveResult
+import io.jobial.scase.core.MessageReceiveResult
+import io.jobial.scase.core.ReceiveTimeout
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
 import java.util.UUID.randomUUID
-import java.util.concurrent.CompletableFuture
 import scala.collection.JavaConverters._
 import scala.compat.java8.FutureConverters.toScala
-import scala.concurrent.{ExecutionContext, TimeoutException}
-import scala.concurrent.duration.{Duration, FiniteDuration}
+import scala.concurrent.TimeoutException
+import scala.concurrent.duration.FiniteDuration
 
 
-class PulsarConsumer[F[_] : Concurrent, M](topic: String, val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]])(implicit context: PulsarContext, cs: ContextShift[IO])
-  extends DefaultMessageConsumer[F, M] with Logging {
+class PulsarConsumer[F[_] : Concurrent: Timer, M](topic: String, val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]])(implicit context: PulsarContext)
+  extends DefaultMessageConsumer[F, M] with CatsUtils with Logging {
 
   val subscriptionName = s"$topic-subscription-${randomUUID}"
 
@@ -33,23 +35,17 @@ class PulsarConsumer[F[_] : Concurrent, M](topic: String, val subscriptions: Ref
       .topic(topic)
       .subscriptionName(subscriptionName)
       .subscribe
-
-  implicit def toScalaFuture[T](f: CompletableFuture[T]) = toScala[T](f)
-
-  // TODO: get rid of this
-  implicit val timer = IO.timer(ExecutionContext.global)
-
+  
   def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]) =
     for {
-      // TODO: could avoid IO here and just use Concurrent[F].async
-      pulsarMessage <- Concurrent[F].liftIO {
-        val r = fromFuture(IO(toScala(consumer.receiveAsync)))
-        timeout.map(r.timeout(_) handleErrorWith {
-          case t: TimeoutException =>
-            error[IO](s"Receive timed out after $timeout") >>
-              raiseError(ReceiveTimeout(this, timeout))
+      pulsarMessage <- {
+        val r = fromFuture(toScala(consumer.receiveAsync))
+        timeout.map(t => r.timeout(t) handleErrorWith {
+          case t: TimeoutException => 
+            debug[F](s"Receive timed out after $timeout") >>
+              Concurrent[F].raiseError(ReceiveTimeout(this, timeout))
           case t =>
-            raiseError(t)
+            Concurrent[F].raiseError(t)
         }).getOrElse(r)
       }
       _ <- debug[F](s"received message ${new String(pulsarMessage.getData).take(200)} on $topic")
@@ -69,7 +65,7 @@ class PulsarConsumer[F[_] : Concurrent, M](topic: String, val subscriptions: Ref
 
 object PulsarConsumer {
 
-  def apply[F[_] : Concurrent, M](topic: String)(implicit context: PulsarContext, cs: ContextShift[IO]): F[PulsarConsumer[F, M]] =
+  def apply[F[_] : Concurrent: Timer, M](topic: String)(implicit context: PulsarContext): F[PulsarConsumer[F, M]] =
     for {
       subscriptions <- Ref.of[F, List[MessageReceiveResult[F, M] => F[_]]](List())
     } yield new PulsarConsumer[F, M](topic, subscriptions)

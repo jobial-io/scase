@@ -19,10 +19,10 @@ public class PulsarRequestResponseServiceConfiguration<REQ, RESP> {
     }
 
     public Service service(RequestHandler<IO, REQ, RESP> requestHandler) throws ExecutionException, InterruptedException {
-        return JavaUtils.service(config.service(requestHandler, concurrent, new PulsarContext().getContext(), contextShift)).get();
+        return JavaUtils.service(config.service(requestHandler, concurrent, timer, new PulsarContext().getContext())).get();
     }
 
     public RequestResponseClient<REQ, RESP> client() throws ExecutionException, InterruptedException {
-        return JavaUtils.<REQ, RESP>requestResponseClient(config.client(concurrent, timer, new PulsarContext().getContext(), contextShift)).get();
+        return JavaUtils.<REQ, RESP>requestResponseClient(config.client(concurrent, timer, new PulsarContext().getContext())).get();
     }
 }

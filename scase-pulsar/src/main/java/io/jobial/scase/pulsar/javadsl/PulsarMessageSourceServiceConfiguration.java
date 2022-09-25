@@ -16,6 +16,6 @@ public class PulsarMessageSourceServiceConfiguration<M> {
     }
 
     public ReceiverClient<M> client() throws ExecutionException, InterruptedException {
-        return JavaUtils.<M>receiverClient(config.client(concurrent, timer, new PulsarContext().getContext(), contextShift)).get();
+        return JavaUtils.<M>receiverClient(config.client(concurrent, timer, new PulsarContext().getContext())).get();
     }
 }
