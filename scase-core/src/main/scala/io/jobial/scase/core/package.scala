@@ -2,9 +2,8 @@ package io.jobial.scase
 
 import cats.Monad
 import cats.effect.IO
-import io.jobial.scase.logging.Logging
-import shapeless._
 import cats.implicits._
+import shapeless._
 
 package object core {
 
