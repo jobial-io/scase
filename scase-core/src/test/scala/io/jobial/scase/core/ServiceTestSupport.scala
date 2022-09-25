@@ -103,15 +103,11 @@ trait ServiceTestSupport extends AsyncFlatSpec
   ): IO[Assertion] =
     for {
       _ <- senderClient.send(request1)
-      _ = println(s"xxxsent $request1")
       r1 <- responseReceiverClient.receiveWithContext
-      _ = println(s"xxxreceived $r1")
       m1 <- r1.message
       _ <- senderClient ! request1
-      _ = println(s"xxxsent $r1")
       m2 <- responseReceiverClient.receive
-      _ = println(s"xxxreceived $m2")
-      _ <- errorReceiverClient.receive(2.second).map(_ => fail()).handleErrorWith { case t: ReceiveTimeout => error[IO](s"receiver received error", t) }
+      _ <- errorReceiverClient.receive(1.second).map(_ => fail()).handleErrorWith { case t: ReceiveTimeout => error[IO](s"receiver received error", t) }
     } yield assert(
       response1 === m1 && response1 === m2
     )

@@ -40,7 +40,7 @@ trait LambdaClient[F[_]] extends AwsClient[F] {
 
   //  private def unmarshalException(result: InvokeResult) = {
   //    val responseString = new String(result.getPayload.array, "utf-8")
-  //    println(responseString)
+  //    debug(responseString)
   //    val o = responseString.parseJson.asJsObject
   //    val errorType = o.fields("errorType").asInstanceOf[JsString].value
   //    val errorMessage = o.fields("errorMessage").asInstanceOf[JsString].value
