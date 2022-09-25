@@ -15,7 +15,11 @@ public class PulsarMessageSourceServiceConfiguration<M> {
         this.config = config;
     }
 
+    public ReceiverClient<M> client(PulsarContext pulsarContext) throws ExecutionException, InterruptedException {
+        return JavaUtils.<M>receiverClient(config.client(concurrent, timer, pulsarContext.getContext())).get();
+    }
+
     public ReceiverClient<M> client() throws ExecutionException, InterruptedException {
-        return JavaUtils.<M>receiverClient(config.client(concurrent, timer, new PulsarContext().getContext())).get();
+        return client(new PulsarContext());
     }
 }

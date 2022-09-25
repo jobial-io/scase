@@ -20,15 +20,27 @@ public class PulsarStreamServiceConfiguration<REQ, RESP> {
         this.config = config;
     }
 
+    public Service service(RequestHandler<IO, REQ, RESP> requestHandler, PulsarContext pulsarContext) throws ExecutionException, InterruptedException {
+        return JavaUtils.service(config.service(requestHandler, concurrent, timer, pulsarContext.getContext())).get();
+    }
+
     public Service service(RequestHandler<IO, REQ, RESP> requestHandler) throws ExecutionException, InterruptedException {
-        return JavaUtils.service(config.service(requestHandler, concurrent, timer, new PulsarContext().getContext())).get();
+        return service(requestHandler, new PulsarContext());
+    }
+
+    public SenderClient<REQ> senderClient(PulsarContext pulsarContext) throws ExecutionException, InterruptedException {
+        return JavaUtils.<REQ>senderClient(config.senderClient(concurrent, timer, pulsarContext.getContext())).get();
     }
 
     public SenderClient<REQ> senderClient() throws ExecutionException, InterruptedException {
-        return JavaUtils.<REQ>senderClient(config.senderClient(concurrent, timer, new PulsarContext().getContext())).get();
+        return senderClient(new PulsarContext());
+    }
+
+    public ReceiverClient<Either<Throwable, RESP>> receiverClient(PulsarContext pulsarContext) throws ExecutionException, InterruptedException {
+        return JavaUtils.<Either<Throwable, RESP>>receiverClient(config.receiverClient(concurrent, timer, pulsarContext.getContext())).get();
     }
 
     public ReceiverClient<Either<Throwable, RESP>> receiverClient() throws ExecutionException, InterruptedException {
-        return JavaUtils.<Either<Throwable, RESP>>receiverClient(config.receiverClient(concurrent, timer, new PulsarContext().getContext())).get();
+        return receiverClient(new PulsarContext());
     }
 }

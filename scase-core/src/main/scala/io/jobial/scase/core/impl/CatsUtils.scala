@@ -14,8 +14,8 @@ trait CatsUtils {
     f.value match {
       case Some(result) =>
         result match {
-          case Success(a) => Concurrent[F].pure(a)
-          case Failure(e) => Concurrent[F].raiseError(e)
+          case Success(a) => pure(a)
+          case Failure(e) => raiseError(e)
         }
       case _ =>
         Concurrent[F].async { cb =>
