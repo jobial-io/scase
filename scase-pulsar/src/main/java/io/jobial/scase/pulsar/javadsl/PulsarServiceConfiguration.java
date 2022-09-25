@@ -2,6 +2,9 @@ package io.jobial.scase.pulsar.javadsl;
 
 import io.jobial.scase.marshalling.javadsl.Marshalling;
 import io.jobial.scase.pulsar.PulsarServiceConfiguration$;
+import scala.None$;
+import scala.Option;
+import scala.Option$;
 
 import java.time.Duration;
 
@@ -16,6 +19,7 @@ public class PulsarServiceConfiguration {
     ) {
         return new PulsarRequestResponseServiceConfiguration(PulsarServiceConfiguration$.MODULE$.<REQ, RESP>requestResponse(
                 requestTopic,
+                Option$.MODULE$.empty(),
                 scala.concurrent.duration.Duration.fromNanos(batchingMaxPublishDelay.toNanos()),
                 requestMarshalling.marshaller(),
                 requestMarshalling.unmarshaller(),
