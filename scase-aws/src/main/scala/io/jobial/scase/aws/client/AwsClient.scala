@@ -21,7 +21,7 @@ import com.amazonaws.endpointdiscovery.DaemonThreadFactory
 import scala.concurrent.Future.failed
 import scala.concurrent.{ExecutionContext, Future}
 
-trait AwsClient {
+trait AwsClient[F[_]] {
 
   def awsContext: AwsContext
   

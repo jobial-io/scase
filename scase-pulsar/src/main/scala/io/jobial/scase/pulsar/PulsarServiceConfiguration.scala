@@ -4,6 +4,7 @@ import cats.effect.{Concurrent, ContextShift, IO, Timer}
 import io.jobial.scase.core.{MessageConsumer, MessageHandler, MessageProducer, ReceiverClient, RequestHandler, RequestResponseClient, ServiceConfiguration}
 import cats.implicits._
 import io.jobial.scase.core.SenderClient
+import io.jobial.scase.core.impl.ConsumerProducerStreamService
 import io.jobial.scase.core.impl.ProducerSenderClient
 import io.jobial.scase.core.impl.{ConsumerMessageHandlerService, ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService, ConsumerReceiverClient, ResponseProducerIdNotFound}
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
@@ -94,7 +95,6 @@ class PulsarStreamServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Mar
   val serviceName: String,
   val requestTopic: String,
   val responseTopic: String,
-  val errorTopic: Option[String],
   val batchingMaxPublishDelay: Duration
 )(
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher
@@ -109,19 +109,14 @@ class PulsarStreamServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Mar
     for {
       consumer <- PulsarConsumer[F, REQ](requestTopic)
       service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
-        consumer, { _ =>
-          for {
-            producer <- PulsarProducer[F, Either[Throwable, RESP]](responseTopic)
-          } yield producer
+        consumer, { responseTopicFromRequest =>
+          PulsarProducer[F, Either[Throwable, RESP]](responseTopicFromRequest.getOrElse(responseTopic)).map(p => p: MessageProducer[F, Either[Throwable, RESP]])
         }: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
-        requestHandler,
-        defaultProducerId = None,
-        autoCommitRequest = false,
-        autoCommitFailedRequest = false
+        requestHandler
       )
     } yield service
 
-  def client[F[_] : Concurrent : Timer](
+  def senderClient[F[_] : Concurrent : Timer](
     implicit context: PulsarContext,
     cs: ContextShift[IO]
   ): F[SenderClient[F, REQ]] =
@@ -129,7 +124,87 @@ class PulsarStreamServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Mar
       producer <- PulsarProducer[F, REQ](requestTopic)
       client <- ProducerSenderClient[F, REQ](
         producer
-        //autoCommitResponse = false
+      )
+    } yield client
+
+  def receiverClient[F[_] : Concurrent : Timer](
+    implicit context: PulsarContext,
+    cs: ContextShift[IO]
+  ): F[ReceiverClient[F, Either[Throwable, RESP]]] =
+    for {
+      consumer <- PulsarConsumer[F, Either[Throwable, RESP]](responseTopic)
+      client <- ConsumerReceiverClient[F, Either[Throwable, RESP]](
+        consumer
+      )
+    } yield client
+  
+}
+
+class PulsarStreamServiceWithErrorTopicConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
+  val serviceName: String,
+  val requestTopic: String,
+  val responseTopic: String,
+  val errorTopic: String,
+  val batchingMaxPublishDelay: Duration
+)(
+  //implicit monitoringPublisher: MonitoringPublisher = noPublisher
+  implicit errorMarshaller: Marshaller[Throwable],
+  errorUnmarshaller: Unmarshaller[Throwable]
+) extends ServiceConfiguration {
+
+  def service[F[_] : Concurrent](requestHandler: RequestHandler[F, REQ, RESP])(
+    implicit context: PulsarContext,
+    cs: ContextShift[IO]
+  ) =
+    for {
+      consumer <- PulsarConsumer[F, REQ](requestTopic)
+      service <- ConsumerProducerStreamService[F, REQ, RESP](
+        consumer, { _ =>
+          for {
+            producer <- PulsarProducer[F, RESP](responseTopic)
+          } yield producer
+        }: Option[String] => F[MessageProducer[F, RESP]], { _ =>
+          for {
+            producer <- PulsarProducer[F, Throwable](responseTopic)
+          } yield producer
+        }: Option[String] => F[MessageProducer[F, Throwable]],
+        requestHandler,
+        defaultProducerId = None,
+        autoCommitRequest = false,
+        autoCommitFailedRequest = false
+      )
+    } yield service
+
+  def senderClient[F[_] : Concurrent : Timer](
+    implicit context: PulsarContext,
+    cs: ContextShift[IO]
+  ): F[SenderClient[F, REQ]] =
+    for {
+      producer <- PulsarProducer[F, REQ](requestTopic)
+      client <- ProducerSenderClient[F, REQ](
+        producer
+      )
+    } yield client
+
+  def responseReceiverClient[F[_] : Concurrent : Timer](
+    implicit context: PulsarContext,
+    cs: ContextShift[IO]
+  ): F[ReceiverClient[F, RESP]] =
+    for {
+      consumer <- PulsarConsumer[F, RESP](responseTopic)
+      client <- ConsumerReceiverClient[F, RESP](
+        consumer
+      )
+    } yield client
+
+  def errorReceiverClient[F[_] : Concurrent : Timer](
+    implicit context: PulsarContext,
+    cs: ContextShift[IO]
+  ): F[ReceiverClient[F, Throwable]] =
+    for {
+      consumer <- PulsarConsumer[F, Throwable](responseTopic)
+      client <- ConsumerReceiverClient[F, Throwable](
+        consumer
       )
     } yield client
 }
@@ -184,17 +259,44 @@ object PulsarServiceConfiguration {
   def stream[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
     requestTopic: String,
     responseTopic: String,
-    batchingMaxPublishDelay: Duration = 1.millis
+    batchingMaxPublishDelay: Duration
   )(
     //implicit monitoringPublisher: MonitoringPublisher = noPublisher
     implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
     responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
-  ) =
+  ): PulsarStreamServiceConfiguration[REQ, RESP] =
     new PulsarStreamServiceConfiguration[REQ, RESP](
       requestTopic,
       requestTopic,
       responseTopic,
-      None,
+      batchingMaxPublishDelay
+    )
+
+  def stream[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
+    requestTopic: String,
+    responseTopic: String
+  )(
+    //implicit monitoringPublisher: MonitoringPublisher = noPublisher
+    implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
+    responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
+  ): PulsarStreamServiceConfiguration[REQ, RESP] =
+    stream(requestTopic, responseTopic, 1.millis)
+
+  def stream[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
+    requestTopic: String,
+    responseTopic: String,
+    errorTopic: String,
+    batchingMaxPublishDelay: Duration = 1.millis
+  )(
+    //implicit monitoringPublisher: MonitoringPublisher = noPublisher
+    implicit errorMarshaller: Marshaller[Throwable],
+    errorUnmarshaller: Unmarshaller[Throwable]
+  ) =
+    new PulsarStreamServiceWithErrorTopicConfiguration[REQ, RESP](
+      requestTopic,
+      requestTopic,
+      responseTopic,
+      errorTopic,
       batchingMaxPublishDelay
     )
 

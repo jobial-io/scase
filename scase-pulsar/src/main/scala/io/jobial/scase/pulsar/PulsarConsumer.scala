@@ -1,6 +1,8 @@
 package io.jobial.scase.pulsar
 
 import cats.Monad
+import cats.effect.IO.fromFuture
+import cats.effect.IO.raiseError
 import cats.effect.concurrent.{Deferred, Ref}
 import cats.effect.{Concurrent, ContextShift, IO, Sync}
 import cats.implicits._
@@ -8,7 +10,6 @@ import io.jobial.scase.core.{DefaultMessageReceiveResult, MessageReceiveResult, 
 import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
-
 import java.util.UUID.randomUUID
 import java.util.concurrent.CompletableFuture
 import scala.collection.JavaConverters._
@@ -42,13 +43,16 @@ class PulsarConsumer[F[_] : Concurrent, M](topic: String, val subscriptions: Ref
     for {
       // TODO: could avoid IO here and just use Concurrent[F].async
       pulsarMessage <- Concurrent[F].liftIO {
-        val r = IO.fromFuture(IO(toScala(consumer.receiveAsync)))
+        val r = fromFuture(IO(toScala(consumer.receiveAsync)))
         timeout.map(r.timeout(_) handleErrorWith {
-          case t: TimeoutException => IO.raiseError(ReceiveTimeout(this, timeout))
-          case t => IO.raiseError(t)
+          case t: TimeoutException =>
+            error[IO](s"Receive timed out after $timeout") >>
+              raiseError(ReceiveTimeout(this, timeout))
+          case t =>
+            raiseError(t)
         }).getOrElse(r)
       }
-      _ = logger.debug(s"received message ${new String(pulsarMessage.getData).take(200)} on $topic")
+      _ <- debug[F](s"received message ${new String(pulsarMessage.getData).take(200)} on $topic")
       unmarshalledMessage = Unmarshaller[M].unmarshal(pulsarMessage.getData)
       result <- unmarshalledMessage match {
         case Right(message) =>
@@ -59,6 +63,7 @@ class PulsarConsumer[F[_] : Concurrent, M](topic: String, val subscriptions: Ref
       }
     } yield result
 
+  // TODO: get rid of subscription
   def stop = Concurrent[F].delay(consumer.close())
 }
 

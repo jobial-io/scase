@@ -35,7 +35,7 @@ class PulsarProducer[F[_] : Concurrent, M](topic: String)(implicit context: Puls
         .value(Marshaller[M].marshal(message))
         .sendAsync()
       ))))
-      _ = logger.info(s"sent message ${message.toString.take(200)}")
+      _ <- debug[F](s"sent message ${message.toString.take(200)} on $topic")
     } yield new MessageSendResult[F, M] {
       def commit = Monad[F].unit
 

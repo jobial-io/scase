@@ -41,7 +41,7 @@ class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscripti
   def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]) =
     for {
       jmsMessage <- Concurrent[F].delay(Option(consumer.receive(timeout.map(_.toMillis).getOrElse(Long.MaxValue))))
-      _ = logger.debug(s"received message ${jmsMessage.toString.take(200)} on $destination")
+      _ <- debug[F](s"received message ${jmsMessage.toString.take(200)} on $destination")
       result <- (for {
         jmsMessage <- jmsMessage
         message = unmarshalMessage(jmsMessage)

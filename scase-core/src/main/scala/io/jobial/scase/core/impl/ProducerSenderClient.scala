@@ -12,20 +12,19 @@ import java.util.UUID.randomUUID
 // TODO: add autocommit
 class ProducerSenderClient[F[_] : Concurrent, REQ: Marshaller](
   messageProducer: MessageProducer[F, REQ],
-  responseProducerId: String
+  responseProducerId: Option[String]
 ) extends SenderClient[F, REQ] with Logging {
 
   override def send[REQUEST <: REQ](request: REQUEST)(implicit sendMessageContext: SendMessageContext): F[MessageSendResult[F, REQUEST]] = {
     val correlationId = randomUUID.toString
-    logger.info(s"sending request with correlation id $correlationId")
 
     for {
+      _ <- info[F](s"sending request with correlation id $correlationId on $messageProducer")
       sendResult <- messageProducer.send(
         request,
         Map(
-          CorrelationIdKey -> correlationId,
-          ResponseProducerIdKey -> responseProducerId
-        )
+          CorrelationIdKey -> correlationId
+        ) ++ responseProducerId.map(ResponseProducerIdKey -> _)
       )
     } yield sendResult.asInstanceOf[MessageSendResult[F, REQUEST]]
   }
@@ -40,6 +39,6 @@ object ProducerSenderClient {
 
   def apply[F[_] : Concurrent, REQ: Marshaller](
     messageProducer: MessageProducer[F, REQ],
-    responseProducerId: String = randomUUID.toString
+    responseProducerId: Option[String] = None
   ) = Concurrent[F].delay(new ProducerSenderClient(messageProducer, responseProducerId))
 }

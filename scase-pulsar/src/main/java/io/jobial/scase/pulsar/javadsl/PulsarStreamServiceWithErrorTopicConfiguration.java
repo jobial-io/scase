@@ -6,17 +6,16 @@ import io.jobial.scase.core.javadsl.JavaUtils;
 import io.jobial.scase.core.javadsl.ReceiverClient;
 import io.jobial.scase.core.javadsl.SenderClient;
 import io.jobial.scase.core.javadsl.Service;
-import scala.util.Either;
 
 import java.util.concurrent.ExecutionException;
 
 import static io.jobial.scase.core.javadsl.JavaUtils.*;
 
-public class PulsarStreamServiceConfiguration<REQ, RESP> {
+public class PulsarStreamServiceWithErrorTopicConfiguration<REQ, RESP> {
 
-    io.jobial.scase.pulsar.PulsarStreamServiceConfiguration config;
+    io.jobial.scase.pulsar.PulsarStreamServiceWithErrorTopicConfiguration config;
 
-    PulsarStreamServiceConfiguration(io.jobial.scase.pulsar.PulsarStreamServiceConfiguration<REQ, RESP> config) {
+    PulsarStreamServiceWithErrorTopicConfiguration(io.jobial.scase.pulsar.PulsarStreamServiceWithErrorTopicConfiguration<REQ, RESP> config) {
         this.config = config;
     }
 
@@ -28,7 +27,11 @@ public class PulsarStreamServiceConfiguration<REQ, RESP> {
         return JavaUtils.<REQ>senderClient(config.senderClient(concurrent, timer, new PulsarContext().getContext(), contextShift)).get();
     }
 
-    public ReceiverClient<Either<Throwable, RESP>> receiverClient() throws ExecutionException, InterruptedException {
-        return JavaUtils.<Either<Throwable, RESP>>receiverClient(config.receiverClient(concurrent, timer, new PulsarContext().getContext(), contextShift)).get();
+    public ReceiverClient<RESP> responseReceiverClient() throws ExecutionException, InterruptedException {
+        return JavaUtils.<RESP>receiverClient(config.responseReceiverClient(concurrent, timer, new PulsarContext().getContext(), contextShift)).get();
+    }
+
+    public ReceiverClient<Throwable> errorReceiverClient() throws ExecutionException, InterruptedException {
+        return JavaUtils.<Throwable>receiverClient(config.errorReceiverClient(concurrent, timer, new PulsarContext().getContext(), contextShift)).get();
     }
 }

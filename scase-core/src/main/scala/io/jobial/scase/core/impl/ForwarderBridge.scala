@@ -36,8 +36,8 @@ class ForwarderBridge[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
       r <- continueForwarding
     } yield r) handleErrorWith {
       case t: Throwable =>
-        logger.error(s"error while forwarding in $this", t)
-        continueForwarding
+        error[F](s"error while forwarding in $this", t) >>
+          continueForwarding
     }
 
   def start = Concurrent[F].start(forward)

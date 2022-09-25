@@ -12,4 +12,8 @@ trait Marshalling[M] {
   def eitherMarshaller[Either[Throwable, M]]: Marshaller[Either[Throwable, M]]
 
   def eitherUnmarshaller[Either[Throwable, M]]: Unmarshaller[Either[Throwable, M]]
+  
+  def throwableMarshaller[Throwable]: Marshaller[Throwable]
+  
+  def throwableUnmarshaller[Throwable]: Unmarshaller[Throwable]
 }

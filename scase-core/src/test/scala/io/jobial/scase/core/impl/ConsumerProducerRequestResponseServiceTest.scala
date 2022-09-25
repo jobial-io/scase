@@ -14,6 +14,7 @@ package io.jobial.scase.core.impl
 
 import cats.Eq
 import cats.effect.IO
+import cats.effect.IO.raiseError
 import cats.effect.concurrent.Deferred
 import cats.implicits._
 import io.jobial.scase.core._
@@ -94,7 +95,7 @@ class ConsumerProducerRequestResponseServiceTest
             println("replying...")
             r.reply(response1)
           case r: TestRequest2 =>
-            IO.raiseError(TestException("exception!!!"))
+            raiseError(TestException("exception!!!"))
         }
       },
       request2,

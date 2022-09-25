@@ -51,7 +51,7 @@ class JMSServiceTest
     val serviceConfig = JMSServiceConfiguration.stream[TestRequest[_ <: TestResponse], TestResponse](
       s"hello-test-${uuid(5)}", session.createQueue(s"hello-test-${uuid(5)}"),
       responseDestination)
-    val sourceConfig = JMSServiceConfiguration.source[Either[TestResponse, Throwable]](responseDestination)
+    val sourceConfig = JMSServiceConfiguration.source[Either[Throwable, TestResponse]](responseDestination)
 
     for {
       service <- serviceConfig.service(requestHandler)
@@ -65,7 +65,7 @@ class JMSServiceTest
     val responseDestination = session.createQueue(s"hello-error-test-response-${uuid(5)}")
     val serviceConfig = JMSServiceConfiguration.stream[TestRequest[_ <: TestResponse], TestResponse](
       s"hello-error-test-${uuid(5)}", session.createQueue(s"hello-error-test-${uuid(5)}"), responseDestination)
-    val sourceConfig = JMSServiceConfiguration.source[Either[TestResponse, Throwable]](responseDestination)
+    val sourceConfig = JMSServiceConfiguration.source[Either[Throwable, TestResponse]](responseDestination)
 
     for {
       service <- serviceConfig.service(requestHandlerWithError)

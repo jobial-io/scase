@@ -59,29 +59,41 @@ class PulsarServiceTest
   }
 
   "stream service" should "reply successfully" in {
-    val responseTopic = s"hello-error-test-response-${uuid(5)}"
     val serviceConfig = stream[TestRequest[_ <: TestResponse], TestResponse](
-      s"hello-test-${uuid(5)}", responseTopic)
-    val sourceConfig = source[Either[TestResponse, Throwable]](responseTopic)
+      s"hello-test-${uuid(5)}", s"hello-test-response-${uuid(5)}")
 
     for {
       service <- serviceConfig.service(requestHandler)
-      senderClient <- serviceConfig.client[IO]
-      receiverClient <- sourceConfig.client[IO]
+      senderClient <- serviceConfig.senderClient[IO]
+      receiverClient <- serviceConfig.receiverClient[IO]
       r <- testSuccessfulStreamReply(service, senderClient, receiverClient)
     } yield r
   }
 
+  "stream service with separate error producer" should "reply successfully" in {
+    val responseTopic = s"hello-test-response-${uuid(5)}"
+    val errorTopic = s"hello-test-error-${uuid(5)}"
+    val serviceConfig = stream[TestRequest[_ <: TestResponse], TestResponse](
+      s"hello-test-${uuid(5)}", responseTopic, errorTopic)
+
+    for {
+      service <- serviceConfig.service(requestHandler)
+      senderClient <- serviceConfig.senderClient[IO]
+      responseReceiverClient <- serviceConfig.responseReceiverClient[IO]
+      errorReceiverClient <- serviceConfig.errorReceiverClient[IO]
+      r <- testSuccessfulStreamReply(service, senderClient, responseReceiverClient, errorReceiverClient)
+    } yield r
+  }
+  
   "stream service" should "reply with error" in {
     val responseTopic = s"hello-error-test-response-${uuid(5)}"
     val serviceConfig = stream[TestRequest[_ <: TestResponse], TestResponse](
       s"hello-error-test-${uuid(5)}", responseTopic)
-    val sourceConfig = source[Either[TestResponse, Throwable]](responseTopic)
 
     for {
       service <- serviceConfig.service(requestHandlerWithError)
-      senderClient <- serviceConfig.client[IO]
-      receiverClient <- sourceConfig.client[IO]
+      senderClient <- serviceConfig.senderClient[IO]
+      receiverClient <- serviceConfig.receiverClient[IO]
       r <- testStreamErrorReply(service, senderClient, receiverClient)
     } yield r
   }

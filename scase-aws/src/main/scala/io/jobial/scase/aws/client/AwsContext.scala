@@ -12,20 +12,27 @@
  */
 package io.jobial.scase.aws.client
 
+import cats.effect.implicits._
+import cats.effect.IO
 import com.amazonaws.auth.AWSCredentials
+import scala.concurrent.ExecutionContext
 
 case class AwsContext(
   credentials: Option[AWSCredentials] = None,
   region: Option[String] = sys.env.get("AWS_DEFAULT_REGION"),
   sqsExtendedS3BucketName: Option[String] = None
 ) {
-
-  // Amazon recommends sharing and reusing clients  
-  lazy val sqsClient = SqsClient(this)
-
-  lazy val lambdaClient = LambdaClient(this)
-
-  lazy val stsClient = StsClient(this)
   
-  lazy val s3Client = S3Client(this)
+  implicit val awsContext = this
+  
+  implicit val contextShift = IO.contextShift(ExecutionContext.Implicits.global)
+  
+  // Amazon recommends sharing and reusing clients  
+  lazy val sqsClient = SqsClient[IO]
+
+  lazy val lambdaClient = LambdaClient[IO](this)
+
+  lazy val stsClient = StsClient[IO](this)
+  
+  lazy val s3Client = S3Client[IO](this)
 }

@@ -10,5 +10,4 @@ public class PulsarContext {
     public io.jobial.scase.pulsar.PulsarContext getContext() {
         return context;
     }
-
 }

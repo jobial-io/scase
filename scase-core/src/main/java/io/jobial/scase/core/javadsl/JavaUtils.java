@@ -1,13 +1,11 @@
 package io.jobial.scase.core.javadsl;
 
 import cats.effect.*;
-import io.jobial.scase.core.javadsl.package$;
 import io.jobial.scase.util.Hash$;
-import scala.Function0;
 import scala.Function1;
-import scala.concurrent.*;
-import scala.util.Success$;
-import scala.util.Try;
+import scala.concurrent.ExecutionContext;
+import scala.concurrent.ExecutionContext$;
+import scala.concurrent.Future;
 
 import java.time.Duration;
 import java.util.Map;
@@ -31,7 +29,7 @@ public class JavaUtils {
     private static <T> Future<T> completableFutureToScalaFuture(CompletableFuture<T> f) {
         return io.jobial.scase.core.javadsl.package$.MODULE$.completableFutureToScalaFuture(f);
     }
-    
+
     public static scala.concurrent.duration.Duration javaDurationToScala(Duration duration) {
         return scala.concurrent.duration.Duration.fromNanos(duration.toNanos());
     }
@@ -43,9 +41,30 @@ public class JavaUtils {
     public static <A, B> Function1<A, B> javaFunctionToScala(Function<A, B> f) {
         return package$.MODULE$.javaFunctionToScala(f);
     }
-    
+
     public static String uuid(int length) {
         return Hash$.MODULE$.uuid(length, 36);
+    }
+
+    public static CompletableFuture<Service> service(Object service) {
+        return ioToCompletableFuture((IO<io.jobial.scase.core.Service<IO>>) service)
+                .thenApply(r -> new Service(r));
+    }
+
+    // Java cannot figure out effectful types correctly... 
+    public static <M> CompletableFuture<ReceiverClient<M>> receiverClient(Object client) {
+        return ioToCompletableFuture((IO<io.jobial.scase.core.ReceiverClient<IO, M>>) client)
+                .thenApply(r -> new ReceiverClient(r));
+    }
+
+    public static <REQ, RESP> CompletableFuture<RequestResponseClient<REQ, RESP>> requestResponseClient(Object client) {
+        return ioToCompletableFuture((IO<io.jobial.scase.core.RequestResponseClient<IO, REQ, RESP>>) client)
+                .thenApply(r -> new RequestResponseClient(r));
+    }
+
+    public static <REQ> CompletableFuture<SenderClient<REQ>> senderClient(Object client) {
+        return ioToCompletableFuture((IO<io.jobial.scase.core.SenderClient<IO, REQ>>) client)
+                .thenApply(r -> new SenderClient(r));
     }
 
     public static ExecutionContext executionContext = ExecutionContext$.MODULE$.global();

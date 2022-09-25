@@ -18,7 +18,7 @@ import com.amazonaws.services.lambda.{AWSLambdaAsync, AWSLambdaAsyncClientBuilde
 
 import scala.concurrent.ExecutionContext
 
-trait LambdaClient extends AwsClient {
+trait LambdaClient[F[_]] extends AwsClient[F] {
   lazy val lambda = buildAwsAsyncClient[AWSLambdaAsyncClientBuilder, AWSLambdaAsync](AWSLambdaAsyncClientBuilder.standard)
 
   def invoke(functionName: String, payload: String)(implicit ec: ExecutionContext) =
@@ -53,8 +53,8 @@ trait LambdaClient extends AwsClient {
 
 object LambdaClient {
 
-  def apply(implicit context: AwsContext) =
-    new LambdaClient {
+  def apply[F[_]](implicit context: AwsContext) =
+    new LambdaClient[F] {
       def awsContext = context
     }
 }

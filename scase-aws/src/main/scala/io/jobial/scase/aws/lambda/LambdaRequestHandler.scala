@@ -48,10 +48,9 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandle
       val requestString = IOUtils.toString(inputStream, "utf-8")
 
 
-      logger.info(s"received request: ${requestString.take(500)}")
-
       val result =
         for {
+          _ <- info[F](s"received request: ${requestString.take(500)}")
           request <- Concurrent[F].fromEither(serviceConfiguration.requestUnmarshaller.unmarshalFromText(requestString))
           responseDeferred <- Deferred[F, Either[Throwable, RESP]]
           processorResult: F[SendResponseResult[RESP]] =
@@ -68,7 +67,7 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandle
 
               override def receiveResult[REQUEST](request: REQUEST): MessageReceiveResult[F, REQUEST] =
                 DefaultMessageReceiveResult(Monad[F].pure(request), context.getClientContext.getEnvironment.asScala.toMap, Monad[F].unit, Monad[F].unit)
-              
+
             })(request)
           // TODO: use redeem when Cats is upgraded, 2.0.0 simply doesn't support mapping errors to an F[B]...
           _ <- processorResult
@@ -76,8 +75,8 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP] extends RequestStreamHandle
               responseDeferred.complete(Right(result.response))
             }
             .handleError { t =>
-              logger.error(s"request processing failed: $request", t)
-              responseDeferred.complete(Left(t))
+              error[F](s"request processing failed: $request", t) >>
+                responseDeferred.complete(Left(t))
             }
           // send response when ready
           r <- responseDeferred.get

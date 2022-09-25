@@ -19,32 +19,26 @@ class InMemoryConsumerProducer[F[_] : Concurrent : Timer, M](
   val receivedMessagesSemaphore: Semaphore[F]
 ) extends DefaultMessageConsumer[F, M] with MessageProducer[F, M] with Logging {
 
-  def sendReceive: F[Unit] = {
+  protected def sendReceive: F[Unit] = {
     for {
       _ <- receivedMessagesSemaphore.acquire
       receive <- receives.modify(r => if (r.isEmpty) (Nil, None) else (r.tail, r.headOption))
       messageReceiveResult <- messages.modify(r => if (r.isEmpty) (Nil, None) else (r.tail, r.headOption))
       _ <- (receive, messageReceiveResult) match {
         case (Some(receive), Some(messageReceiveResult)) =>
-          logger.info(s"completing send $receive on queue with $messageReceiveResult")
-          for {
-            _ <- receive.complete(messageReceiveResult)
-            _ <- receivedMessagesSemaphore.release
-            _ <- sendReceive
-          } yield ()
+          info[F](s"completing send $receive on queue with $messageReceiveResult") >>
+            receive.complete(messageReceiveResult) >>
+            receivedMessagesSemaphore.release >>
+            sendReceive
         case _ =>
-          for {
-            _ <- messages.update(m => messageReceiveResult.toList ++ m)
-            _ <- receives.update(r => receive.toList ++ r)
-            _ <- receivedMessagesSemaphore.release
-          } yield ()
+          messages.update(m => messageReceiveResult.toList ++ m) >>
+            receives.update(r => receive.toList ++ r) >>
+            receivedMessagesSemaphore.release
       }
     } yield ()
   } handleErrorWith { t =>
-    for {
-      _ <- receivedMessagesSemaphore.release
-      _ <- Concurrent[F].raiseError[Unit](t)
-    } yield ()
+    receivedMessagesSemaphore.release >>
+      Concurrent[F].raiseError[Unit](t)
   }
 
   /**
@@ -69,7 +63,7 @@ class InMemoryConsumerProducer[F[_] : Concurrent : Timer, M](
       receive <- Deferred[F, MessageReceiveResult[F, M]]
       _ <- receives.update(receives => receives :+ receive)
       _ <- sendReceive
-      _ = logger.info(s"waiting on receive $receive")
+      _ <- info[F](s"waiting on receive $receive")
       result <- timeout.map(receive.get.timeout(_)).getOrElse(receive.get)
     } yield result
 }
