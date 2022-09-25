@@ -115,4 +115,15 @@ public class PulsarServiceConfiguration {
                 marshalling.unmarshaller()
         ));
     }
+
+    public static <M> PulsarMessageHandlerServiceConfiguration<M> handler(
+            String topic,
+            Marshalling<M> marshalling
+    ) {
+        return new PulsarMessageHandlerServiceConfiguration(PulsarServiceConfiguration$.MODULE$.<M>handler(
+                topic,
+                marshalling.marshaller(),
+                marshalling.unmarshaller()
+        ));
+    }
 }

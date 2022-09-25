@@ -13,16 +13,17 @@
 package io.jobial.scase.pulsar.javadsl;
 
 import io.jobial.scase.core.*;
+import io.jobial.scase.core.javadsl.MessageHandler;
 import io.jobial.scase.core.javadsl.RequestHandler;
 import io.jobial.scase.core.javadsl.SendRequestContext;
 import io.jobial.scase.marshalling.serialization.javadsl.SerializationMarshalling;
 import org.junit.Test;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import static io.jobial.scase.core.javadsl.JavaUtils.uuid;
-import static io.jobial.scase.pulsar.javadsl.PulsarServiceConfiguration.requestResponse;
-import static io.jobial.scase.pulsar.javadsl.PulsarServiceConfiguration.stream;
+import static io.jobial.scase.pulsar.javadsl.PulsarServiceConfiguration.*;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
@@ -54,13 +55,19 @@ public class PulsarServiceTest {
         return null;
     };
 
+    MessageHandler<TestRequest> messageHandler(CompletableFuture<TestRequest> received) {
+        return (message, context) -> {
+            received.complete(message);
+        };
+    }
+
     @Test
     public void testRequestResponseService() throws ExecutionException, InterruptedException, RequestTimeout {
         var serviceConfig =
                 requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest>(), new SerializationMarshalling<TestResponse>());
 
         var service = serviceConfig.service(requestHandler);
-        var state = service.start();
+        var state = service.start().get();
 
         var client = serviceConfig.client();
         var request = new TestRequest1("world");
@@ -69,9 +76,7 @@ public class PulsarServiceTest {
                 .get();
 
         assertEquals(response, new TestResponse1(request, "hello world"));
-        Thread.sleep(1000);
-        state.get().stop().whenComplete((r, error) -> System.out.println("stopped service"));
-        Thread.sleep(1000);
+        state.stop().whenComplete((r, error) -> System.out.println("stopped service"));
     }
 
     @Test(expected = RequestTimeout.class)
@@ -96,7 +101,7 @@ public class PulsarServiceTest {
                 requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest>(), new SerializationMarshalling<TestResponse>());
 
         var service = serviceConfig.service(requestHandlerWithError);
-        var state = service.start();
+        var state = service.start().get();
 
         var client = serviceConfig.client();
         var request = new TestRequest1("world");
@@ -105,7 +110,7 @@ public class PulsarServiceTest {
         } catch (ExecutionException e) {
             throw e.getCause();
         } finally {
-            state.get().stop();
+            state.stop();
         }
     }
 
@@ -115,7 +120,7 @@ public class PulsarServiceTest {
                 requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest>(), new SerializationMarshalling<TestResponse>());
 
         var service = serviceConfig.service(requestHandlerWithError);
-        var state = service.start();
+        var state = service.start().get();
 
         var client = serviceConfig.client();
         var request = new TestRequest2("world");
@@ -124,7 +129,7 @@ public class PulsarServiceTest {
         } catch (ExecutionException e) {
             throw e.getCause();
         } finally {
-            state.get().stop();
+            state.stop();
         }
     }
 
@@ -134,7 +139,7 @@ public class PulsarServiceTest {
                 requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest>(), new SerializationMarshalling<TestResponse>());
 
         var service = serviceConfig.service(requestHandlerWithError);
-        var state = service.start();
+        var state = service.start().get();
 
         var client = serviceConfig.client();
         var request = new TestRequest3("world");
@@ -143,7 +148,7 @@ public class PulsarServiceTest {
         } catch (ExecutionException e) {
             throw e.getCause();
         } finally {
-            state.get().stop();
+            state.stop();
         }
     }
 
@@ -153,7 +158,7 @@ public class PulsarServiceTest {
                 stream("hello-test-" + uuid(6), "hello-test-response-" + uuid(6), new SerializationMarshalling<TestRequest>(), new SerializationMarshalling<TestResponse>());
 
         var service = serviceConfig.service(requestHandler);
-        var state = service.start();
+        var state = service.start().get();
 
         var senderClient = serviceConfig.senderClient();
         var receiverClient = serviceConfig.receiverClient();
@@ -164,8 +169,24 @@ public class PulsarServiceTest {
 
         var response = receiverClient.receive().get();
         assertEquals(response.right().get(), new TestResponse1(request, "hello world"));
-        Thread.sleep(1000);
-        state.get().stop().whenComplete((r, error) -> System.out.println("stopped service"));
-        Thread.sleep(1000);
+        state.stop().whenComplete((r, error) -> System.out.println("stopped service"));
+    }
+
+    @Test
+    public void testMessageHandlerService() throws ExecutionException, InterruptedException, RequestTimeout {
+        var serviceConfig = handler("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest>());
+
+        var received = new CompletableFuture<TestRequest>();
+        var service = serviceConfig.service(messageHandler(received));
+        var state = service.start().get();
+
+        var client = serviceConfig.client();
+        var request = new TestRequest1("world");
+        client.send(request)
+                .whenComplete((r, error) -> System.out.println(r))
+                .get();
+
+        assertEquals(request, received.get());
+        state.stop().whenComplete((r, error) -> System.out.println("stopped service"));
     }
 }
