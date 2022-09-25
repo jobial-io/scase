@@ -170,8 +170,8 @@ case class DefaultSendResponseResult[RESPONSE](response: RESPONSE) extends SendR
 object ConsumerProducerRequestResponseService {
 
   def apply[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
-    messageConsumer: MessageConsumer[F, REQ],
-    messageProducer: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
+    requestConsumer: MessageConsumer[F, REQ],
+    responseProducer: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
     requestHandler: RequestHandler[F, REQ, RESP],
     messageProducerForErrors: Option[MessageProducer[F, REQ]] = None, // TODO: implement this
     autoCommitRequest: Boolean = true,
@@ -190,8 +190,8 @@ object ConsumerProducerRequestResponseService {
           Monad[F].pure(None)
     } yield new ConsumerProducerRequestResponseService(
       producersCacheRef,
-      messageConsumer,
-      messageProducer,
+      requestConsumer,
+      responseProducer,
       requestHandler,
       messageProducerForErrors,
       autoCommitRequest,

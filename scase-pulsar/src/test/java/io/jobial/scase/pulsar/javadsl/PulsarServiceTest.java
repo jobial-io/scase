@@ -127,24 +127,24 @@ public class PulsarServiceTest {
         }
     }
 
-//    @Test(expected = NullPointerException.class)
-//    public void testServiceReturnsNull() throws Throwable {
-//        var serviceConfig =
-//                requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest, TestResponse>());
-//
-//        var service = serviceConfig.service(requestHandlerWithError);
-//        var state = service.start();
-//
-//        var client = serviceConfig.client();
-//        var request = new TestRequest3("world");
-//        try {
-//            client.sendRequest(request).get();
-//        } catch (ExecutionException e) {
-//            throw e.getCause();
-//        } finally {
-//            state.get().stop();
-//        }
-//    }
+    @Test(expected = NullPointerException.class)
+    public void testServiceReturnsNull() throws Throwable {
+        var serviceConfig =
+                requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest, TestResponse>());
+
+        var service = serviceConfig.service(requestHandlerWithError);
+        var state = service.start();
+
+        var client = serviceConfig.client();
+        var request = new TestRequest3("world");
+        try {
+            client.sendRequest(request).get();
+        } catch (ExecutionException e) {
+            throw e.getCause();
+        } finally {
+            state.get().stop();
+        }
+    }
 
     @Test
     public void testStreamService() throws ExecutionException, InterruptedException, RequestTimeout {

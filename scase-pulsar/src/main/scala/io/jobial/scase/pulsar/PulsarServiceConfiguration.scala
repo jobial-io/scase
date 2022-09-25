@@ -94,6 +94,7 @@ class PulsarStreamServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Mar
   val serviceName: String,
   val requestTopic: String,
   val responseTopic: String,
+  val errorTopic: Option[String],
   val batchingMaxPublishDelay: Duration
 )(
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher
@@ -193,6 +194,7 @@ object PulsarServiceConfiguration {
       requestTopic,
       requestTopic,
       responseTopic,
+      None,
       batchingMaxPublishDelay
     )
 
