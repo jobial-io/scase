@@ -21,6 +21,7 @@ import java.io.OutputStream
 import java.io.PrintStream
 import java.nio.charset.StandardCharsets.UTF_8
 import scala.util.Try
+import io.jobial.scase.util._
 
 trait SprayJsonMarshalling {
 
