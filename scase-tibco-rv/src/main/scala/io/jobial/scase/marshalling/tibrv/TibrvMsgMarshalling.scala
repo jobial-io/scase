@@ -1,4 +1,4 @@
-package io.jobial.scase.marshalling.tibrv.sprayjson
+package io.jobial.scase.marshalling.tibrv
 
 import com.tibco.tibrv.TibrvDate
 import com.tibco.tibrv.TibrvMsg
@@ -31,7 +31,7 @@ import scala.util.Try
  * conversion. It spares the complexity of dealing with case class creation. The flip side is the inherently 
  * lossy encoding of JSON.
  */
-trait TibrvMsgSprayJsonMarshalling extends ProductFormats with StandardFormats with AdditionalFormats
+trait TibrvMsgMarshalling extends ProductFormats with StandardFormats with AdditionalFormats
   with CollectionFormats {
 
   implicit val stringJsFormat = spray.json.DefaultJsonProtocol.StringJsonFormat
