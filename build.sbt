@@ -58,6 +58,7 @@ lazy val PulsarVersion = "2.9.0"
 lazy val ScalaJava8CompatVersion = "1.0.2"
 lazy val LogbackVersion = "1.2.3"
 lazy val ShapelessVersion = "2.3.3"
+lazy val JodaTimeVersion = "2.11.1"
 
 lazy val root: Project = project
   .in(file("."))
@@ -161,8 +162,10 @@ lazy val `scase-tibco-rv` = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "tibco" % "tibrvj" % "7.5.1" % "provided"
-    )
+      "joda-time" % "joda-time" % JodaTimeVersion
+    ),
+    Compile / unmanagedJars ++= Seq (file(sys.env.get("TIBCO_RV_ROOT").getOrElse(sys.props("tibco.rv.root")) + "/lib/" + "tibrvj.jar"))
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "test->test")
+  .dependsOn(`scase-spray-json`)

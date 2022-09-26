@@ -1,18 +1,20 @@
 package io.jobial.scase.marshalling.rawbytes
 
-import cats.effect.IO
-import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
+import cats.effect.Concurrent
+import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.marshalling.Marshaller
+import io.jobial.scase.marshalling.Unmarshaller
 import org.apache.commons.io.IOUtils
-
-import java.io.{InputStream, OutputStream}
+import java.io.InputStream
+import java.io.OutputStream
 import java.util.Base64
 
-trait RawBytesMarshalling {
-  
+trait RawBytesMarshalling extends CatsUtils {
+
   implicit val rawBytesMarshaller = new Marshaller[Array[Byte]] {
     def marshal(o: Array[Byte]): Array[Byte] = o
 
-    def marshal(o: Array[Byte], out: OutputStream) = IO {
+    def marshal[F[_] : Concurrent](o: Array[Byte], out: OutputStream) = delay {
       out.write(o)
       out
     }
@@ -25,8 +27,8 @@ trait RawBytesMarshalling {
 
     def unmarshal(bytes: Array[Byte]) = Right(bytes)
 
-    def unmarshal(in: InputStream) =
-      IO(IOUtils.toByteArray(in))
+    def unmarshal[F[_] : Concurrent](in: InputStream) =
+      delay(IOUtils.toByteArray(in))
 
     def unmarshalFromText(text: String) =
       unmarshal(Base64.getDecoder.decode(text))
