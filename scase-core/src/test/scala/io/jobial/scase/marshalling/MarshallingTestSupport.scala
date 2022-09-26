@@ -13,13 +13,13 @@
 package io.jobial.scase.marshalling
 
 import cats.Eq
+import cats.effect.IO
 import cats.implicits.catsSyntaxEitherId
 import cats.instances.either._
 import cats.tests.StrictCatsEquality
 import io.jobial.scase.core.{ScaseTestHelper, ServiceTestModel, TestException}
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.scalatest.flatspec.AsyncFlatSpec
-
 import java.io.ByteArrayInputStream
 
 trait MarshallingTestSupport extends AsyncFlatSpec
@@ -31,9 +31,9 @@ trait MarshallingTestSupport extends AsyncFlatSpec
     val buf = new ByteArrayOutputStream
 
     for {
-      _ <- Marshaller[M].marshal(message, buf)
+      _ <- Marshaller[M].marshal[IO](message, buf)
       _ = buf.close
-      r <- Unmarshaller[M].unmarshal(new ByteArrayInputStream(buf.toByteArray))
+      r <- Unmarshaller[M].unmarshal[IO](new ByteArrayInputStream(buf.toByteArray))
     } yield {
       assert(Unmarshaller[M].unmarshal(buf.toByteArray) === message.asRight[Throwable])
       assert(r === message)

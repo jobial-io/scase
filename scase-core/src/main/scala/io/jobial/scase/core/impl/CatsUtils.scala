@@ -54,6 +54,12 @@ trait CatsUtils {
         }
     }
 
+  def fromEither[F[_] : Concurrent, A](e: Either[Throwable, A]): F[A] =
+    e match {
+      case Right(a) => pure(a)
+      case Left(err) => raiseError(err)
+    }
+
   def fromJavaFuture[F[_] : Concurrent, A](f: => java.util.concurrent.Future[A], pollTime: FiniteDuration = 10.millis): F[A] =
     delay(f.get(pollTime.toMillis, TimeUnit.MILLISECONDS)).handleErrorWith {
       case t: CancellationException =>
