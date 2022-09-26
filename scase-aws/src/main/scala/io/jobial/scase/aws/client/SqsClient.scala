@@ -13,6 +13,7 @@
 package io.jobial.scase.aws.client
 
 import cats.effect.Concurrent
+import cats.effect.IO
 import cats.effect.Timer
 import cats.implicits._
 import com.amazon.sqs.javamessaging.AmazonSQSExtendedClient
@@ -40,27 +41,46 @@ trait SqsClient[F[_]] extends S3Client[F] {
 
   val defaultMaxReceiveMessageWaitTime = 20
 
-  def createQueue(queueName: String) = delay {
-    logger.info(s"creating SQS queue $queueName")
-    val request = new CreateQueueRequest(queueName)
-      .addAttributesEntry("ReceiveMessageWaitTimeSeconds", defaultMaxReceiveMessageWaitTime.toString)
-      .addAttributesEntry("MessageRetentionPeriod", "86400")
+  def createQueue(queueName: String) =
+    for {
+      r <-
+        info(s"creating SQS queue $queueName") >>
+          delay {
+            val request = new CreateQueueRequest(queueName)
+              .addAttributesEntry("ReceiveMessageWaitTimeSeconds", defaultMaxReceiveMessageWaitTime.toString)
+              .addAttributesEntry("MessageRetentionPeriod", "86400")
 
-    sqs.createQueue(request)
-  }
-
-  def createQueueIfNotExists(queueName: String)(implicit awsContext: AwsContext = AwsContext()) =
-    createQueue(queueName).map(_.getQueueUrl) handleErrorWith {
-      case e: AmazonSQSException =>
-        if (e.getErrorCode().equals("QueueAlreadyExists"))
-          delay(sqs.getQueueUrl(queueName).getQueueUrl).map { queueUrl =>
-            enableLongPolling(queueUrl)
-            queueUrl
+            sqs.createQueue(request)
+          }.handleErrorWith { t =>
+            enableLongPolling(sqs.getQueueUrl(queueName).getQueueUrl) >>
+              raiseError(t)
           }
-        else raiseError(e)
-      case t =>
-        raiseError(t)
-    }
+      _ <- enableLongPolling(r.getQueueUrl)
+    } yield r
+
+  def initializeQueue(queueUrl: String, messageRetentionPeriod: Option[Duration],
+    visibilityTimeout: Option[Duration], cleanup: Boolean) = {
+
+    def setupQueue =
+      messageRetentionPeriod.map(setMessageRetentionPeriod(queueUrl, _)).getOrElse(unit) >>
+        visibilityTimeout.map(setVisibilityTimeout(queueUrl, _)).getOrElse(unit)
+
+    {
+      createQueue(queueUrl) >>
+        whenA(cleanup)(delay(sys.addShutdownHook { () => {
+          debug[IO](s"deleting queue $queueUrl") >>
+            IO(sqs.deleteQueue(queueUrl)).handleErrorWith { t =>
+              raiseError[IO, Unit](new IllegalStateException(s"error deleting queue $queueUrl", t))
+            }
+        }.unsafeRunSync()
+
+        })) >>
+        info(s"created queue $queueUrl")
+    }.handleErrorWith { t =>
+      setupQueue >>debug("")
+    } >> setupQueue >>
+      debug(s"initialized SQS consumer $this")
+  }
 
   def sendMessage(queueUrl: String, message: String, attributes: Map[String, String] = Map())(implicit awsContext: AwsContext = AwsContext()) = {
     {
@@ -70,13 +90,18 @@ trait SqsClient[F[_]] extends S3Client[F] {
             .withQueueUrl(queueUrl)
             .withMessageBody(message)
             // we need to explicitly convert to a mutable java map here because the extended client needs to add further attributes...
-            .withMessageAttributes(new util.Hashtable(attributes.mapValues { value =>
-              new MessageAttributeValue().withDataType("String").withStringValue(value)
+            .withMessageAttributes(new util.Hashtable(attributes.mapValues {
+              value =>
+                new MessageAttributeValue().withDataType("String").withStringValue(value)
             }.toMap.asJava)
             )
         }
-        r <- debug(s"message attributes: ${request.getMessageAttributes.asScala}") >>
-          debug(s"calling sendMessage on queue $queueUrl with ${request.toString.take(200)}") >>
+        r <- debug(s"message attributes: ${
+          request.getMessageAttributes.asScala
+        }") >>
+          debug(s"calling sendMessage on queue $queueUrl with ${
+            request.toString.take(200)
+          }") >>
           delay(sqsExtended.getOrElse(sqs).sendMessage(request))
       } yield r
     } handleErrorWith {
@@ -89,9 +114,10 @@ trait SqsClient[F[_]] extends S3Client[F] {
   //  def sendMessage(queueUrl: String, message: JsValue): Try[SendMessageResult] =
   //    sendMessage(queueUrl, message.prettyPrint)
   //
-  def enableLongPolling(queueUrl: String) =
+  def enableLongPolling(queueUrl: String) = delay {
     sqs.setQueueAttributes(new SetQueueAttributesRequest().withQueueUrl(queueUrl)
       .addAttributesEntry(QueueAttributeName.ReceiveMessageWaitTimeSeconds.toString, defaultMaxReceiveMessageWaitTime.toString))
+  }
 
   def setMessageRetentionPeriod(queueUrl: String, messageRetentionPeriod: Duration) = delay {
     sqs.setQueueAttributes(new SetQueueAttributesRequest().withQueueUrl(queueUrl)

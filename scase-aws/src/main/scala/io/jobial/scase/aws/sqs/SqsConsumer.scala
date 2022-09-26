@@ -35,21 +35,7 @@ class SqsConsumer[F[_] : Concurrent, M](
   import awsContext.sqsClient._
 
   override def initialize =
-    liftIO(createQueueIfNotExists(queueUrl)) >>
-      whenA(cleanup)(delay(sys.addShutdownHook({ () =>
-        try {
-          logger.debug(s"deleting queue $queueUrl")
-          deleteQueue(queueUrl).unsafeRunSync()
-        } catch {
-          case t: Throwable =>
-            throw new RuntimeException(s"error deleting queue $queueUrl", t)
-        }
-      }))) >>
-      debug(s"created queue $queueUrl") >>
-      // TODO: only do this when first created
-      liftIO(messageRetentionPeriod.map(setMessageRetentionPeriod(queueUrl, _)).getOrElse(IO())) >>
-      liftIO(visibilityTimeout.map(setVisibilityTimeout(queueUrl, _)).getOrElse(IO())) >>
-      debug(s"initialized SQS consumer $this")
+    liftIO(initializeQueue(queueUrl, messageRetentionPeriod, visibilityTimeout, cleanup))
 
   def receiveMessagesFromQueue(timeout: Option[FiniteDuration]) =
     (for {
