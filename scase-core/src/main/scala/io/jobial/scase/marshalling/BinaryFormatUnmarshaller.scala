@@ -13,7 +13,7 @@ trait BinaryFormatUnmarshaller[M] extends Unmarshaller[M] with CatsUtils {
   def unmarshal[F[_] : Concurrent](in: InputStream) =
     fromEither(unmarshalFromInputStream(in))
 
-  protected def unmarshalFromInputStream(in: InputStream): Either[Throwable, M]
+  def unmarshalFromInputStream(in: InputStream): Either[Throwable, M]
 
   def unmarshalFromText(text: String) =
     unmarshal(Base64.getDecoder.decode(text))

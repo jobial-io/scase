@@ -5,15 +5,15 @@ import io.jobial.scase.marshalling.Unmarshaller
 
 trait Marshalling[M] {
 
-  def marshaller[M]: Marshaller[M]
+  def marshaller: Marshaller[M]
 
-  def unmarshaller[M]: Unmarshaller[M]
-  
-  def eitherMarshaller[Either[Throwable, M]]: Marshaller[Either[Throwable, M]]
+  def unmarshaller: Unmarshaller[M]
 
-  def eitherUnmarshaller[Either[Throwable, M]]: Unmarshaller[Either[Throwable, M]]
-  
-  def throwableMarshaller[Throwable]: Marshaller[Throwable]
-  
-  def throwableUnmarshaller[Throwable]: Unmarshaller[Throwable]
+  def eitherMarshaller: Marshaller[Either[Throwable, M]]
+
+  def eitherUnmarshaller: Unmarshaller[Either[Throwable, M]]
+
+  def throwableMarshaller: Marshaller[Throwable]
+
+  def throwableUnmarshaller: Unmarshaller[Throwable]
 }

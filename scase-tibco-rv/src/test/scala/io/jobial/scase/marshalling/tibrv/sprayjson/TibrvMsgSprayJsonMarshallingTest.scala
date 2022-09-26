@@ -1,4 +1,4 @@
-package io.jobial.scase.marshalling.tibrv
+package io.jobial.scase.marshalling.tibrv.sprayjson
 
 import com.tibco.tibrv.TibrvDate
 import com.tibco.tibrv.TibrvMsg
@@ -26,7 +26,7 @@ case class Address(
   address: String
 )
 
-class TibrvMsgMarshallingTest extends AnyFlatSpec with TibrvMsgMarshalling {
+class TibrvMsgSprayJsonMarshallingTest extends AnyFlatSpec with TibrvMsgSprayJsonMarshalling {
 
   implicit val manidrFormat = jsonFormat1(Address)
 

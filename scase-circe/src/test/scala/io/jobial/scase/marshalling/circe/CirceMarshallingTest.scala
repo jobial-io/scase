@@ -1,7 +1,7 @@
 package io.jobial.scase.marshalling.circe
 
-import io.jobial.scase.marshalling.MarshallingTestSupport
 import io.circe.generic.auto._
+import io.jobial.scase.marshalling.MarshallingTestSupport
 
 class CirceMarshallingTest extends MarshallingTestSupport {
   

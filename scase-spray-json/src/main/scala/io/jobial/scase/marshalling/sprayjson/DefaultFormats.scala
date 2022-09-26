@@ -12,14 +12,13 @@
  */
 package io.jobial.scase.marshalling.sprayjson
 
-import io.circe.Json
 import io.jobial.scase.marshalling.MarshallingUtils
 import spray.json._
-
 import scala.util.Try
 
-trait DefaultFormats extends MarshallingUtils {
-  implicit def eitherJsonFormat[A: JsonWriter : JsonReader, B: JsonWriter : JsonReader] = new JsonFormat[Either[A, B]] {
+trait DefaultFormats extends StandardFormats with AdditionalFormats with MarshallingUtils {
+
+  override implicit def eitherFormat[A: JsonFormat, B: JsonFormat]: JsonFormat[Either[A, B]] = new JsonFormat[Either[A, B]] {
     def write(obj: Either[A, B]): JsValue = obj match {
       case Left(a) =>
         a.toJson
