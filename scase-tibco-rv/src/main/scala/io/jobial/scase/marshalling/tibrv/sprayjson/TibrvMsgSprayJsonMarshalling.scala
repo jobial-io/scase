@@ -1,4 +1,4 @@
-package io.jobial.scase.marshalling.tibrv
+package io.jobial.scase.marshalling.tibrv.sprayjson
 
 import com.tibco.tibrv.TibrvDate
 import com.tibco.tibrv.TibrvMsg
@@ -31,7 +31,7 @@ import scala.util.Try
  * conversion. It spares the complexity of dealing with case class creation. The flip side is the inherently 
  * lossy encoding of JSON.
  */
-trait TibrvMsgMarshalling extends ProductFormats with StandardFormats with AdditionalFormats
+trait TibrvMsgSprayJsonMarshalling extends ProductFormats with StandardFormats with AdditionalFormats
   with CollectionFormats {
 
   implicit val stringJsFormat = spray.json.DefaultJsonProtocol.StringJsonFormat
@@ -94,7 +94,7 @@ trait TibrvMsgMarshalling extends ProductFormats with StandardFormats with Addit
       new DateTime(json.asInstanceOf[JsNumber].value.toLong)
   }
 
-  implicit def tibrvMsgJsonMarshaller[M: JsonWriter] = new BinaryFormatMarshaller[M] {
+  implicit def tibrvMsgSprayJsonMarshaller[M: JsonWriter] = new BinaryFormatMarshaller[M] {
     def marshalToOutputStream(o: M, out: OutputStream) = {
 
       def jsValueToTibrvMsgField(v: JsValue, m: TibrvMsg, field: String): Unit = v match {
@@ -156,7 +156,7 @@ trait TibrvMsgMarshalling extends ProductFormats with StandardFormats with Addit
     }
   }
 
-  implicit def tibrvMsgJsonUnmarshaller[M: JsonReader] = new BinaryFormatUnmarshaller[M] {
+  implicit def tibrvMsgSprayJsonUnmarshaller[M: JsonReader] = new BinaryFormatUnmarshaller[M] {
     def unmarshalFromInputStream(in: InputStream) = {
       val m = new TibrvMsg(toByteArray(in))
 

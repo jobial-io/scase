@@ -53,8 +53,8 @@ public class PulsarServiceConfiguration {
                 requestMarshalling.unmarshaller(),
                 responseMarshalling.marshaller(),
                 responseMarshalling.unmarshaller(),
-                responseMarshalling.throwableMarshaller(),
-                responseMarshalling.throwableUnmarshaller()
+                responseMarshalling.eitherMarshaller(),
+                responseMarshalling.eitherUnmarshaller()
         ));
     }
 

@@ -1,17 +1,12 @@
 package io.jobial.scase.marshalling.serialization.javadsl
 
-import io.jobial.scase.marshalling.javadsl.Marshalling
+import io.jobial.scase.marshalling.javadsl.DelegatingMarshalling
 
-class SerializationMarshalling[M] extends Marshalling[M] with io.jobial.scase.marshalling.serialization.SerializationMarshalling {
-  def marshaller[M] = javaSerializationWithGzipObjectMarshaller[M]
+class SerializationMarshalling[M] extends DelegatingMarshalling[M] with io.jobial.scase.marshalling.serialization.SerializationMarshalling {
 
-  def unmarshaller[M] = javaSerializationWithGzipObjectUnmarshaller[M]
+  val marshaller = javaSerializationWithGzipObjectMarshaller[M]
 
-  def eitherMarshaller[Either[Throwable, M]] = javaSerializationWithGzipObjectMarshaller[Either[Throwable, M]]
+  val unmarshaller = javaSerializationWithGzipObjectUnmarshaller[M]
 
-  def eitherUnmarshaller[Either[Throwable, M]] = javaSerializationWithGzipObjectUnmarshaller[Either[Throwable, M]]
-
-  def throwableMarshaller[Throwable] = javaSerializationWithGzipObjectMarshaller[Throwable]
-
-  def throwableUnmarshaller[Throwable] = javaSerializationWithGzipObjectUnmarshaller[Throwable]
+  def delegate[M] = new SerializationMarshalling[M]
 }
