@@ -1,6 +1,7 @@
 package io.jobial.scase.core
 
 trait MessageContext[F[_]] {
+  def receiveResult[M](request: M): MessageReceiveResult[F, M]
 }
 
 trait MessageHandler[F[_], M] {
