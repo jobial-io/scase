@@ -26,7 +26,7 @@ trait MarshallingTestSupport extends AsyncFlatSpec
   with StrictCatsEquality
   with ScaseTestHelper
   with ServiceTestModel {
-
+  
   def testMarshalling[M: Marshaller : Unmarshaller : Eq](message: M, testUnmarshalError: Boolean = false) = {
     val buf = new ByteArrayOutputStream
 
