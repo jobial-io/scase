@@ -79,6 +79,7 @@ lazy val `scase-core` = project
       "org.typelevel" %% "cats-core" % CatsVersion,
       "org.typelevel" %% "cats-effect" % CatsVersion,
       "org.typelevel" %% "cats-testkit-scalatest" % CatsTestkitScalatestVersion % Test,
+      "org.typelevel" %% "kittens" % CatsVersion % Test,
       "com.typesafe.scala-logging" %% "scala-logging" % ScalaLoggingVersion,
       "com.lihaoyi" %% "sourcecode" % SourcecodeVersion,
       "org.scalatest" %% "scalatest" % ScalatestVersion % Test,

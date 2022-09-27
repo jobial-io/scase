@@ -5,6 +5,7 @@ import com.tibco.tibrv.TibrvMsg
 import com.tibco.tibrv.TibrvMsgField
 import io.jobial.scase.marshalling.BinaryFormatMarshaller
 import io.jobial.scase.marshalling.BinaryFormatUnmarshaller
+import io.jobial.scase.marshalling.sprayjson.DefaultFormats
 import org.apache.commons.io.IOUtils.toByteArray
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
@@ -20,7 +21,6 @@ import spray.json.JsonFormat
 import spray.json.JsonReader
 import spray.json.JsonWriter
 import spray.json.ProductFormats
-import spray.json.StandardFormats
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.Date
@@ -31,7 +31,7 @@ import scala.util.Try
  * conversion. It spares the complexity of dealing with case class creation. The flip side is the inherently 
  * lossy encoding of JSON.
  */
-trait TibrvMsgSprayJsonMarshalling extends ProductFormats with StandardFormats with AdditionalFormats
+trait TibrvMsgSprayJsonMarshalling extends ProductFormats with DefaultFormats with AdditionalFormats
   with CollectionFormats {
 
   implicit val stringJsFormat = spray.json.DefaultJsonProtocol.StringJsonFormat

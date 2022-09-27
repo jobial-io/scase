@@ -2,7 +2,6 @@ package io.jobial.scase.marshalling
 
 import cats.effect.Concurrent
 import java.io.OutputStream
-import cats.effect.IO
 
 trait Marshaller[M] {
   def marshal(o: M): Array[Byte]

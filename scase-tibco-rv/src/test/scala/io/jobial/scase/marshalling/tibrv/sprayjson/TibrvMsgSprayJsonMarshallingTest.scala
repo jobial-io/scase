@@ -3,36 +3,38 @@ package io.jobial.scase.marshalling.tibrv.sprayjson
 import com.tibco.tibrv.TibrvDate
 import com.tibco.tibrv.TibrvMsg
 import io.jobial.scase.marshalling.Marshaller
+import io.jobial.scase.marshalling.MarshallingTestSupport
 import io.jobial.scase.marshalling.Unmarshaller
 import org.joda.time.DateTime
 import org.joda.time.DateTime.now
 import org.joda.time.LocalDate
-import org.scalatest.flatspec.AnyFlatSpec
+import cats.instances.all._
+import cats.kernel.Eq
+import cats.derived.auto.eq._
+import io.jobial.scase.core.TestRequest1
+import io.jobial.scase.core.TestResponse1
 
-case class Employee(
-  name: String,
-  id: Int,
-  salary: Double,
-  children: Option[Int],
-  long: Long,
-  dateOfBirth: LocalDate,
-  active: Boolean,
-  nicknames: List[String],
-  address: Option[Address] = None,
-  timestamp: DateTime
-)
+class TibrvMsgSprayJsonMarshallingTest extends MarshallingTestSupport with TibrvMsgSprayJsonMarshalling {
 
-case class Address(
-  address: String
-)
-
-class TibrvMsgSprayJsonMarshallingTest extends AnyFlatSpec with TibrvMsgSprayJsonMarshalling {
-
-  implicit val manidrFormat = jsonFormat1(Address)
+  implicit val addressFormat = jsonFormat1(Address)
 
   implicit val testPersonFormat = jsonFormat10(Employee)
 
+  implicit val tibrvDateEq = Eq.fromUniversalEquals[TibrvDate]
+
+  implicit val localDateEq = Eq.fromUniversalEquals[LocalDate]
+
+  implicit val dateTimeEq = Eq.fromUniversalEquals[DateTime]
+
+  implicit val testRequest1Format = jsonFormat1(TestRequest1)
+
+  implicit val testResponse1Format = jsonFormat2(TestResponse1)
+
   "marshalling" should "work" in {
+    testMarshallingWithDefaultFormats(response1)
+  }
+  
+  "marshalling some other type" should "work" in {
     val timestamp = now
     val dateOfBirth = LocalDate.now
     val m = new TibrvMsg(Marshaller[Employee].marshal(
@@ -45,13 +47,13 @@ class TibrvMsgSprayJsonMarshallingTest extends AnyFlatSpec with TibrvMsgSprayJso
     assert(m.getField("salary").data.asInstanceOf[Double] === 30000.0)
     assert(m.getField("timestamp").data.asInstanceOf[TibrvDate] === new TibrvDate(timestamp.toDate))
     assert(m.getField("dateOfBirth").data.asInstanceOf[TibrvDate] === new TibrvDate(dateOfBirth.toDate))
-    assert(m.getField("long").data.asInstanceOf[java.lang.Long] === Long.MaxValue)
-    assert(m.getField("active").data.asInstanceOf[java.lang.Boolean] === true)
+    assert(m.getField("long").data.asInstanceOf[Long] === Long.MaxValue)
+    assert(m.getField("active").data.asInstanceOf[Boolean] === true)
     assert(m.getField("nicknames").data.asInstanceOf[TibrvMsg].getNumFields === 3)
     assert(m.getField("address").data.asInstanceOf[TibrvMsg].get("address").toString === "Y")
   }
 
-  "unmarshalling" should "work" in {
+  "unmarshalling some other type" should "work" in {
     val dateOfBirth = LocalDate.now
     val timestamp = now
     val m = new TibrvMsg
@@ -81,7 +83,23 @@ class TibrvMsgSprayJsonMarshallingTest extends AnyFlatSpec with TibrvMsgSprayJso
     assert(p.long === Long.MaxValue)
     assert(p.active)
     assert(p.nicknames === List("a", "b"))
-    assert(p.address === Some(Address("Z")))
+    assert(p.address === Option(Address("Z")))
   }
 }
 
+case class Employee(
+  name: String,
+  id: Int,
+  salary: Double,
+  children: Option[Int],
+  long: Long,
+  dateOfBirth: LocalDate,
+  active: Boolean,
+  nicknames: List[String],
+  address: Option[Address] = None,
+  timestamp: DateTime
+)
+
+case class Address(
+  address: String
+)
