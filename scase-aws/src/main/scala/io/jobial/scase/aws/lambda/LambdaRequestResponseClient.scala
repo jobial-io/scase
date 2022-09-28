@@ -12,19 +12,17 @@
  */
 package io.jobial.scase.aws.lambda
 
-import cats.Monad
 import cats.effect.Concurrent
-import cats.effect.IO
 import cats.implicits._
 import io.jobial.scase.aws.client.AwsContext
-import io.jobial.scase.core.impl.CatsUtils
-import io.jobial.scase.core.impl.DefaultMessageSendResult
-import io.jobial.scase.core.impl.DefaultRequestResponseResult
 import io.jobial.scase.core.DefaultMessageReceiveResult
 import io.jobial.scase.core.RequestResponseClient
 import io.jobial.scase.core.RequestResponseMapping
 import io.jobial.scase.core.RequestResponseResult
 import io.jobial.scase.core.SendRequestContext
+import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.core.impl.DefaultMessageSendResult
+import io.jobial.scase.core.impl.DefaultRequestResponseResult
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
@@ -47,26 +45,28 @@ case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP:
   )(
     implicit sendRequestContext: SendRequestContext
   ): F[RequestResponseResult[F, REQUEST, RESPONSE]] =
-    pure {
+    for {
+      response <- liftIO(invoke(functionName, Marshaller[REQ].marshalToText(request)))
+      responsePayload = new String(response.getPayload.array, StandardCharsets.UTF_8)
+      m <- Unmarshaller[RESP].unmarshalFromText(responsePayload) match {
+        case Right(r) =>
+          pure(r.asInstanceOf[RESPONSE])
+        case Left(t) =>
+          raiseError(t)
+      }
+    } yield
       DefaultRequestResponseResult(
         DefaultMessageSendResult[F, REQUEST](unit, unit),
         DefaultMessageReceiveResult[F, RESPONSE](
-          for {
-            response <- liftIO(invoke(functionName, Marshaller[REQ].marshalToText(request)))
-            m <- Unmarshaller[RESP].unmarshalFromText(new String(response.getPayload.array, StandardCharsets.UTF_8)) match {
-              case Right(r) =>
-                pure(r.asInstanceOf[RESPONSE])
-              case Left(t) =>
-                raiseError(t)
-            }
-          } yield m,
+          pure(m),
           Map(), // TODO: propagate attributes here
           unit,
-          unit
+          unit,
+          pure(responsePayload),
+          pure(response)
         )
       )
-    }
-
+  
   def stop = unit
 }
 

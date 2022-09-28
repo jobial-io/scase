@@ -58,6 +58,6 @@ object ForwarderBridge extends CatsUtils with Logging {
         sendResult <- destination.send(message)(SendMessageContext(r.attributes))
       } yield sendResult
     }, { r =>
-      pure(Some(DefaultMessageReceiveResult(r.message, r.attributes, unit, unit)))
+      pure(Some(DefaultMessageReceiveResult(r.message, r.attributes, unit, unit, r.underlyingMessage, r.underlyingContext)))
     }, stopped)
 }

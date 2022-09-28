@@ -19,13 +19,19 @@ trait MessageReceiveResult[F[_], M] {
   def commit: F[Unit]
 
   def rollback: F[Unit]
+  
+  def underlyingMessage: F[Any]
+
+  def underlyingContext: F[Any]
 }
 
 case class DefaultMessageReceiveResult[F[_], M](
   message: F[M],
   attributes: Map[String, String],
   commit: F[Unit],
-  rollback: F[Unit]
+  rollback: F[Unit],
+  underlyingMessage: F[Any],
+  underlyingContext: F[Any]
 ) extends MessageReceiveResult[F, M]
 
 trait MessageSubscription[F[_], M] {

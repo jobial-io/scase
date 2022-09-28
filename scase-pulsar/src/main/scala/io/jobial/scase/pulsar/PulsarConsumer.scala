@@ -60,7 +60,9 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](topic: String, val subscripti
           pure(
             DefaultMessageReceiveResult(pure(message), attributes,
               commit = delay(consumer.acknowledge(pulsarMessage)),
-              rollback = delay(consumer.negativeAcknowledge(pulsarMessage))
+              rollback = delay(consumer.negativeAcknowledge(pulsarMessage)),
+              underlyingMessage = pure(pulsarMessage),
+              underlyingContext = raiseError(new IllegalStateException("No underlying context"))
             )
           )
         case Left(error) =>
