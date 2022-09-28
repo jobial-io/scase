@@ -25,6 +25,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.util.Date
 import scala.util.Try
+import io.jobial.scase.util._
 
 /**
  * A marshalling implementation for case classes and TibrvMsg piggybacking on Spray Json for the case class
@@ -94,7 +95,7 @@ trait TibrvMsgSprayJsonMarshalling extends ProductFormats with DefaultFormats wi
       new DateTime(json.asInstanceOf[JsNumber].value.toLong)
   }
 
-  implicit def tibrvMsgSprayJsonMarshaller[M: JsonWriter] = new BinaryFormatMarshaller[M] {
+  implicit def tibrvMsgSprayJsonMarshaller[M: JsonWriter]: BinaryFormatMarshaller[M] = new BinaryFormatMarshaller[M] {
     def marshalToOutputStream(o: M, out: OutputStream) = {
 
       def jsValueToTibrvMsgField(v: JsValue, m: TibrvMsg, field: String): Unit = v match {
@@ -156,7 +157,7 @@ trait TibrvMsgSprayJsonMarshalling extends ProductFormats with DefaultFormats wi
     }
   }
 
-  implicit def tibrvMsgSprayJsonUnmarshaller[M: JsonReader] = new BinaryFormatUnmarshaller[M] {
+  implicit def tibrvMsgSprayJsonUnmarshaller[M: JsonReader]: BinaryFormatUnmarshaller[M] = new BinaryFormatUnmarshaller[M] {
     def unmarshalFromInputStream(in: InputStream) = {
       val m = new TibrvMsg(toByteArray(in))
 

@@ -31,7 +31,7 @@ trait CirceSprayJsonSupport {
     // This is obviously awfully inefficient, should only be used for migration or backcompat purposes...
       Decoder[T].apply(HCursor.fromJson(parser.parse(json.compactPrint).right.get)).right.get
   }
-  
+
   implicit def jsonFormatFromCirce[T: Encoder : Decoder] = new JsonFormat[T] {
     override def write(obj: T): JsValue = jsonWriterFromCirceEncoder[T].write(obj)
 
