@@ -1,4 +1,3 @@
-package io.jobial.scase.marshalling
+package io.jobial.scase.marshalling.tibrv
 
-import io.jobial.scase.marshalling.tibrv.sprayjson.TibrvMsgSprayJsonMarshalling
-package object tibrv extends TibrvMsgSprayJsonMarshalling
+package object sprayjson extends TibrvMsgSprayJsonMarshalling

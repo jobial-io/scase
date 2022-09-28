@@ -18,4 +18,9 @@ public class Service {
         return ioToCompletableFuture(service.start())
                 .thenApply(r -> new ServiceState((io.jobial.scase.core.ServiceState<IO>) r));
     }
+
+    public CompletableFuture<ServiceState> startAndJoin() {
+        return ioToCompletableFuture(service.startAndJoin())
+                .thenApply(r -> new ServiceState((io.jobial.scase.core.ServiceState<IO>) r));
+    }
 }

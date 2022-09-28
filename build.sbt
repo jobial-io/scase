@@ -30,6 +30,7 @@ import xerial.sbt.Sonatype._
 lazy val commonSettings = Seq(
   publishConfiguration := publishConfiguration.value.withOverwrite(true),
   publishLocalConfiguration := publishLocalConfiguration.value.withOverwrite(true),
+  publishM2Configuration := publishM2Configuration.value.withOverwrite(true),
   publishTo := publishTo.value.orElse(sonatypePublishToBundle.value),
   sonatypeProjectHosting := Some(GitHubHosting("jobial-io", "scase", "orbang@jobial.io")),
   organizationName := "Jobial OÜ",
@@ -68,9 +69,9 @@ lazy val root: Project = project
     makePom / publishArtifact := true
   )
   .aggregate(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`,
-    `scase-pulsar`, `scase-jms`)
+    `scase-pulsar`, `scase-jms`, `scase-tibco-rv`)
   .dependsOn(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`,
-    `scase-pulsar`, `scase-jms`)
+    `scase-pulsar`, `scase-jms`, `scase-tibco-rv`)
 
 lazy val `scase-core` = project
   .settings(commonSettings)
@@ -145,6 +146,7 @@ lazy val `scase-pulsar` = project
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "test->test")
+  .dependsOn(`scase-tibco-rv` % "test->test")
 
 lazy val `scase-jms` = project
   .settings(commonSettings)
@@ -165,7 +167,7 @@ lazy val `scase-tibco-rv` = project
     libraryDependencies ++= Seq(
       "joda-time" % "joda-time" % JodaTimeVersion
     ),
-    Compile / unmanagedJars ++= Seq (file(sys.env.get("TIBCO_RV_ROOT").getOrElse(sys.props("tibco.rv.root")) + "/lib/" + "tibrvj.jar"))
+    Compile / unmanagedJars ++= Seq (file(sys.env.get("TIBCO_RV_ROOT").getOrElse(sys.props("tibco.rv.root")) + "/lib/tibrvj.jar"))
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "test->test")

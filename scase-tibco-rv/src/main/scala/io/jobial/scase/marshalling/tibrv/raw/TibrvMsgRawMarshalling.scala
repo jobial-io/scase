@@ -11,6 +11,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import scala.util.Failure
 import scala.util.Try
+import io.jobial.scase.util._
 
 trait TibrvMsgRawMarshalling {
 
@@ -66,7 +67,7 @@ trait TibrvMsgRawMarshalling {
       val buf = out.toByteArray
       tibrvMsgRawThrowableUnmarshaller.unmarshalFromInputStream(new ByteArrayInputStream(buf)) match {
         case Left(_) =>
-          tibrvMsgRawUnmarshaller.unmarshalFromInputStream(new ByteArrayInputStream(buf)).map(Right(_))
+          tibrvMsgRawUnmarshaller.unmarshalFromInputStream(new ByteArrayInputStream(buf)).right.map(Right(_))
         case Right(t) =>
           Right(Left[Throwable, TibrvMsg](t))
       }
