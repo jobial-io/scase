@@ -55,7 +55,10 @@ class InMemoryConsumerProducer[F[_] : Concurrent : Timer, M](
    */
   def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M]): F[MessageSendResult[F, M]] =
     for {
-      _ <- messages.update(m => m :+ DefaultMessageReceiveResult[F, M](pure(message), attributes, unit, unit))
+      _ <- messages.update(m => m :+ 
+        DefaultMessageReceiveResult[F, M](pure(message), attributes, unit, unit, 
+          raiseError(new IllegalStateException("No underlying message")),
+          raiseError(new IllegalStateException("No underlying context"))))
       _ <- sendReceive
     } yield new MessageSendResult[F, M] {
       def commit = unit

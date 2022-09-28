@@ -52,7 +52,6 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP]
     } else {
       val requestString = IOUtils.toString(inputStream, "utf-8")
 
-
       val result =
         for {
           _ <- info(s"received request: ${requestString.take(500)}")
@@ -71,7 +70,8 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP]
                 DefaultSendResponseResult[RESPONSE](response)
 
               override def receiveResult[REQUEST](request: REQUEST): MessageReceiveResult[F, REQUEST] =
-                DefaultMessageReceiveResult(pure(request), context.getClientContext.getEnvironment.asScala.toMap, unit, unit)
+                DefaultMessageReceiveResult(pure(request), context.getClientContext.getEnvironment.asScala.toMap, unit, unit,
+                  pure(requestString), pure(context))
 
             })(request)
           // TODO: use redeem when Cats is upgraded, 2.0.0 simply doesn't support mapping errors to an F[B]...
