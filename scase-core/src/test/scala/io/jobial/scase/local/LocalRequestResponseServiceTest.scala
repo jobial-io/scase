@@ -21,14 +21,14 @@ class LocalRequestResponseServiceTest
 
   "request-response service" should "reply successfully" in {
     for {
-      (service, client) <- LocalServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello").serviceAndClient(requestHandler)
+      (service, client) <- LocalServiceConfiguration("hello").serviceAndClient(requestHandler)
       r <- testSuccessfulReply(service, client)
     } yield r
   }
 
   "another request-response service" should "reply successfully" in {
     for {
-      (service, client) <- LocalServiceConfiguration[Req, Resp]("hello").serviceAndClient(anotherRequestProcessor)
+      (service, client) <- LocalServiceConfiguration("hello").serviceAndClient(anotherRequestProcessor)
       _ <- service.start
       r <- testSuccessfulReply(client, Req1(), Resp1())
     } yield r

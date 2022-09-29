@@ -1,22 +1,23 @@
 package io.jobial.scase.inmemory
 
-import cats.Monad
+import cats.effect.Concurrent
+import cats.effect.Timer
 import cats.effect.concurrent.Deferred
 import cats.effect.concurrent.Ref
 import cats.effect.concurrent.Semaphore
 import cats.effect.implicits.catsEffectSyntaxConcurrent
-import cats.effect.Concurrent
-import cats.effect.Timer
 import cats.implicits._
-import io.jobial.scase.core.impl.CatsUtils
-import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.core.DefaultMessageReceiveResult
 import io.jobial.scase.core.MessageProducer
 import io.jobial.scase.core.MessageReceiveResult
 import io.jobial.scase.core.MessageSendResult
+import io.jobial.scase.core.ReceiveTimeout
+import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
+import scala.concurrent.TimeoutException
 import scala.concurrent.duration.FiniteDuration
 
 
@@ -29,17 +30,17 @@ class InMemoryConsumerProducer[F[_] : Concurrent : Timer, M](
   protected def sendReceive: F[Unit] = {
     for {
       _ <- receivedMessagesSemaphore.acquire
-      receive <- receives.modify(r => if (r.isEmpty) (Nil, None) else (r.tail, r.headOption))
+      receiveList <- receives.modify(r => (Nil, r))
       messageReceiveResult <- messages.modify(r => if (r.isEmpty) (Nil, None) else (r.tail, r.headOption))
-      _ <- (receive, messageReceiveResult) match {
-        case (Some(receive), Some(messageReceiveResult)) =>
-          info(s"completing send $receive on queue with $messageReceiveResult") >>
-            receive.complete(messageReceiveResult) >>
+      _ <- (receiveList, messageReceiveResult) match {
+        case (_ :: _, Some(messageReceiveResult)) =>
+          debug(s"completing send $receiveList on queue with $messageReceiveResult") >>
+            receiveList.map(_.complete(messageReceiveResult)).sequence >>
             receivedMessagesSemaphore.release >>
             sendReceive
         case _ =>
-          messages.update(m => messageReceiveResult.toList ++ m) >>
-            receives.update(r => receive.toList ++ r) >>
+            messages.update(m => messageReceiveResult.toList ++ m) >>
+            receives.update(r => receiveList) >>
             receivedMessagesSemaphore.release
       }
     } yield ()
@@ -55,27 +56,33 @@ class InMemoryConsumerProducer[F[_] : Concurrent : Timer, M](
    */
   def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M]): F[MessageSendResult[F, M]] =
     for {
-      _ <- messages.update(m => m :+ 
-        DefaultMessageReceiveResult[F, M](pure(message), attributes, unit, unit, 
+      _ <- messages.update(m => m :+
+        DefaultMessageReceiveResult[F, M](pure(message), attributes, unit, unit,
           raiseError(new IllegalStateException("No underlying message")),
           raiseError(new IllegalStateException("No underlying context"))))
       _ <- sendReceive
+      _ <- debug(s"sent message $message")
     } yield new MessageSendResult[F, M] {
       def commit = unit
 
       def rollback = unit
     }
 
-  def stop = unit
-
   def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]) =
     for {
       receive <- Deferred[F, MessageReceiveResult[F, M]]
-      _ <- receives.update(receives => receives :+ receive)
+      _ <- receives.update(receives => receive :: receives)
       _ <- sendReceive
-      _ <- info(s"waiting on receive $receive")
-      result <- timeout.map(receive.get.timeout(_)).getOrElse(receive.get)
+      result <- timeout.map(receive.get.timeout(_).handleErrorWith {
+        case t: TimeoutException =>
+          raiseError(ReceiveTimeout(timeout))
+        case t =>
+          raiseError(t)
+      }).getOrElse(receive.get)
     } yield result
+
+  def stop = unit
+
 }
 
 object InMemoryConsumerProducer {
