@@ -13,8 +13,6 @@
 package io.jobial.scase.local
 
 import io.jobial.scase.core._
-
-import scala.concurrent.TimeoutException
 import scala.concurrent.duration.DurationInt
 
 
@@ -39,10 +37,9 @@ class LocalRequestResponseServiceTest
   "request" should "time out if service is not started" in {
     implicit val sendRequestContext = SendRequestContext(requestTimeout = Some(1.second))
 
-    recoverToSucceededIf[TimeoutException] {
+    recoverToSucceededIf[RequestTimeout] {
       for {
-        t <- localServiceAndClient("greeting", requestHandler)
-        (_, client) = t
+        (_, client) <- localServiceAndClient("greeting", requestHandler)
         _ <- client ? request1
       } yield succeed
     }
