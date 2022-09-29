@@ -58,7 +58,7 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](topic: String, val subscripti
         case Right(message) =>
           val attributes = pulsarMessage.getProperties.asScala.toMap
           pure(
-            DefaultMessageReceiveResult(pure(message), attributes,
+            DefaultMessageReceiveResult[F, M](pure(message), attributes,
               commit = delay(consumer.acknowledge(pulsarMessage)),
               rollback = delay(consumer.negativeAcknowledge(pulsarMessage)),
               underlyingMessage = pure(pulsarMessage),
