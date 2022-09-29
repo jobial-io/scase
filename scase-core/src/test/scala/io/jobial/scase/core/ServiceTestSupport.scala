@@ -64,7 +64,7 @@ trait ServiceTestSupport extends AsyncFlatSpec
   def testSuccessfulReply(service: Service[IO], client: RequestResponseClient[IO, TestRequest[_ <: TestResponse], TestResponse]): IO[Assertion] =
     for {
       h <- service.start
-      //_ <- IO.sleep(1000.seconds)
+      _ <- IO.sleep(2.seconds)
       r1 <- testSuccessfulReply(client, request1, response1)
       r2 <- testSuccessfulReply(client, request2, response2)
       _ <- client.stop
