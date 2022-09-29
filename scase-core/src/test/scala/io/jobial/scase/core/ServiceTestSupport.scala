@@ -21,7 +21,6 @@ import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
 import org.scalatest.Assertion
 import org.scalatest.flatspec.AsyncFlatSpec
-import scala.concurrent.TimeoutException
 import scala.concurrent.duration._
 
 trait ServiceTestSupport extends AsyncFlatSpec
@@ -165,7 +164,7 @@ trait ServiceTestSupport extends AsyncFlatSpec
   ) = {
     implicit val sendRequestContext = SendRequestContext(requestTimeout = Some(1.second))
 
-    recoverToSucceededIf[TimeoutException] {
+    recoverToSucceededIf[ReceiveTimeout] {
       for {
         _ <- senderClient ! request1
         _ <- receiverClient.receive(1.second).handleErrorWith { t =>
