@@ -50,7 +50,7 @@ class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscripti
       } yield message match {
         case Right(message) =>
           val attributes = extractAttributes(jmsMessage)
-          val messageReceiveResult = DefaultMessageReceiveResult(
+          val messageReceiveResult = DefaultMessageReceiveResult[F, M](
             pure(message),
             attributes,
             commit = delay(session.commit),
