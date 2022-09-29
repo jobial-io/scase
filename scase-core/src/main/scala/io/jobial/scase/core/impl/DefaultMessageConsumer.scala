@@ -48,19 +48,13 @@ abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsu
       new MessageSubscription[F, M] {
 
         override def join =
-          for {
-            _ <- cancellationHappened.get
-          } yield ()
+          cancellationHappened.get
 
         override def cancel =
-          for {
-            _ <- cancelled.update(_ => true)
-            _ <- cancellationHappened.complete()
-          } yield ()
+          cancelled.update(_ => true) >>
+            cancellationHappened.complete()
 
-        override def isCancelled = {
-          // TODO: make this non-blocking
+        override def isCancelled =
           cancelled.get
-        }
       }
 }
