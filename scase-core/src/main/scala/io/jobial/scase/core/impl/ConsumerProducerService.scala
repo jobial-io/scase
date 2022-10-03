@@ -73,7 +73,7 @@ trait ConsumerProducerService[F[_], REQ, RESP] extends CatsUtils with Logging {
           val responseAttributes = request.correlationId.map(correlationId => Map(CorrelationIdKey -> correlationId)).getOrElse(Map())
 
           // send response when ready
-          Concurrent[F].start(processResultWithErrorHandling) >>
+          start(processResultWithErrorHandling) >>
             sendResult(request, response, responseAttributes).handleErrorWith { t =>
               error(s"unhadled error", t) >> raiseError(t)
             }

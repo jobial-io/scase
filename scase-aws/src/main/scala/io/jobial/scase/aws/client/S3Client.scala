@@ -98,7 +98,7 @@ trait S3Client[F[_]] extends AwsClient[F] {
       r <- if (exists)
         pure(true)
       else for {
-        _ <- Timer[F].sleep(5.seconds)
+        _ <- sleep(5.seconds)
         r <- waitForObjectExists(bucketName, key, repeat - 1)
       } yield r
     } yield r

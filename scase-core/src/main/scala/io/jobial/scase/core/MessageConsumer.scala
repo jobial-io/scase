@@ -5,7 +5,7 @@ import scala.concurrent.duration._
 
 trait MessageReceiveResult[F[_], M] {
 
-  // This is in F to allow error handling
+  // In F to allow error handling
   def message: F[M]
 
   def attributes: Map[String, String]
@@ -43,12 +43,34 @@ trait MessageSubscription[F[_], M] {
   def isCancelled: F[Boolean]
 }
 
+/**
+ * The usual semantics of a consumer is that each message is delivered to exactly one receive or subscription. Therefore,
+ * multiple subscriptions on a consumer receive messages randomly.
+ * If messages need to be delivered multiple times, each receiver should have a separate consumer.
+ * 
+ * @tparam F
+ * @tparam M
+ */
 trait MessageConsumer[F[_], M] {
 
+  /**
+   * Receive a message from the consumer. Receives compete for messages, each message is returned by exactly one receive.
+   * 
+   * @param timeout
+   * @param u
+   * @return
+   */
   def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]): F[MessageReceiveResult[F, M]]
 
-  // Subscribes to the message source. In the background, subscribe might start async processing (e.g. a Fiber to poll messages in a source).
-  // TODO: should the result be in F too?
+  /**
+   * Receive messages continuously and call the provided callback function for each message. If there are multiple
+   * subscriptions, they will compete for messages and each message will be delivered to exactly one callback function.
+   * 
+   * @param callback
+   * @param u
+   * @tparam T
+   * @return
+   */
   def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M]): F[MessageSubscription[F, M]]
 
   def stop: F[Unit]

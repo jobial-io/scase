@@ -17,7 +17,8 @@ import io.circe.generic.auto._
 import io.jobial.scase.core._
 import io.jobial.scase.marshalling.circe._
 import io.jobial.scase.util.Hash.uuid
-
+import java.util.concurrent.Executors
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
 

@@ -15,7 +15,6 @@ package io.jobial.scase.core.impl
 import cats.Eq
 import cats.effect.IO
 import io.jobial.scase.core._
-import io.jobial.scase.inmemory.InMemoryConsumerProducer
 import io.jobial.scase.local.LocalServiceConfiguration
 import io.jobial.scase.marshalling.serialization._
 

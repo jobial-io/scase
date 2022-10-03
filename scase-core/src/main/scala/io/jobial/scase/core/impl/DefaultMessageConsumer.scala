@@ -18,22 +18,20 @@ import scala.concurrent.duration.FiniteDuration
  */
 abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsumer[F, M] with CatsUtils with Logging {
 
-  val receiveTimeoutInSubscribe = 1.second
-
-  def receiveMessagesUntilCancelled[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean], receiving: Deferred[F, Unit], receiveTimeout: FiniteDuration = 1.millis)(implicit u: Unmarshaller[M]): F[Unit] = {
+  val receiveTimeoutInSubscribe = 5.second
+  
+  def receiveMessagesUntilCancelled[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean], receiving: Deferred[F, Unit], receiveTimeout: FiniteDuration = receiveTimeoutInSubscribe, receivingCompleted: Boolean = false)(implicit u: Unmarshaller[M]): F[Unit] = {
 
     def continueIfNotCancelled =
       for {
         c <- cancelled.get
-        r <- if (!c) receiveMessagesUntilCancelled(callback, cancelled, receiving, receiveTimeoutInSubscribe) else unit
+        r <- if (!c) receiveMessagesUntilCancelled(callback, cancelled, receiving, receiveTimeoutInSubscribe, true) else unit
       } yield r
 
     (for {
-      result <- receive(Some(receiveTimeout)).handleErrorWith { t =>
-        receiving.complete().attempt >>
-          raiseError(t)
+      result <- guarantee(receive(if (receivingCompleted) Some(receiveTimeout) else Some(1.milli))) {
+        whenA(!receivingCompleted){receiving.complete().attempt}
       }
-      _ <- receiving.complete().attempt
       _ <- callback(result)
       _ <- continueIfNotCancelled
     } yield {
@@ -46,6 +44,8 @@ abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsu
     }
   }
 
+  def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]): F[MessageReceiveResult[F, M]]
+
   def initialize = unit
 
   override def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M]): F[MessageSubscription[F, M]] =
@@ -54,10 +54,7 @@ abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsu
       cancelled <- Ref.of[F, Boolean](false)
       cancellationHappened <- Deferred[F, Unit]
       receiving <- Deferred[F, Unit]
-      _ <- Concurrent[F].start(receiveMessagesUntilCancelled(callback, cancelled, receiving))
-      _ <- receiving.get
-    } yield
-      new MessageSubscription[F, M] {
+      subscription = new MessageSubscription[F, M] {
 
         override def join =
           cancellationHappened.get
@@ -69,4 +66,8 @@ abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsu
         override def isCancelled =
           cancelled.get
       }
+      _ <- start(receiveMessagesUntilCancelled(callback, cancelled, receiving))
+      _ <- receiving.get
+      _ = debug(s"new subscription $subscription")
+    } yield subscription
 }

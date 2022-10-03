@@ -18,7 +18,8 @@ import cats.effect.IO.raiseError
 import cats.effect.concurrent.Deferred
 import cats.implicits._
 import io.jobial.scase.core._
-import io.jobial.scase.inmemory.InMemoryConsumerProducer
+import io.jobial.scase.inmemory.InMemoryConsumer
+import io.jobial.scase.inmemory.InMemoryProducer
 import io.jobial.scase.marshalling.serialization._
 
 class ConsumerProducerRequestResponseServiceTest
@@ -26,8 +27,10 @@ class ConsumerProducerRequestResponseServiceTest
 
   def testRequestResponse[REQ, RESP](testRequestProcessor: RequestHandler[IO, REQ, RESP], request: REQ, response: Either[Throwable, RESP]) =
     for {
-      testMessageConsumer <- InMemoryConsumerProducer[IO, REQ]
-      testMessageProducer <- InMemoryConsumerProducer[IO, Either[Throwable, RESP]]
+      testMessageConsumer <- InMemoryConsumer[IO, REQ]
+      requestProducer <- testMessageConsumer.producer
+      resultConsumer <- InMemoryConsumer[IO, Either[Throwable, RESP]]
+      testMessageProducer <- resultConsumer.producer
       service <- ConsumerProducerRequestResponseService[IO, REQ, RESP](
         testMessageConsumer,
         { _: Option[String] => IO(testMessageProducer) },
@@ -35,14 +38,14 @@ class ConsumerProducerRequestResponseServiceTest
       )
       s <- service.start
       d <- Deferred[IO, Either[Throwable, RESP]]
-      _ <- testMessageProducer.subscribe({ m =>
+      _ <- resultConsumer.subscribe({ m =>
         println("complete")
         for {
           message <- m.message
           r <- d.complete(message)
         } yield r
       })
-      _ <- testMessageConsumer.send(request, Map(ResponseProducerIdKey -> ""))
+      _ <- requestProducer.send(request, Map(ResponseProducerIdKey -> ""))
       r <- d.get
     } yield assert(r == response)
 
@@ -50,8 +53,10 @@ class ConsumerProducerRequestResponseServiceTest
     implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]
   ) =
     for {
-      testMessageConsumer <- InMemoryConsumerProducer[IO, REQ]
-      testMessageProducer <- InMemoryConsumerProducer[IO, Either[Throwable, RESP]]
+      testMessageConsumer <- InMemoryConsumer[IO, REQ]
+      requestProducer <- testMessageConsumer.producer
+      resultConsumer <- InMemoryConsumer[IO, Either[Throwable, RESP]]
+      testMessageProducer <- resultConsumer.producer
       service <- ConsumerProducerRequestResponseService[IO, REQ, RESP](
         testMessageConsumer,
         { _: Option[String] => IO(testMessageProducer) },
@@ -59,14 +64,14 @@ class ConsumerProducerRequestResponseServiceTest
       )
       s <- service.start
       client <- ConsumerProducerRequestResponseClient[IO, REQ, RESP](
-        testMessageProducer,
-        () => testMessageConsumer,
+        resultConsumer,
+        () => requestProducer,
         None
       )
       r1 <- client ? request
       r <- {
         implicit val c = client
-        // We do it this way to test if the implicit request sending is working, obviously we could also use client.sendRequest here 
+        // Do it this way to test if the implicit request sending is working, obviously we could also use client.sendRequest here 
         for {
           r <- request
         } yield r

@@ -1,6 +1,7 @@
 package io.jobial.scase.core.impl
 
 import cats.effect.Concurrent
+import cats.effect.Fiber
 import cats.effect.concurrent.Ref
 import cats.implicits._
 import io.jobial.scase.core.ReceiverClient
@@ -39,7 +40,7 @@ class ForwarderBridge[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
           continueForwarding
     }
 
-  def start = Concurrent[F].start(forward)
+  def start: F[Fiber[F, Unit]] = start(forward)
 
   def stop = stopped.set(true)
 }

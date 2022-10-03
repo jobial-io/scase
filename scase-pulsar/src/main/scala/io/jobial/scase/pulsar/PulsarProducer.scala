@@ -35,7 +35,9 @@ class PulsarProducer[F[_] : Concurrent, M](topic: String)(implicit context: Puls
         .properties(attributes.asJava)
         .value(Marshaller[M].marshal(message))
         .sendAsync()
-      ))
+      )).handleErrorWith { t =>
+        error(s"failed to send message on $this", t) >> raiseError(t)
+      }
       _ <- debug(s"sent message ${message.toString.take(200)} on $topic")
     } yield new MessageSendResult[F, M] {
       def commit = unit
