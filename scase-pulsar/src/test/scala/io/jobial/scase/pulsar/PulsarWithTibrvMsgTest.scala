@@ -8,8 +8,10 @@ import io.jobial.scase.marshalling.sprayjson.DefaultFormats
 import io.jobial.scase.marshalling.tibrv.sprayjson._
 import io.jobial.scase.pulsar.PulsarServiceConfiguration.requestResponse
 import io.jobial.scase.util.Hash.uuid
+import org.scalatest.Ignore
 
 
+@Ignore
 class PulsarWithTibrvMsgTest
   extends ServiceTestSupport with CirceSprayJsonSupport with DefaultFormats {
 

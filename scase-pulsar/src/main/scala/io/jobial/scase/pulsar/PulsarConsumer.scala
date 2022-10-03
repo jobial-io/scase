@@ -6,6 +6,7 @@ import cats.effect.concurrent.Ref
 import cats.implicits._
 import io.jobial.scase.core.DefaultMessageReceiveResult
 import io.jobial.scase.core.MessageReceiveResult
+import io.jobial.scase.core.MessageSubscription
 import io.jobial.scase.core.ReceiveTimeout
 import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
@@ -44,7 +45,7 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](topic: String, val subscripti
     for {
       pulsarMessage <- fromFuture(toScala {
         val f = consumer.receiveAsync
-        timeout.map(t => f.orTimeout(t.toNanos, TimeUnit.NANOSECONDS)).getOrElse(f)
+        timeout.map(t => f.orTimeout(t.toMillis, TimeUnit.MILLISECONDS)).getOrElse(f)
       }).handleErrorWith {
         case t: TimeoutException =>
           debug(s"Receive timed out after $timeout") >>
@@ -73,6 +74,8 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](topic: String, val subscripti
   def stop =
     delay(consumer.unsubscribe()) >>
       delay(consumer.close())
+      
+  override def toString = super.toString + s" topic: $topic subscription: $subscriptionName"
 }
 
 object PulsarConsumer {

@@ -3,13 +3,14 @@ package io.jobial.scase.local
 import cats.effect.Concurrent
 import cats.effect.Timer
 import cats.implicits._
-import io.jobial.scase.core.impl.CatsUtils
-import io.jobial.scase.core.impl.ConsumerProducerRequestResponseClient
-import io.jobial.scase.core.impl.ConsumerProducerRequestResponseService
 import io.jobial.scase.core.MessageProducer
 import io.jobial.scase.core.RequestHandler
 import io.jobial.scase.core.ServiceConfiguration
-import io.jobial.scase.inmemory.InMemoryConsumerProducer
+import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.core.impl.ConsumerProducerRequestResponseClient
+import io.jobial.scase.core.impl.ConsumerProducerRequestResponseService
+import io.jobial.scase.inmemory.InMemoryConsumer
+import io.jobial.scase.inmemory.InMemoryProducer
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.serialization._
 
@@ -24,8 +25,8 @@ class LocalServiceConfiguration[REQ, RESP](
 
   def service[F[_] : Concurrent : Timer](requestHandler: RequestHandler[F, REQ, RESP]) =
     for {
-      requestQueue <- InMemoryConsumerProducer[F, REQ]
-      responseQueue <- InMemoryConsumerProducer[F, Either[Throwable, RESP]]
+      requestQueue <- InMemoryConsumer[F, REQ]
+      responseQueue <- InMemoryProducer[F, Either[Throwable, RESP]]
       service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
         requestQueue, { _ => delay(responseQueue) }: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
         requestHandler
@@ -34,10 +35,12 @@ class LocalServiceConfiguration[REQ, RESP](
 
   def client[F[_] : Concurrent : Timer](service: ConsumerProducerRequestResponseService[F, REQ, RESP]) =
     for {
-      messageConsumer <- service.responseProducer(None)
+      responseProducer <- service.responseProducer(None)
+      responseConsumer <- responseProducer.asInstanceOf[InMemoryProducer[F, Either[Throwable, RESP]]].consumer
+      requestProducer <- service.requestConsumer.asInstanceOf[InMemoryConsumer[F, REQ]].producer
       client <- ConsumerProducerRequestResponseClient[F, REQ, RESP](
-        messageConsumer.asInstanceOf[InMemoryConsumerProducer[F, Either[Throwable, RESP]]],
-        () => service.requestConsumer.asInstanceOf[InMemoryConsumerProducer[F, REQ]],
+        responseConsumer,
+        () => requestProducer,
         None
       )
     } yield client

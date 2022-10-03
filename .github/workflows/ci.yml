@@ -13,7 +13,7 @@ jobs:
       name: CI
     services:
        pulsar:
-         image: apachepulsar/pulsar-standalone:2.7.4
+         image: apachepulsar/pulsar-standalone:2.8.4
          ports:
          - 6650:6650
        activemq:

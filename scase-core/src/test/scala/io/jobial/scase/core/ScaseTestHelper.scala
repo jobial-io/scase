@@ -14,11 +14,14 @@ package io.jobial.scase.core
 
 import cats.effect.IO
 import cats.tests.StrictCatsEquality
+import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.logging.Logging
 import org.scalactic.source
 import org.scalatest.Assertion
+import org.scalatest.Succeeded
 import org.scalatest.compatible.Assertion
 import org.scalatest.flatspec.AsyncFlatSpec
-
+import java.util.concurrent.Executors
 import java.util.concurrent.Executors.newCachedThreadPool
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.ExecutionContext.fromExecutor
@@ -27,7 +30,7 @@ import scala.reflect.ClassTag
 trait ScaseTestHelper {
   this: AsyncFlatSpec =>
   
-  val ec = fromExecutor(newCachedThreadPool)
+  val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool)
   
   implicit val contextShift = IO.contextShift(ec)
 
@@ -40,4 +43,11 @@ trait ScaseTestHelper {
   def recoverToSucceededIf[T <: AnyRef](io: IO[Any])(implicit classTag: ClassTag[T], pos: source.Position): IO[Assertion] =
     IO.fromFuture(IO(recoverToSucceededIf(io.unsafeToFuture())))
 
+  implicit def assertionsToIOAssert(l: IO[List[Assertion]]): IO[Assertion] =
+    for {
+      l <- l
+    } yield assert(l.forall(_ === Succeeded))
+
+  implicit def assertionsToFutureAssert(l: IO[List[Assertion]]) =
+    runIOResult(l)
 }
