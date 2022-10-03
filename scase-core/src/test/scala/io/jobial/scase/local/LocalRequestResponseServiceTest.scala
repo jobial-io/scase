@@ -12,12 +12,14 @@
  */
 package io.jobial.scase.local
 
+import cats.effect.IO
 import io.jobial.scase.core._
+import io.jobial.scase.core.impl.CatsUtils
 import scala.concurrent.duration.DurationInt
 
 
 class LocalRequestResponseServiceTest
-  extends ServiceTestSupport {
+  extends ServiceTestSupport with CatsUtils {
 
   "request-response service" should "reply successfully" in {
     for {
@@ -44,4 +46,43 @@ class LocalRequestResponseServiceTest
       } yield succeed
     }
   }
+
+  "request-response service" should "succeed in load test" in {
+    val serviceConfig = LocalServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello")
+    for {
+      service <- serviceConfig.service(requestHandler)
+      h <- service.start
+      client <- serviceConfig.client(service)
+      r <- {
+        for {
+          i <- 0 until 100
+        } yield for {
+          _ <- debug[IO](s"sending $i")
+          r <- testSuccessfulReply(client, request1, response1)
+          _ <- debug[IO](s"received $i")
+        } yield r
+      }.parSequence
+      _ <- h.stop
+    } yield r
+  }
+
+  "request-response service" should "succeed in load test with different clients" in {
+    val serviceConfig = LocalServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello")
+    for {
+      service <- serviceConfig.service(requestHandler)
+      h <- service.start
+      r <- {
+        for {
+          i <- 0 until 10
+        } yield for {
+          client <- serviceConfig.client(service)
+          _ <- debug[IO](s"sending $i")
+          r <- testSuccessfulReply(client, request1, response1)
+          _ <- debug[IO](s"received $i")
+        } yield r
+      }.parSequence
+      _ <- h.stop
+    } yield r
+  }
+
 }

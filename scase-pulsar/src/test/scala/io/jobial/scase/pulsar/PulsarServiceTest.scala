@@ -11,8 +11,9 @@ import io.jobial.scase.pulsar.PulsarServiceConfiguration.requestResponse
 import io.jobial.scase.pulsar.PulsarServiceConfiguration.source
 import io.jobial.scase.pulsar.PulsarServiceConfiguration.stream
 import io.jobial.scase.util.Hash.uuid
+import org.scalatest.Ignore
 
-
+@Ignore
 class PulsarServiceTest
   extends ServiceTestSupport {
 
@@ -60,7 +61,7 @@ class PulsarServiceTest
 
   "stream service" should "reply successfully" in {
     val serviceConfig = stream[TestRequest[_ <: TestResponse], TestResponse](
-      s"hello-test-${uuid(5)}", s"hello-test-response-${uuid(5)}")
+      s"hello-test-${uuid(6)}", s"hello-test-response-${uuid(6)}")
 
     for {
       service <- serviceConfig.service(requestHandler)
@@ -71,10 +72,10 @@ class PulsarServiceTest
   }
 
   "stream service with separate error producer" should "reply successfully" in {
-    val responseTopic = s"hello-test-response-${uuid(5)}"
-    val errorTopic = s"hello-test-error-${uuid(5)}"
+    val responseTopic = s"hello-stream-test-response-${uuid(6)}"
+    val errorTopic = s"hello-stream-test-error-${uuid(6)}"
     val serviceConfig = stream[TestRequest[_ <: TestResponse], TestResponse](
-      s"hello-test-${uuid(5)}", responseTopic, errorTopic)
+      s"hello-test-${uuid(6)}", responseTopic, errorTopic)
 
     for {
       service <- serviceConfig.service(requestHandler)
@@ -86,9 +87,9 @@ class PulsarServiceTest
   }
   
   "stream service" should "reply with error" in {
-    val responseTopic = s"hello-error-test-response-${uuid(5)}"
+    val responseTopic = s"hello-stream-error-test-response-${uuid(6)}"
     val serviceConfig = stream[TestRequest[_ <: TestResponse], TestResponse](
-      s"hello-error-test-${uuid(5)}", responseTopic)
+      s"hello-error-test-${uuid(6)}", responseTopic)
 
     for {
       service <- serviceConfig.service(requestHandlerWithError)
@@ -100,7 +101,7 @@ class PulsarServiceTest
 
   "message handler service" should "receive successfully" in {
     val serviceConfig = handler[TestRequest[_ <: TestResponse]](
-      s"hello-test-handler-${uuid(5)}")
+      s"hello-test-handler-${uuid(6)}")
 
     for {
       receivedMessage <- Deferred[IO, TestRequest[_ <: TestResponse]]
@@ -111,7 +112,7 @@ class PulsarServiceTest
   }
 
   "message destination" should "receive successfully" in {
-    val topic = s"hello-source-${uuid(5)}"
+    val topic = s"hello-source-${uuid(6)}"
     val destinationConfig = destination[TestRequest[_ <: TestResponse]](topic)
     val sourceConfig = source[TestRequest[_ <: TestResponse]](topic)
 

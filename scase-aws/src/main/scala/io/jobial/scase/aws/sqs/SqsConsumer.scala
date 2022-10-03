@@ -14,6 +14,7 @@ import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
+import scala.math.min
 
 /**
  * Consumer implementation for AWS SQS.
@@ -47,7 +48,7 @@ class SqsConsumer[F[_] : Concurrent, M](
             newMessages <-
               debug(s"waiting for messages on $queueUrl") >>
                 // TODO: handle timeout more precisely
-                liftIO(receiveMessage(queueUrl, 10, timeout.map(_.toSeconds.toInt).getOrElse(Int.MaxValue)).map(_.getMessages.asScala))
+                liftIO(receiveMessage(queueUrl, 10, timeout.map(t => min(1, t.toSeconds.toInt)).getOrElse(Int.MaxValue)).map(_.getMessages.asScala))
             _ <- debug(s"received messages ${newMessages.toString.take(500)} on queue $queueUrl")
           } yield newMessages
         else
@@ -74,7 +75,6 @@ class SqsConsumer[F[_] : Concurrent, M](
       result <- {
         message match {
           case Some(sqsMessage) =>
-            //                        try {
             for {
               unmarshalledMessage <- Concurrent[F].fromEither(u.unmarshalFromText(sqsMessage.getBody))
               _ <- outstandingMessagesRef.update(_ + ((unmarshalledMessage, sqsMessage.getReceiptHandle)))
@@ -106,11 +106,6 @@ class SqsConsumer[F[_] : Concurrent, M](
                 //                                    IO.raiseError(CouldNotFindMessageToCommit(unmarshalledMessage))
                 //                                }
               )
-          //                        } catch {
-          //                          case t: Throwable =>
-          //                            // TODO: add retry limit and a limited cache for failed messages to avoid retrying over and over again
-          //                            logger.error(s"could not process received message $sqsMessage", t)
-          //                        }
           case None =>
             raiseError(ReceiveTimeout(timeout))
         }

@@ -36,7 +36,6 @@ trait ServiceTestSupport extends AsyncFlatSpec
   val anotherRequestProcessor = new RequestHandler[IO, Req, Resp] {
     override def handleRequest(implicit context: RequestContext[IO]): Handler = {
       case r: Req1 =>
-        println("replying...")
         r.reply(Resp1())
     }
   }
@@ -44,7 +43,6 @@ trait ServiceTestSupport extends AsyncFlatSpec
   val requestHandlerWithError = new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
     override def handleRequest(implicit context: RequestContext[IO]) = {
       case r: TestRequest1 =>
-        println("replying...")
         r ! response1
       case r: TestRequest2 =>
         raiseError(TestException("exception!!!"))
@@ -64,7 +62,7 @@ trait ServiceTestSupport extends AsyncFlatSpec
   def testSuccessfulReply(service: Service[IO], client: RequestResponseClient[IO, TestRequest[_ <: TestResponse], TestResponse]): IO[Assertion] =
     for {
       h <- service.start
-      _ <- IO.sleep(2.seconds)
+      //_ <- IO.sleep(2.seconds)
       r1 <- testSuccessfulReply(client, request1, response1)
       r2 <- testSuccessfulReply(client, request2, response2)
       _ <- client.stop
@@ -232,10 +230,8 @@ trait ServiceTestSupport extends AsyncFlatSpec
 trait TestRequestHandler extends RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] with ServiceTestModel {
   override def handleRequest(implicit context: RequestContext[IO]) = {
     case r: TestRequest1 =>
-      println("replying...")
       r ! response1
     case r: TestRequest2 =>
-      println("replying...")
       r ! response2
   }
 }
@@ -243,10 +239,8 @@ trait TestRequestHandler extends RequestHandler[IO, TestRequest[_ <: TestRespons
 case class TestMessageHandler(receivedMessage: Deferred[IO, TestRequest[_ <: TestResponse]]) extends MessageHandler[IO, TestRequest[_ <: TestResponse]] with ServiceTestModel {
   override def handleMessage(implicit context: MessageContext[IO]) = {
     case r: TestRequest1 =>
-      println("received...")
       receivedMessage.complete(r)
     case r: TestRequest2 =>
-      println("received...")
       receivedMessage.complete(r)
   }
 }

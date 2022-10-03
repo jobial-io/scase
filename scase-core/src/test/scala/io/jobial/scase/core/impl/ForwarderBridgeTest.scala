@@ -15,7 +15,8 @@ package io.jobial.scase.core.impl
 import cats.Eq
 import cats.effect.IO
 import io.jobial.scase.core._
-import io.jobial.scase.inmemory.InMemoryConsumerProducer
+import io.jobial.scase.inmemory.InMemoryConsumer
+import io.jobial.scase.inmemory.InMemoryProducer
 import io.jobial.scase.marshalling.serialization._
 
 class ForwarderBridgeTest
@@ -23,14 +24,16 @@ class ForwarderBridgeTest
 
   def testForwarderBridge[REQ: Eq](message: REQ) =
     for {
-      source <- InMemoryConsumerProducer[IO, REQ]
-      destination <- InMemoryConsumerProducer[IO, REQ]
+      source <- InMemoryConsumer[IO, REQ]
+      destination <- InMemoryProducer[IO, REQ]
       receiverClient <- ConsumerReceiverClient(source)
       senderClient <- ProducerSenderClient(destination)
       bridge <- ForwarderBridge(receiverClient, senderClient)
       _ <- bridge.start
-      _ <- source.send(message)
-      r <- destination.receive(None)
+      sourceProducer <- source.producer
+      destinationConsumer <- destination.consumer
+      _ <- sourceProducer.send(message)
+      r <- destinationConsumer.receive(None)
       receivedMessage <- r.message
       _ <- bridge.stop
       _ <- receiverClient.stop

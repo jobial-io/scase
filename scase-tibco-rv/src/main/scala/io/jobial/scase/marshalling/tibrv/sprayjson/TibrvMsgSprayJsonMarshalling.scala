@@ -117,9 +117,9 @@ trait TibrvMsgSprayJsonMarshalling extends ProductFormats with DefaultFormats wi
                   m.add(field, n.toInt)
                 case "long" =>
                   m.add(field, n.toLong)
-                case localDateClassName =>
+                case `localDateClassName` =>
                   m.add(field, new Date(n.toLong))
-                case dateTimeClassName =>
+                case `dateTimeClassName` =>
                   m.add(field, new Date(n.toLong))
               }
             case _ =>

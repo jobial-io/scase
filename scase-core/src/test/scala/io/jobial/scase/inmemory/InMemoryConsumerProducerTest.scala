@@ -14,28 +14,91 @@ package io.jobial.scase.inmemory
 
 import cats.effect.IO
 import cats.effect.concurrent.Deferred
+import cats.effect.concurrent.Ref
+import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.{ScaseTestHelper, TestRequest1}
+import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.serialization._
 import org.scalatest.flatspec.AsyncFlatSpec
+import scala.concurrent.duration.DurationInt
 
-class InMemoryConsumerProducerTest extends AsyncFlatSpec with ScaseTestHelper {
+class InMemoryConsumerProducerTest extends AsyncFlatSpec with CatsUtils with Logging with ScaseTestHelper {
 
-  "request-response service" should "reply" in {
+  "consumer" should "receive message" in {
     val request = TestRequest1("1")
 
     for {
-      queue <- InMemoryConsumerProducer[IO, TestRequest1]
+      consumer <- InMemoryConsumer[IO, TestRequest1]
+      producer <- consumer.producer
       d <- Deferred[IO, TestRequest1]
-      _ <- queue.subscribe({ m =>
+      _ <- consumer.subscribe({ m =>
         println(m)
         for {
           message <- m.message
           r <- d.complete(message)
         } yield r
       })
-      _ <- queue.send(request)
+      _ <- producer.send(request)
       r <- d.get
       _ = println(r)
     } yield assert(r == request)
+  }
+
+  "multiple consumers" should "all receive the messages" in {
+    val requests = for {
+      i <- 0 until 10
+    } yield
+      TestRequest1(i.toString)
+
+    for {
+      producer <- InMemoryProducer[IO, TestRequest1]
+      results <- Ref.of[IO, List[TestRequest1]](List())
+      _ <- {
+        for {
+          i <- 0 until 3
+        } yield for {
+          consumer <- producer.consumer
+          _ <- consumer.subscribe({ m =>
+            for {
+              m <- m.message
+              _ <- debug[IO](m.toString)
+              _ <- results.update(m :: _)
+            } yield m
+          })
+        } yield consumer
+      }.parSequence
+      _ <- requests.map(producer.send(_)).parSequence
+      _ <- sleep(1.second)
+      r <- results.get
+    } yield assert(r.sortBy(_.id) === (requests ++ requests ++ requests).toList.sortBy(_.id))
+  }
+
+  "multiple subscriptions" should "should receive messages" in {
+    val requests = for {
+      i <- 0 until 10
+    } yield
+      TestRequest1(i.toString)
+
+    for {
+      producer <- InMemoryProducer[IO, TestRequest1]
+      results <- Ref.of[IO, List[TestRequest1]](List())
+      consumer <- producer.consumer
+      _ <- {
+        for {
+          i <- 0 until 5
+        } yield for {
+          _ <- consumer.subscribe({ m =>
+            for {
+              m <- m.message
+              _ <- debug[IO](m.toString)
+              _ <- results.update(m :: _)
+            } yield m
+          })
+        } yield consumer
+      }.parSequence
+      _ <- requests.map(producer.send(_)).parSequence
+      _ <- sleep(1.second)
+      r <- results.get
+    } yield assert(r.sortBy(_.id) === requests.toList.sortBy(_.id))
   }
 }
