@@ -24,19 +24,29 @@ import io.jobial.scase.marshalling.Unmarshaller
 import io.jobial.scase.pulsar.PulsarServiceConfiguration.destination
 import io.jobial.scase.pulsar.PulsarServiceConfiguration.requestResponse
 import io.jobial.scase.pulsar.PulsarServiceConfiguration.source
+import org.apache.pulsar.client.api.SubscriptionInitialPosition
+import java.time.Instant
 import java.util.UUID.randomUUID
 import scala.concurrent.duration._
 
 class PulsarMessageHandlerServiceConfiguration[M: Marshaller : Unmarshaller](
   val serviceName: String,
-  requestTopic: String
+  requestTopic: String,
+  patternAutoDiscoveryPeriod: Option[FiniteDuration] = Some(1.second),
+  subscriptionInitialPosition: Option[SubscriptionInitialPosition] = None,
+  subscriptionInitialPublishTime: Option[Instant] = None
 ) extends ServiceConfiguration {
 
   def service[F[_] : Concurrent : Timer](messageHandler: MessageHandler[F, M])(
     implicit context: PulsarContext
   ) =
     for {
-      consumer <- PulsarConsumer[F, M](requestTopic)
+      consumer <- PulsarConsumer[F, M](
+        requestTopic,
+        patternAutoDiscoveryPeriod,
+        subscriptionInitialPosition,
+        subscriptionInitialPublishTime
+      )
       service = new ConsumerMessageHandlerService(
         consumer,
         messageHandler
@@ -257,8 +267,17 @@ object PulsarServiceConfiguration {
       batchingMaxPublishDelay
     )
 
-  def handler[M: Marshaller : Unmarshaller](requestTopic: String) =
-    new PulsarMessageHandlerServiceConfiguration[M](requestTopic, requestTopic)
+  def handler[M: Marshaller : Unmarshaller](requestTopic: String,
+    patternAutoDiscoveryPeriod: Option[FiniteDuration] = Some(1.second),
+    subscriptionInitialPosition: Option[SubscriptionInitialPosition] = None,
+    subscriptionInitialPublishTime: Option[Instant] = None
+  ) =
+    new PulsarMessageHandlerServiceConfiguration[M](requestTopic,
+      requestTopic,
+      patternAutoDiscoveryPeriod,
+      subscriptionInitialPosition,
+      subscriptionInitialPublishTime
+    )
 
   def source[M: Unmarshaller](sourceTopic: String) =
     new PulsarMessageSourceServiceConfiguration(sourceTopic)

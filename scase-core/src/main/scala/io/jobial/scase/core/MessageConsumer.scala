@@ -20,9 +20,9 @@ trait MessageReceiveResult[F[_], M] {
 
   def rollback: F[Unit]
   
-  def underlyingMessage: F[Any]
+  def underlyingMessage[T]: F[T]
 
-  def underlyingContext: F[Any]
+  def underlyingContext[T]: F[T]
 }
 
 case class DefaultMessageReceiveResult[F[_], M](
@@ -30,9 +30,13 @@ case class DefaultMessageReceiveResult[F[_], M](
   attributes: Map[String, String],
   commit: F[Unit],
   rollback: F[Unit],
-  underlyingMessage: F[Any],
-  underlyingContext: F[Any]
-) extends MessageReceiveResult[F, M]
+  underlyingMessageProvided: F[Any],
+  underlyingContextProvided: F[Any]
+) extends MessageReceiveResult[F, M] {
+  override def underlyingMessage[T]: F[T] = underlyingMessageProvided.asInstanceOf[F[T]]
+
+  override def underlyingContext[T]: F[T] = underlyingContextProvided.asInstanceOf[F[T]]
+}
 
 trait MessageSubscription[F[_], M] {
 

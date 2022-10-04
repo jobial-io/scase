@@ -96,8 +96,8 @@ class SqsConsumer[F[_] : Concurrent, M](
                     _ <- outstandingMessagesRef.update(_ - unmarshalledMessage)
                   } yield (),
                 rollback = unit,
-                underlyingMessage = pure(sqsMessage.getBody),
-                underlyingContext = pure(sqsMessage)
+                underlyingMessageProvided = pure(sqsMessage.getBody),
+                underlyingContextProvided = pure(sqsMessage)
                 //                                outstandingMessages.remove(unmarshalledMessage) match {
                 //                                  case Some(receiptHandle) =>
                 //                                    // if the process fails at this point it will still roll back after the visibility timeout
