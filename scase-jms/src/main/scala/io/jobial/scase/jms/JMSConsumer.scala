@@ -59,8 +59,8 @@ class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscripti
             attributes,
             commit = delay(session.commit),
             rollback = delay(session.rollback),
-            underlyingMessage = pure(jmsMessage),
-            underlyingContext = raiseError(new IllegalStateException("No underlying context"))
+            underlyingMessageProvided = pure(jmsMessage),
+            underlyingContextProvided = raiseError(new IllegalStateException("No underlying context"))
           )
           pure(messageReceiveResult)
         case Left(error) =>

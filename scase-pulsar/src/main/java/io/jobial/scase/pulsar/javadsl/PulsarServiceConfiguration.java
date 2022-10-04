@@ -2,11 +2,17 @@ package io.jobial.scase.pulsar.javadsl;
 
 import io.jobial.scase.marshalling.javadsl.Marshalling;
 import io.jobial.scase.pulsar.PulsarServiceConfiguration$;
+import org.apache.pulsar.client.api.SubscriptionInitialPosition;
 import scala.None$;
 import scala.Option;
 import scala.Option$;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Optional;
+
+import static io.jobial.scase.core.javadsl.JavaUtils.javaDurationToScala;
+import static io.jobial.scase.core.javadsl.JavaUtils.javaOptionalToScala;
 
 
 public class PulsarServiceConfiguration {
@@ -120,8 +126,21 @@ public class PulsarServiceConfiguration {
             String topic,
             Marshalling<M> marshalling
     ) {
+        return handler(topic, Optional.empty(), Optional.empty(), Optional.empty(), marshalling);
+    }
+
+    public static <M> PulsarMessageHandlerServiceConfiguration<M> handler(
+            String topic,
+            Optional<Duration> patternAutoDiscoveryPeriod,
+            Optional<SubscriptionInitialPosition> subscriptionInitialPosition,
+            Optional<Instant> subscriptionInitialPublishTime,
+            Marshalling<M> marshalling
+    ) {
         return new PulsarMessageHandlerServiceConfiguration(PulsarServiceConfiguration$.MODULE$.<M>handler(
                 topic,
+                javaOptionalToScala(patternAutoDiscoveryPeriod.map(t -> javaDurationToScala(t))),
+                javaOptionalToScala(subscriptionInitialPosition),
+                javaOptionalToScala(subscriptionInitialPublishTime),
                 marshalling.marshaller(),
                 marshalling.unmarshaller()
         ));

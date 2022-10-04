@@ -89,10 +89,10 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
       result <- message match {
         case Right(payload) =>
           debug(s"client received success: ${receiveResult.toString.take(500)}") >>
-            pure(DefaultMessageReceiveResult(pure(payload.asInstanceOf[RESPONSE]), receiveResult.attributes, receiveResult.commit, receiveResult.rollback, receiveResult.underlyingMessage, receiveResult.underlyingContext))
+            pure(DefaultMessageReceiveResult(pure(payload.asInstanceOf[RESPONSE]), receiveResult.attributes, receiveResult.commit, receiveResult.rollback, receiveResult.underlyingMessage[Any], receiveResult.underlyingContext[Any]))
         case Left(t) =>
           error(s"client received failure: ${receiveResult.toString.take(500)}", t) >>
-            pure(DefaultMessageReceiveResult(raiseError[F, RESPONSE](t), receiveResult.attributes, receiveResult.commit, receiveResult.rollback, receiveResult.underlyingMessage, receiveResult.underlyingContext))
+            pure(DefaultMessageReceiveResult(raiseError[F, RESPONSE](t), receiveResult.attributes, receiveResult.commit, receiveResult.rollback, receiveResult.underlyingMessage[Any], receiveResult.underlyingContext[Any]))
       }
     } yield DefaultRequestResponseResult(sendResult, result)
   }

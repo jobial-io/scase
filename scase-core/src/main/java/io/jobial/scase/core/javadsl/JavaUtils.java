@@ -2,8 +2,7 @@ package io.jobial.scase.core.javadsl;
 
 import cats.effect.*;
 import io.jobial.scase.util.Hash$;
-import scala.Function0;
-import scala.Function1;
+import scala.*;
 import scala.concurrent.ExecutionContext;
 import scala.concurrent.ExecutionContext$;
 import scala.concurrent.Future;
@@ -11,6 +10,7 @@ import scala.runtime.BoxedUnit;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -32,7 +32,15 @@ public class JavaUtils {
         return io.jobial.scase.core.javadsl.package$.MODULE$.completableFutureToScalaFuture(f);
     }
 
-    public static scala.concurrent.duration.Duration javaDurationToScala(Duration duration) {
+    public static <T> Option<T> javaOptionalToScala(Optional<T> o) {
+        if (o.isPresent()) {
+            return Some$.MODULE$.apply(o.get());
+        } else {
+            return Option$.MODULE$.<T>empty();
+        }
+    }
+    
+    public static scala.concurrent.duration.FiniteDuration javaDurationToScala(Duration duration) {
         return scala.concurrent.duration.Duration.fromNanos(duration.toNanos());
     }
 
@@ -80,7 +88,6 @@ public class JavaUtils {
     public static Concurrent<IO> concurrent = IO$.MODULE$.ioConcurrentEffect(contextShift);
 
     public static Timer<IO> timer = IO$.MODULE$.timer(executionContext);
-    
-    
+
 
 }
