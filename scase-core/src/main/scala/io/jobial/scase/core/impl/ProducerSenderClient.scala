@@ -19,7 +19,7 @@ class ProducerSenderClient[F[_] : Concurrent, REQ: Marshaller](
     val correlationId = randomUUID.toString
 
     for {
-      _ <- info(s"sending request with correlation id $correlationId on $messageProducer")
+      _ <- info(s"sending message with correlation id $correlationId on $messageProducer")
       sendResult <- messageProducer.send(
         request,
         Map(

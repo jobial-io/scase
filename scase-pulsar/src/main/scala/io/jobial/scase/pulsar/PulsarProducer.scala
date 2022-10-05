@@ -16,7 +16,7 @@ import scala.compat.java8.FutureConverters.toScala
 class PulsarProducer[F[_] : Concurrent, M](topic: String)(implicit context: PulsarContext)
   extends MessageProducer[F, M] with CatsUtils with Logging {
 
-  lazy val producer =
+  val producer =
     context
       .client
       .newProducer
@@ -26,7 +26,6 @@ class PulsarProducer[F[_] : Concurrent, M](topic: String)(implicit context: Puls
       .batchingMaxPublishDelay(1, TimeUnit.MILLISECONDS)
       .enableBatching(true)
       .create
-
 
   override def send(message: M, attributes: Map[String, String])(implicit m: Marshaller[M]): F[MessageSendResult[F, M]] =
     for {
@@ -46,6 +45,8 @@ class PulsarProducer[F[_] : Concurrent, M](topic: String)(implicit context: Puls
     }
 
   def stop = delay(producer.close())
+  
+  override def toString = super.toString + s" topic: $topic"
 }
 
 object PulsarProducer extends CatsUtils {

@@ -15,7 +15,9 @@ package io.jobial.scase.core
 import cats.Eq
 import cats.effect.IO
 import cats.effect.IO.raiseError
+import cats.effect.IO.sleep
 import cats.effect.concurrent.Deferred
+import cats.effect.concurrent.MVar
 import cats.tests.StrictCatsEquality
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
@@ -205,12 +207,12 @@ trait ServiceTestSupport extends AsyncFlatSpec
   def testSuccessfulMessageHandlerReceive(
     service: Service[IO],
     senderClient: SenderClient[IO, TestRequest[_ <: TestResponse]],
-    receivedMessage: Deferred[IO, TestRequest[_ <: TestResponse]]
+    receivedMessage: MVar[IO, TestRequest[_ <: TestResponse]]
   ) =
     for {
       h <- service.start
       _ <- senderClient ! request1
-      r <- receivedMessage.get
+      r <- receivedMessage.take
       _ <- senderClient.stop
       _ <- h.stop
     } yield assert(r.asInstanceOf[TestRequest1] === request1)
@@ -236,11 +238,11 @@ trait TestRequestHandler extends RequestHandler[IO, TestRequest[_ <: TestRespons
   }
 }
 
-case class TestMessageHandler(receivedMessage: Deferred[IO, TestRequest[_ <: TestResponse]]) extends MessageHandler[IO, TestRequest[_ <: TestResponse]] with ServiceTestModel {
+case class TestMessageHandler(receivedMessage: MVar[IO, TestRequest[_ <: TestResponse]]) extends MessageHandler[IO, TestRequest[_ <: TestResponse]] with ServiceTestModel {
   override def handleMessage(implicit context: MessageContext[IO]) = {
     case r: TestRequest1 =>
-      receivedMessage.complete(r)
+      receivedMessage.put(r)
     case r: TestRequest2 =>
-      receivedMessage.complete(r)
+      receivedMessage.put(r)
   }
 }
