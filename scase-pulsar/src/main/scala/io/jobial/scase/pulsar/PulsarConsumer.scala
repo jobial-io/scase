@@ -10,6 +10,7 @@ import io.jobial.scase.core.MessageSubscription
 import io.jobial.scase.core.ReceiveTimeout
 import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
+import io.jobial.scase.core.impl.RegexUtils
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
 import org.apache.pulsar.client.api.Consumer
@@ -34,12 +35,13 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
   subscriptionInitialPublishTime: Option[Instant],
   val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]]
 )(implicit context: PulsarContext)
-  extends DefaultMessageConsumer[F, M] with CatsUtils with Logging {
+  extends DefaultMessageConsumer[F, M] with CatsUtils with RegexUtils with Logging {
 
-  val subscriptionName = s"$topic-subscription-${randomUUID}"
+  val subscriptionName = s"subscription-${randomUUID}"
 
   val responseTopicInNamespace = context.topicInDefaultNamespace(topic)
 
+  // TODO: revisit this
   implicit class ConsumerBuilderExt(builder: ConsumerBuilder[_]) {
     def apply(f: ConsumerBuilder[_] => Option[ConsumerBuilder[_]]): ConsumerBuilder[_] =
       f(builder).getOrElse(builder)
@@ -50,8 +52,8 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
       .client
       .newConsumer
       .consumerName(s"consumer-${randomUUID}")
-      .topic(topic)
       .subscriptionName(subscriptionName)
+      .apply(b => if (isProbablyRegex(topic)) Some(b.topicsPattern(topic)) else Some(b.topic(topic)))
       .apply(b =>
         patternAutoDiscoveryPeriod.map(p => b.patternAutoDiscoveryPeriod(p.toSeconds.toInt, TimeUnit.SECONDS))
       )
@@ -72,7 +74,7 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
         timeout.map(t => f.orTimeout(t.toMillis, TimeUnit.MILLISECONDS)).getOrElse(f)
       }).handleErrorWith {
         case t: TimeoutException =>
-          debug(s"Receive timed out after $timeout") >>
+          debug(s"Receive timed out after $timeout in $this ${consumer.isConnected}") >>
             raiseError(ReceiveTimeout(timeout, t))
         case t =>
           raiseError(t)
@@ -80,7 +82,7 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
       _ <- debug(s"received message ${new String(pulsarMessage.getData).take(200)} on $topic")
       result <-
         if (subscriptionInitialPublishTime.map(pulsarMessage.getPublishTime < _.toEpochMilli).getOrElse(false))
-          debug(s"dropping message ${new String(pulsarMessage.getData).take(200)}  with publish time ${pulsarMessage.getPublishTime} < $subscriptionInitialPublishTime on $topic") >>
+          debug(s"dropping message ${new String(pulsarMessage.getData).take(200)} with publish time ${pulsarMessage.getPublishTime} < $subscriptionInitialPublishTime on $topic") >>
             raiseError(ReceiveTimeout(timeout))
         else for {
           result <- Unmarshaller[M].unmarshal(pulsarMessage.getData) match {

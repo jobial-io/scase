@@ -1,7 +1,7 @@
 package io.jobial.scase.pulsar
 
 import cats.effect.IO
-import cats.effect.concurrent.Deferred
+import cats.effect.concurrent.MVar
 import io.circe.generic.auto._
 import io.jobial.scase.core._
 import io.jobial.scase.marshalling.circe._
@@ -11,9 +11,10 @@ import io.jobial.scase.pulsar.PulsarServiceConfiguration.requestResponse
 import io.jobial.scase.pulsar.PulsarServiceConfiguration.source
 import io.jobial.scase.pulsar.PulsarServiceConfiguration.stream
 import io.jobial.scase.util.Hash.uuid
-import org.scalatest.Ignore
+import org.apache.pulsar.client.api.SubscriptionInitialPosition
+import scala.language.postfixOps
 
-@Ignore
+//@Ignore
 class PulsarServiceTest
   extends ServiceTestSupport {
 
@@ -104,9 +105,26 @@ class PulsarServiceTest
       s"hello-test-handler-${uuid(6)}")
 
     for {
-      receivedMessage <- Deferred[IO, TestRequest[_ <: TestResponse]]
+      receivedMessage <- MVar.empty[IO, TestRequest[_ <: TestResponse]]
       service <- serviceConfig.service(TestMessageHandler(receivedMessage))
       senderClient <- serviceConfig.client[IO]
+      r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)
+    } yield r
+  }
+
+  "message handler service with topic pattern" should "receive successfully" in {
+    val requestTopicPrefix = s"persistent://public/default/hello-test-handler-${uuid(6)}"
+    val serviceConfig = handler[TestRequest[_ <: TestResponse]](
+      s"$requestTopicPrefix-.*",
+      subscriptionInitialPosition = Some(SubscriptionInitialPosition.Earliest)
+    )
+
+    for {
+      receivedMessage <- MVar.empty[IO, TestRequest[_ <: TestResponse]]
+      senderClient <- destination[TestRequest[_ <: TestResponse]](s"$requestTopicPrefix-a").client[IO]
+      service <- serviceConfig.service(TestMessageHandler(receivedMessage))
+      r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)
+      senderClient <- destination[TestRequest[_ <: TestResponse]](s"$requestTopicPrefix-b").client[IO]
       r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)
     } yield r
   }
