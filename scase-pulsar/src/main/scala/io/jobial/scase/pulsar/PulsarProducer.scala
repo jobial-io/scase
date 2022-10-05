@@ -21,7 +21,7 @@ class PulsarProducer[F[_] : Concurrent, M](topic: String)(implicit context: Puls
       .client
       .newProducer
       .producerName(s"producer-${randomUUID}")
-      .topic(topic)
+      .topic(context.fullyQualifiedTopicName(topic))
       .blockIfQueueFull(true)
       .batchingMaxPublishDelay(1, TimeUnit.MILLISECONDS)
       .enableBatching(true)

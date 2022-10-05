@@ -31,7 +31,7 @@ case class PulsarContext(
 
   val nonPersistentScheme = "non-persistent:"
 
-  def topicInDefaultNamespace(topic: String) =
+  def fullyQualifiedTopicName(topic: String) =
     if (topic.startsWith(persistentScheme) || topic.startsWith(nonPersistentScheme))
       topic
     else
