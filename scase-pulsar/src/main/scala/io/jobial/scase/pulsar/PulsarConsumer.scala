@@ -39,7 +39,7 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
 
   val subscriptionName = s"subscription-${randomUUID}"
 
-  val responseTopicInNamespace = context.topicInDefaultNamespace(topic)
+  val responseTopicInNamespace = context.fullyQualifiedTopicName(topic)
 
   // TODO: revisit this
   implicit class ConsumerBuilderExt(builder: ConsumerBuilder[_]) {
@@ -53,7 +53,9 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
       .newConsumer
       .consumerName(s"consumer-${randomUUID}")
       .subscriptionName(subscriptionName)
-      .apply(b => if (isProbablyRegex(topic)) Some(b.topicsPattern(topic)) else Some(b.topic(topic)))
+      .apply(b => 
+        if (isProbablyRegex(topic)) Some(b.topicsPattern(context.fullyQualifiedTopicName(topic))) else Some(b.topic(context.fullyQualifiedTopicName(topic)))
+      )
       .apply(b =>
         patternAutoDiscoveryPeriod.map(p => b.patternAutoDiscoveryPeriod(p.toSeconds.toInt, TimeUnit.SECONDS))
       )

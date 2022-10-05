@@ -12,9 +12,10 @@ import io.jobial.scase.pulsar.PulsarServiceConfiguration.source
 import io.jobial.scase.pulsar.PulsarServiceConfiguration.stream
 import io.jobial.scase.util.Hash.uuid
 import org.apache.pulsar.client.api.SubscriptionInitialPosition
+import org.scalatest.Ignore
 import scala.language.postfixOps
 
-//@Ignore
+@Ignore
 class PulsarServiceTest
   extends ServiceTestSupport {
 

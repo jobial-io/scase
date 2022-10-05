@@ -2,11 +2,11 @@ package io.jobial.scase.jms
 
 import cats.effect.IO
 import cats.effect.concurrent.Deferred
+import cats.effect.concurrent.MVar
 import io.circe.generic.auto._
 import io.jobial.scase.core._
 import io.jobial.scase.marshalling.circe._
 import io.jobial.scase.util.Hash.uuid
-
 import javax.jms.Session
 
 
@@ -80,7 +80,7 @@ class JMSServiceTest
       s"hello-test-handler-${uuid(5)}", session.createQueue(s"hello-test-handler-${uuid(5)}"))
 
     for {
-      receivedMessage <- Deferred[IO, TestRequest[_ <: TestResponse]]
+      receivedMessage <- MVar.empty[IO, TestRequest[_ <: TestResponse]]
       service <- serviceConfig.service(TestMessageHandler(receivedMessage))
       senderClient <- serviceConfig.client[IO]
       r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)
