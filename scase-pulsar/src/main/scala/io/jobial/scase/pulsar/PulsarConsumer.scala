@@ -76,15 +76,15 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
         timeout.map(t => f.orTimeout(t.toMillis, TimeUnit.MILLISECONDS)).getOrElse(f)
       }).handleErrorWith {
         case t: TimeoutException =>
-          debug(s"Receive timed out after $timeout in $this ${consumer.isConnected}") >>
+          trace(s"Receive timed out after $timeout in $this ${consumer.isConnected}") >>
             raiseError(ReceiveTimeout(timeout, t))
         case t =>
           raiseError(t)
       }
-      _ <- debug(s"received message ${new String(pulsarMessage.getData).take(200)} on $topic")
+      _ <- trace(s"received message ${new String(pulsarMessage.getData).take(200)} on $topic")
       result <-
         if (subscriptionInitialPublishTime.map(pulsarMessage.getPublishTime < _.toEpochMilli).getOrElse(false))
-          debug(s"dropping message ${new String(pulsarMessage.getData).take(200)} with publish time ${pulsarMessage.getPublishTime} < $subscriptionInitialPublishTime on $topic") >>
+          trace(s"dropping message ${new String(pulsarMessage.getData).take(200)} with publish time ${pulsarMessage.getPublishTime} < $subscriptionInitialPublishTime on $topic") >>
             raiseError(ReceiveTimeout(timeout))
         else for {
           result <- Unmarshaller[M].unmarshal(pulsarMessage.getData) match {

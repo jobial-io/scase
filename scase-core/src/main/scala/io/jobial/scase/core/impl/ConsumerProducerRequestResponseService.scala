@@ -47,16 +47,16 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ, RESP: Marsh
           // Just call the provided function for a new producer...
           responseProducer(request.responseProducerId)
       }
-      _ <- debug(s"found response producer $producer for request in service: ${request.toString.take(500)}")
+      _ <- trace(s"found response producer $producer for request in service: ${request.toString.take(500)}")
       // TODO: make this a Deferred
       resultAfterSend <- res match {
         case Right(r) =>
           for {
-            _ <- debug(s"sending success for request: ${request.toString.take(500)} on $producer")
+            _ <- trace(s"sending success for request: ${request.toString.take(500)} on $producer")
             sendResult <- producer.send(Right(r), responseAttributes)
             // commit request after result is written
             _ <- whenA(autoCommitRequest)(
-              debug(s"service committing request: ${request.toString.take(500)} on $producer") >>
+              trace(s"service committing request: ${request.toString.take(500)} on $producer") >>
                 request.commit
             )
           } yield sendResult
@@ -65,7 +65,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ, RESP: Marsh
             _ <- error(s"sending failure for request: ${request.toString.take(500)}", t)
             sendResult <- producer.send(Left(t), responseAttributes)
             _ <- whenA(autoCommitFailedRequest)(
-              debug(s"service committing request: ${request.toString.take(500)}") >>
+              trace(s"service committing request: ${request.toString.take(500)}") >>
                 request.commit
             )
           } yield sendResult

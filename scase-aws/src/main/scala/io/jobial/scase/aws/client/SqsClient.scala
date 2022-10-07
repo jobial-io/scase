@@ -75,11 +75,11 @@ trait SqsClient[F[_]] extends S3Client[F] {
         }.unsafeRunSync()
 
         })) >>
-        info(s"created queue $queueUrl")
+        info(s"created SQS queue $queueUrl")
     }.handleErrorWith { t =>
-      setupQueue >>debug("")
+      setupQueue >> trace(s"could not create SQS queue $queueUrl")
     } >> setupQueue >>
-      debug(s"initialized SQS consumer $this")
+      trace(s"initialized SQS queue $queueUrl")
   }
 
   def sendMessage(queueUrl: String, message: String, attributes: Map[String, String] = Map())(implicit awsContext: AwsContext = AwsContext()) = {
@@ -96,10 +96,10 @@ trait SqsClient[F[_]] extends S3Client[F] {
             }.toMap.asJava)
             )
         }
-        r <- debug(s"message attributes: ${
+        r <- trace(s"message attributes: ${
           request.getMessageAttributes.asScala
         }") >>
-          debug(s"calling sendMessage on queue $queueUrl with ${
+          trace(s"calling sendMessage on queue $queueUrl with ${
             request.toString.take(200)
           }") >>
           delay(sqsExtended.getOrElse(sqs).sendMessage(request))
