@@ -15,7 +15,7 @@ name := "scase"
 ThisBuild / organization := "io.jobial"
 ThisBuild / scalaVersion := "2.13.8"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.15", "2.13.8")
-ThisBuild / version := "0.5.2"
+ThisBuild / version := "0.5.3"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
 ThisBuild / javacOptions ++= Seq("-source", "11", "-target", "11")
 ThisBuild / publishArtifact in(Test, packageBin) := true
@@ -64,10 +64,6 @@ lazy val JodaTimeVersion = "2.11.1"
 lazy val root: Project = project
   .in(file("."))
   .settings(commonSettings)
-  .settings(
-    publishArtifact := false,
-    makePom / publishArtifact := true
-  )
   .aggregate(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`,
     `scase-pulsar`, `scase-jms`, `scase-tibco-rv`)
   .dependsOn(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`,
