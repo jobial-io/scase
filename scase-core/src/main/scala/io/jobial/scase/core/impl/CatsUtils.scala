@@ -48,19 +48,11 @@ trait CatsUtils {
   def start[F[_] : Concurrent, A](f: F[A]) = Concurrent[F].start(f)
 
   def fromFuture[F[_] : Concurrent, A](f: => Future[A]): F[A] =
-    f.value match {
-      case Some(result) =>
-        result match {
-          case Success(a) => pure(a)
-          case Failure(e) => raiseError(e)
-        }
-      case _ =>
-        Concurrent[F].async { cb =>
-          f.onComplete(r => cb(r match {
-            case Success(a) => Right(a)
-            case Failure(e) => Left(e)
-          }))(ExecutionContext.Implicits.global)
-        }
+    Concurrent[F].async { cb =>
+      f.onComplete(r => cb(r match {
+        case Success(a) => Right(a)
+        case Failure(e) => Left(e)
+      }))(ExecutionContext.Implicits.global)
     }
 
   def fromEither[F[_] : Concurrent, A](e: Either[Throwable, A]): F[A] =
@@ -95,7 +87,7 @@ trait CatsUtils {
 
   implicit def iterableToSequenceSyntax[F[_] : Parallel : Applicative, T](l: Iterable[F[T]]) =
     IterableSequenceSyntax(l)
-  
+
   def take[F[_] : Concurrent : Timer, T](mvar: MVar[F, T], timeout: Option[FiniteDuration], pollTime: FiniteDuration = 1.millis): F[T] =
     timeout match {
       case Some(timeout) =>
