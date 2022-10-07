@@ -69,7 +69,7 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
         case Some(requestTimeout) =>
           requestTimeout match {
             case requestTimeout: FiniteDuration =>
-              info(s"waiting on $receiveResultDeferred") >>
+              trace(s"waiting on $receiveResultDeferred") >>
                 receiveResultDeferred.get.timeout(requestTimeout).handleErrorWith {
                   case t: TimeoutException =>
                     raiseError(RequestTimeout(requestTimeout, t))
