@@ -15,12 +15,13 @@ package io.jobial.scase.core
 import cats.Eq
 import cats.effect.IO
 import cats.effect.IO.raiseError
-import cats.effect.IO.sleep
-import cats.effect.concurrent.Deferred
 import cats.effect.concurrent.MVar
+import cats.effect.concurrent.Ref
+import cats.implicits.catsSyntaxFlatMapOps
 import cats.tests.StrictCatsEquality
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
+import io.jobial.scase.marshalling.rawbytes.iterableToSequenceSyntax
 import org.scalatest.Assertion
 import org.scalatest.flatspec.AsyncFlatSpec
 import scala.concurrent.duration._
@@ -227,14 +228,44 @@ trait ServiceTestSupport extends AsyncFlatSpec
       _ <- senderClient.stop
       _ <- receiverClient.stop
     } yield assert(r.asInstanceOf[TestRequest1] === request1)
+
+  def testMultipleRequests[REQ, RESP: Eq](
+    service: Service[IO],
+    client: IO[RequestResponseClient[IO, REQ, RESP]],
+    request: Int => REQ, response: Int => RESP,
+    requestCount: Int = 100
+  )(implicit mapping: RequestResponseMapping[REQ, RESP]): IO[List[Assertion]] =
+    for {
+      received <- Ref.of[IO, List[Int]](List())
+      range = 0 until requestCount
+      h <- service.start
+      r <- {
+        for {
+          i <- range
+        } yield for {
+          client <- client
+          _ <- debug[IO](s"sending $i")
+          r <- testSuccessfulReply(client, request(i), response(i))
+          _ <- received.update(i :: _)
+          _ <- debug[IO](s"received $i")
+        } yield r
+      }.toList.parSequence.handleErrorWith { t => {
+        for {
+          received <- received.get
+          _ <- error[IO](s"missing responses: " + (range.diff(received)))
+        } yield ()
+      } >> raiseError(t)
+      }
+      _ <- h.stop
+    } yield r
 }
 
 trait TestRequestHandler extends RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] with ServiceTestModel {
   override def handleRequest(implicit context: RequestContext[IO]) = {
     case r: TestRequest1 =>
-      r ! response1
+      r ! TestResponse1(r, r.id)
     case r: TestRequest2 =>
-      r ! response2
+      r ! TestResponse2(r, r.id)
   }
 }
 

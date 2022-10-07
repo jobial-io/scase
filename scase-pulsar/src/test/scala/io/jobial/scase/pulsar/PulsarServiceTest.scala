@@ -12,10 +12,8 @@ import io.jobial.scase.pulsar.PulsarServiceConfiguration.source
 import io.jobial.scase.pulsar.PulsarServiceConfiguration.stream
 import io.jobial.scase.util.Hash.uuid
 import org.apache.pulsar.client.api.SubscriptionInitialPosition
-import org.scalatest.Ignore
 import scala.language.postfixOps
 
-//@Ignore
 class PulsarServiceTest
   extends ServiceTestSupport {
 
@@ -87,7 +85,7 @@ class PulsarServiceTest
       r <- testSuccessfulStreamReply(service, senderClient, responseReceiverClient, errorReceiverClient)
     } yield r
   }
-  
+
   "stream service" should "reply with error" in {
     val responseTopic = s"hello-stream-error-test-response-${uuid(6)}"
     val serviceConfig = stream[TestRequest[_ <: TestResponse], TestResponse](
@@ -141,4 +139,22 @@ class PulsarServiceTest
       r <- testMessageSourceReceive(senderClient, receiverClient)
     } yield r
   }
+  
+  "request-response service" should "succeed in load test" in {
+    val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"hello-test-${uuid(6)}")
+    for {
+      service <- serviceConfig.service(requestHandler)
+      client <- serviceConfig.client[IO]
+      r <- testMultipleRequests(service, IO.pure(client), i => TestRequest1(i.toString), i => TestResponse1(TestRequest1(i.toString), i.toString))
+    } yield r
+  }
+
+  "request-response service" should "succeed in load test with different clients" in {
+    val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"hello-test-${uuid(6)}")
+    for {
+      service <- serviceConfig.service(requestHandler)
+      r <- testMultipleRequests(service, serviceConfig.client[IO], i => TestRequest1(i.toString), i => TestResponse1(TestRequest1(i.toString), i.toString))
+    } yield r
+  }
+
 }

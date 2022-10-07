@@ -51,18 +51,8 @@ class LocalRequestResponseServiceTest
     val serviceConfig = LocalServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello")
     for {
       service <- serviceConfig.service(requestHandler)
-      h <- service.start
       client <- serviceConfig.client(service)
-      r <- {
-        for {
-          i <- 0 until 100
-        } yield for {
-          _ <- debug[IO](s"sending $i")
-          r <- testSuccessfulReply(client, request1, response1)
-          _ <- debug[IO](s"received $i")
-        } yield r
-      }.parSequence
-      _ <- h.stop
+      r <- testMultipleRequests(service, IO.pure(client), _ => request1, _ => response1)
     } yield r
   }
 
@@ -70,18 +60,7 @@ class LocalRequestResponseServiceTest
     val serviceConfig = LocalServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello")
     for {
       service <- serviceConfig.service(requestHandler)
-      h <- service.start
-      r <- {
-        for {
-          i <- 0 until 10
-        } yield for {
-          client <- serviceConfig.client(service)
-          _ <- debug[IO](s"sending $i")
-          r <- testSuccessfulReply(client, request1, response1)
-          _ <- debug[IO](s"received $i")
-        } yield r
-      }.parSequence
-      _ <- h.stop
+      r <- testMultipleRequests(service, serviceConfig.client(service), _ => request1, _ => response1)
     } yield r
   }
 
