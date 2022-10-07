@@ -63,7 +63,7 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
         subscriptionInitialPosition.map(b.subscriptionInitialPosition)
       )
       .subscribe()
-
+  
   sys.addShutdownHook { () =>
     if (consumer.isConnected)
       consumer.unsubscribe()
