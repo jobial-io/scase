@@ -45,7 +45,7 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
     //monitoringPublisher.increment(request.getClass.getName)
 
     for {
-      _ <- debug(s"sending ${request.toString.take(500)} with $correlationId using $this")
+      _ <- trace(s"sending ${request.toString.take(500)} with $correlationId using $this")
       receiveResultDeferred <- Deferred[F, MessageReceiveResult[F, Either[Throwable, RESP]]]
       _ <- correlationsRef.update { correlations =>
         correlations + ((correlationId, CorrelationInfo(
@@ -57,14 +57,14 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
             None
         )))
       }
-      _ <- debug(s"sending request with correlation id $correlationId")
+      _ <- trace(s"sending request with correlation id $correlationId")
       sendResult <- producer.send(
         request,
         Map(
           CorrelationIdKey -> correlationId
         ) ++ responseProducerId.map(responseProducerId => ResponseProducerIdKey -> responseProducerId) ++ sendRequestContext.requestTimeout.map(t => RequestTimeoutKey -> t.toMillis.toString)
       ).asInstanceOf[F[MessageSendResult[F, REQUEST]]]
-      _ <- debug(s"waiting for request with correlation id $correlationId")
+      _ <- trace(s"waiting for request with correlation id $correlationId")
       receiveResult <- sendRequestContext.requestTimeout match {
         case Some(requestTimeout) =>
           requestTimeout match {
@@ -88,7 +88,7 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
       // to turn the Either[Throwable, RESP] result into F[RESP] before returning
       result <- message match {
         case Right(payload) =>
-          debug(s"client received success: ${receiveResult.toString.take(500)}") >>
+          trace(s"client received success: ${receiveResult.toString.take(500)}") >>
             pure(DefaultMessageReceiveResult(pure(payload.asInstanceOf[RESPONSE]), receiveResult.attributes, receiveResult.commit, receiveResult.rollback, receiveResult.underlyingMessage[Any], receiveResult.underlyingContext[Any]))
         case Left(t) =>
           error(s"client received failure: ${receiveResult.toString.take(500)}", t) >>
@@ -127,7 +127,7 @@ object ConsumerProducerRequestResponseClient extends CatsUtils with Logging {
     for {
       correlationsRef <- Ref.of[F, Map[String, CorrelationInfo[F, REQ, RESP]]](Map())
       subscription <- messageConsumer.subscribe { receiveResult =>
-        debug(s"received response ${receiveResult.toString.take(500)}") >> {
+        trace(s"received response ${receiveResult.toString.take(500)}") >> {
           receiveResult.correlationId match {
             case Some(correlationId) =>
               for {
@@ -142,7 +142,7 @@ object ConsumerProducerRequestResponseClient extends CatsUtils with Logging {
                 _ <- whenA(autoCommitResponse)(
                   for {
                     r <- receiveResult.commit
-                    _ <- debug(s"client committed response ${receiveResult.toString.take(500)}")
+                    _ <- trace(s"client committed response ${receiveResult.toString.take(500)}")
                   } yield r
                 )
               }
@@ -152,7 +152,7 @@ object ConsumerProducerRequestResponseClient extends CatsUtils with Logging {
           }
         }
       }
-      _ <- debug(s"subscribed in $this")
+      _ <- trace(s"subscribed in $this")
     } yield
       new ConsumerProducerRequestResponseClient(correlationsRef, subscription, messageConsumer, messageProducer, responseProducerId, autoCommitResponse, name)
 

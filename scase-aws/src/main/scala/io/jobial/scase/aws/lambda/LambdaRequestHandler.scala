@@ -88,7 +88,7 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP]
         } yield
           r match {
             case Right(r) =>
-              logger.debug(s"sending success to client for request: $request")
+              logger.trace(s"sending success to client for request: $request")
               outputStream.write(serviceConfiguration.responseMarshaller.marshalToText(r).getBytes("utf-8"))
             case Left(t) =>
               logger.error(s"sending failure to client for request: $request", t)

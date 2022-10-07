@@ -33,8 +33,8 @@ trait ConsumerProducerService[F[_], REQ, RESP] extends CatsUtils with Logging {
 
     val r: F[MessageSendResult[F, _]] = {
       for {
-        _ <- debug(s"received request in service: ${request.toString.take(500)}")
-        _ <- debug(s"found response producer id ${request.responseProducerId} in request")
+        _ <- trace(s"received request in service: ${request.toString.take(500)}")
+        _ <- trace(s"found response producer id ${request.responseProducerId} in request")
         response <- Deferred[F, Either[Throwable, RESP]]
         message <- request.message
         processorResult <- {
@@ -45,7 +45,7 @@ trait ConsumerProducerService[F[_], REQ, RESP] extends CatsUtils with Logging {
                 implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE],
                 sendMessageContext: SendMessageContext
               ): SendResponseResult[RESPONSE] = {
-                logger.debug(s"context sending response ${r.toString.take(500)}")
+                logger.trace(s"context sending response ${r.toString.take(500)}")
                 DefaultSendResponseResult[RESPONSE](r)
               }
 
@@ -59,7 +59,7 @@ trait ConsumerProducerService[F[_], REQ, RESP] extends CatsUtils with Logging {
           val processResultWithErrorHandling = processorResult
             .flatMap {
               result =>
-                debug(s"request processing successful") >>
+                trace(s"request processing successful") >>
                   response.complete(Right(result.response))
             }
             .handleErrorWith {

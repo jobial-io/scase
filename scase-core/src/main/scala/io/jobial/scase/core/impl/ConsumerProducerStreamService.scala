@@ -55,12 +55,12 @@ class ConsumerProducerStreamService[F[_] : Concurrent, REQ, RESP: Marshaller](
                 // Just call the provided function for a new producer...
                 responseProducer(request.responseProducerId)
             }
-            _ <- debug(s"sending success for request: ${request.toString.take(500)} on $producer")
-            _ <- debug(s"found response producer $producer for request in service: ${request.toString.take(500)}")
+            _ <- trace(s"sending success for request: ${request.toString.take(500)} on $producer")
+            _ <- trace(s"found response producer $producer for request in service: ${request.toString.take(500)}")
             sendResult <- producer.send(r, responseAttributes)
             // commit request after result is written
             _ <- whenA(autoCommitRequest)(
-              debug(s"service committing request: ${request.toString.take(500)} on $producer") >>
+              trace(s"service committing request: ${request.toString.take(500)} on $producer") >>
                 request.commit
             )
           } yield sendResult
@@ -87,11 +87,11 @@ class ConsumerProducerStreamService[F[_] : Concurrent, REQ, RESP: Marshaller](
                 // Just call the provided function for a new producer...
                 errorProducer(request.responseProducerId)
             }
-            _ <- debug(s"found response producer $producer for request in service: ${request.toString.take(500)}")
+            _ <- trace(s"found response producer $producer for request in service: ${request.toString.take(500)}")
             sendResult <- producer.send(t, responseAttributes)
             _ <-
               if (autoCommitFailedRequest)
-                debug(s"service committing request: ${request.toString.take(500)}") >>
+                trace(s"service committing request: ${request.toString.take(500)}") >>
                   request.commit
               else unit
           } yield sendResult

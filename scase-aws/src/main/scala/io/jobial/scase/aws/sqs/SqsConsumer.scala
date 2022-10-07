@@ -46,10 +46,10 @@ class SqsConsumer[F[_] : Concurrent, M](
         if (receivedMessages.isEmpty)
           for {
             newMessages <-
-              debug(s"waiting for messages on $queueUrl") >>
+              trace(s"waiting for messages on $queueUrl") >>
                 // TODO: handle timeout more precisely
                 liftIO(receiveMessage(queueUrl, 10, timeout.map(t => min(1, t.toSeconds.toInt)).getOrElse(Int.MaxValue)).map(_.getMessages.asScala))
-            _ <- debug(s"received messages ${newMessages.toString.take(500)} on queue $queueUrl")
+            _ <- trace(s"received messages ${newMessages.toString.take(500)} on queue $queueUrl")
           } yield newMessages
         else
           pure(List())
@@ -88,7 +88,7 @@ class SqsConsumer[F[_] : Concurrent, M](
                     o <- outstandingMessagesRef.get
                     r <- o.get(unmarshalledMessage) match {
                       case Some(receiptHandle) =>
-                        debug(s"deleted message ${unmarshalledMessage.toString.take(500)}") >>
+                        trace(s"deleted message ${unmarshalledMessage.toString.take(500)}") >>
                           delay(deleteMessage(queueUrl, receiptHandle))
                       case _ =>
                         raiseError(CouldNotFindMessageToCommit(unmarshalledMessage))

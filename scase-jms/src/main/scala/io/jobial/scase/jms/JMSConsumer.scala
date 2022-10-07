@@ -47,7 +47,7 @@ class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscripti
         error(s"error receiving message", t) >>
           raiseError(t)
       }
-      _ <- debug(s"received message ${jmsMessage.toString.take(200)} on $destination")
+      _ <- trace(s"received message ${jmsMessage.toString.take(200)} on $destination")
       result <- (for {
         jmsMessage <- jmsMessage
         message = unmarshalMessage(jmsMessage)
