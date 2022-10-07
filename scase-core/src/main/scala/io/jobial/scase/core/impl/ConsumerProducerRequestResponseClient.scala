@@ -153,9 +153,7 @@ object ConsumerProducerRequestResponseClient extends CatsUtils with Logging {
         }
       }
       _ <- debug(s"subscribed in $this")
-    }
-
-    yield
+    } yield
       new ConsumerProducerRequestResponseClient(correlationsRef, subscription, messageConsumer, messageProducer, responseProducerId, autoCommitResponse, name)
 
 }

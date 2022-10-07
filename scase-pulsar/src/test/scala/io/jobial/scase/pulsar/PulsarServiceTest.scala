@@ -15,7 +15,7 @@ import org.apache.pulsar.client.api.SubscriptionInitialPosition
 import org.scalatest.Ignore
 import scala.language.postfixOps
 
-@Ignore
+//@Ignore
 class PulsarServiceTest
   extends ServiceTestSupport {
 

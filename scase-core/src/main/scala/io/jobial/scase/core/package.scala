@@ -20,6 +20,12 @@ package object core {
      */
     def ![RESPONSE](response: RESPONSE)(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], context: RequestContext[F], sendMessageContext: SendMessageContext = SendMessageContext()) =
       reply(response)
+
+    def underlyingMessage[T](context: RequestContext[F]) =
+      context.receiveResult(request).underlyingMessage[T]
+
+    def underlyingContext[T](context: RequestContext[F]) =
+      context.receiveResult(request).underlyingContext[T]
   }
 
   implicit def requestResultToResponse[F[_] : Monad, REQUEST, RESPONSE](requestResult: RequestResponseResult[F, REQUEST, RESPONSE]) =
