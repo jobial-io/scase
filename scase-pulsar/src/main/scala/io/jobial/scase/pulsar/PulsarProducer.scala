@@ -1,6 +1,5 @@
 package io.jobial.scase.pulsar
 
-import cats.Monad
 import cats.effect.Concurrent
 import cats.implicits._
 import io.jobial.scase.core.MessageProducer

@@ -68,6 +68,6 @@ abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsu
       }
       _ <- start(receiveMessagesUntilCancelled(callback, cancelled, receiving))
       _ <- receiving.get
-      _ = trace(s"new subscription $subscription")
+      _ <- trace(s"new subscription $subscription")
     } yield subscription
 }

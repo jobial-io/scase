@@ -28,6 +28,7 @@ class LocalServiceConfiguration[REQ, RESP](
       requestQueue <- InMemoryConsumer[F, REQ]
       responseQueue <- InMemoryProducer[F, Either[Throwable, RESP]]
       service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
+        // TODO: could create a number of producers here and assign them to clients randomly as an optimisation 
         requestQueue, { _ => delay(responseQueue) }: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
         requestHandler
       )

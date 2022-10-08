@@ -6,19 +6,15 @@ import cats.effect.concurrent.Ref
 import cats.implicits._
 import io.jobial.scase.core.DefaultMessageReceiveResult
 import io.jobial.scase.core.MessageReceiveResult
-import io.jobial.scase.core.MessageSubscription
 import io.jobial.scase.core.ReceiveTimeout
 import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.core.impl.RegexUtils
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
-import org.apache.pulsar.client.api.Consumer
 import org.apache.pulsar.client.api.ConsumerBuilder
 import org.apache.pulsar.client.api.SubscriptionInitialPosition
 import java.time.Instant
-import java.time.LocalDateTime
-import java.time.OffsetTime
 import java.util.UUID.randomUUID
 import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
@@ -54,7 +50,13 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
       .consumerName(s"consumer-${randomUUID}")
       .subscriptionName(subscriptionName)
       .apply(b => 
-        if (isProbablyRegex(topic)) Some(b.topicsPattern(context.fullyQualifiedTopicName(topic))) else Some(b.topic(context.fullyQualifiedTopicName(topic)))
+        if (isProbablyRegex(topic)) {
+          logger.trace(s"using topic pattern for $topic")
+          Some(b.topicsPattern(context.fullyQualifiedTopicName(topic)))
+        } else {
+          logger.trace(s"using simple topic for $topic")
+          Some(b.topic(context.fullyQualifiedTopicName(topic)))
+        }
       )
       .apply(b =>
         patternAutoDiscoveryPeriod.map(p => b.patternAutoDiscoveryPeriod(p.toSeconds.toInt, TimeUnit.SECONDS))
@@ -81,7 +83,7 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
         case t =>
           raiseError(t)
       }
-      _ <- trace(s"received message ${new String(pulsarMessage.getData).take(200)} on $topic")
+      _ <- trace(s"received message in consumer ${new String(pulsarMessage.getData).take(200)} on $topic in $this")
       result <-
         if (subscriptionInitialPublishTime.map(pulsarMessage.getPublishTime < _.toEpochMilli).getOrElse(false))
           trace(s"dropping message ${new String(pulsarMessage.getData).take(200)} with publish time ${pulsarMessage.getPublishTime} < $subscriptionInitialPublishTime on $topic") >>
@@ -92,8 +94,8 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
               val attributes = pulsarMessage.getProperties.asScala.toMap
               pure(
                 DefaultMessageReceiveResult[F, M](pure(message), attributes,
-                  commit = delay(consumer.acknowledge(pulsarMessage)),
-                  rollback = delay(consumer.negativeAcknowledge(pulsarMessage)),
+                  commit = trace(s"committing message $message in $this") >> delay(consumer.acknowledge(pulsarMessage)),
+                  rollback = trace(s"rolling back message $message in $this") >>  delay(consumer.negativeAcknowledge(pulsarMessage)),
                   underlyingMessageProvided = pure(pulsarMessage),
                   underlyingContextProvided = raiseError(new IllegalStateException("No underlying context"))
                 )
