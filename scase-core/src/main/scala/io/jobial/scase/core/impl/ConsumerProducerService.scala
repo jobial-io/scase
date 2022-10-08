@@ -87,9 +87,9 @@ trait ConsumerProducerService[F[_], REQ, RESP] extends CatsUtils with Logging {
 
   def start: F[ServiceState[F]] =
     for {
-      _ <- info(s"starting service for processor $requestHandler")
+      _ <- trace(s"starting service for processor $requestHandler")
       subscription <- requestConsumer.subscribe(handleRequest)
-      _ <- info(s"subscribed to consumer for processor $requestHandler")
+      _ <- trace(s"subscribed to consumer for processor $requestHandler")
     } yield
       DefaultServiceState(subscription, this)
 }
@@ -103,7 +103,7 @@ case class DefaultServiceState[F[_] : Sync, M](
   def stop =
     for {
       _ <- subscription.cancel
-      _ <- info(s"Shutting down $service...")
+      _ <- trace(s"shutting down $service...")
       _ <- subscription.join
     } yield this
 

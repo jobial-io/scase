@@ -68,14 +68,14 @@ trait SqsClient[F[_]] extends S3Client[F] {
     {
       createQueue(queueUrl) >>
         whenA(cleanup)(delay(sys.addShutdownHook { () => {
-          debug[IO](s"deleting queue $queueUrl") >>
+          trace[IO](s"deleting queue $queueUrl") >>
             IO(sqs.deleteQueue(queueUrl)).handleErrorWith { t =>
               raiseError[IO, Unit](new IllegalStateException(s"error deleting queue $queueUrl", t))
             }
         }.unsafeRunSync()
 
         })) >>
-        info(s"created SQS queue $queueUrl")
+        trace(s"created SQS queue $queueUrl")
     }.handleErrorWith { t =>
       setupQueue >> trace(s"could not create SQS queue $queueUrl")
     } >> setupQueue >>

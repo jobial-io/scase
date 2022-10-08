@@ -19,28 +19,31 @@ import scala.concurrent.duration.FiniteDuration
 abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsumer[F, M] with CatsUtils with Logging {
 
   val receiveTimeoutInSubscribe = 1.second
-  
+
   def receiveMessagesUntilCancelled[T](callback: MessageReceiveResult[F, M] => F[T], cancelled: Ref[F, Boolean], receiving: Deferred[F, Unit], receiveTimeout: FiniteDuration = receiveTimeoutInSubscribe, receivingCompleted: Boolean = false)(implicit u: Unmarshaller[M]): F[Unit] = {
 
     def continueIfNotCancelled =
       for {
         c <- cancelled.get
-        r <- if (!c) receiveMessagesUntilCancelled(callback, cancelled, receiving, receiveTimeoutInSubscribe, true) else unit
+        r <- if (!c)
+          receiveMessagesUntilCancelled(callback, cancelled, receiving, receiveTimeoutInSubscribe, true)
+        else
+          trace(s"subscription stopped receiving messages in consumer $this")
       } yield r
 
     (for {
       result <- guarantee(receive(if (receivingCompleted) Some(receiveTimeout) else Some(1.milli))) {
-        whenA(!receivingCompleted){receiving.complete().attempt}
+        whenA(!receivingCompleted) {
+          receiving.complete().attempt
+        }
       }
       _ <- callback(result)
       _ <- continueIfNotCancelled
-    } yield {
-      logger.info(s"finished receiving messages in $this")
-    }) handleErrorWith {
+    } yield ()) handleErrorWith {
       case t: ReceiveTimeout =>
         continueIfNotCancelled
       case t =>
-        error(s"stopped receiving messages on consumer $this", t)
+        error(s"subscription stopped receiving messages in consumer $this", t)
     }
   }
 
