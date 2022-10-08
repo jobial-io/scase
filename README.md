@@ -4,9 +4,13 @@
 [![Scala version support](https://index.scala-lang.org/jobial-io/scase/scase/latest-by-scala-version.svg?targetType=Js)](https://index.scala-lang.org/jobial-io/scase)
 [![Codecov](https://codecov.io/gh/jobial-io/scase/branch/master/graph/badge.svg?token=WP67SLCC4P)](https://codecov.io/gh/jobial-io/scase)
 
-**Run Scala code as a portable serverless function or microservice, with zero boilerplate and maximum type safety.**
+**Run Scala or Java code as a portable serverless function or microservice, with zero boilerplate and complete type safety**
 
-**Use a uniform, portable messaging API in your applications.** 
+**Easily integrate different Message-Oriented Middlewares and protocols**
+
+**Use a uniform, portable messaging API in your applications**
+
+<br/>
 
 **Scase** helps you achieve
 
@@ -14,7 +18,7 @@
  * Type-safe, functional implementation of common messaging patterns in enterprise applications
  * Uniform API for a wide range of messaging protocols and middelware
  * Clean separation of service API, implementation and client side
- * Portability: deployment on multiple platforms like **AWS Lambda**, **Kafka** or **Apache Pulsar** without rewriting application code
+ * Portability: deployment on multiple platforms such as **AWS Lambda**, **Kafka** or **Apache Pulsar** without rewriting application code
  * Clean, purely functional internal design and API
  * Pluggable protocol support
  * High performance
@@ -26,9 +30,9 @@
 Mircoservices and messaging are fundamental building blocks of many applications. From an application developer point of view, the use cases are often similar, yet
 the underlying APIs and runtimes can be quite different. In many cases, integration and deployment requires a substantial effort and a lot of boilerplate code.
 Often the application code outlives these runtimes and protocols, or the same code has to run on multiple runtimes at the same time (e.g. local execution, cloud deployment, testing, migration...).
-Scase provides a clean and simple way to cover these use cases while keeping your code portable and clean.
+**Scase** provides a clean and simple way to address these use cases while keeping your code portable and clean.
 
-## Serverless function case
+## Serverless functions
 
 When thinking of implementing a microservice or a serverless function, we typically want to do something like:
 
@@ -80,7 +84,7 @@ In addition, we would like to:
 * Integrated with effect systems like **Cats Effect**, **ZIO**, **Monix** (can also be used seamlessly with Scala / Java Futures)
 * Lightweight, modular, extendable design that provides a simple layer between runtime and application code - not a "
   framework"
-* Additional Java-friendly client API to allow easy interop with Java and other JVM languages
+* Java-friendly DSL for clients and services
 * Test support
 * Well defined error handling
 * Purely functional, from top to bottom, but without the need to understand complex FP constructs.
@@ -111,15 +115,16 @@ trait GreetingService extends RequestHandler[IO, GreetingRequest[_ <: GreetingRe
 }
 ```
 
-Full example can be found at:...
+Full example can be found at
+[scase-pulsar-example](https://github.com/jobial-io/scase-pulsar-example/tree/master/src/main/scala/io/jobial/scase/example/greeting/pulsar).
 
-A few things to highlight in the example:
+A few things to highlight:
 
 * The service must handle every message, it is a compile time error if a request is not replied appropriately
 * The request must be replied using the right type, again, it is checked at compile time
 * The response message on the client side is type-safe; for example, for `Hello` the client code receives a `HelloResponse` and for `Hi` the response type is `HiResponse`
 * It is not possible to send a request that does not conform to the client's type, this is checked at compile time.
-* You don't have to use Cats Effect's `IO`: you can use any other effect type. If you are not familiar with functional effects or need to use non-pure code, you can just wrap
+* It is optional to use Cats Effect's `IO`: you can use any other effect type. If you are not familiar with functional effects or need to use non-pure code, you can just wrap
 your code in an `IO`.
 
 ## How to use
@@ -157,7 +162,7 @@ Of course, it supports the effect types provided by Cats Effect itself (IO, for 
 
 ZIO is supported seamlessly through ZIO cats-interop:
 
-[Example](scase-zio-example/src/main/scala/io/jobial/scase/example/greeting/zio)
+[Example](https://github.com/jobial-io/scase-zio-example/tree/master/src/main/scala/io/jobial/scase/example/greeting/zio)
 
 ## Integrations
 
@@ -165,22 +170,22 @@ ZIO is supported seamlessly through ZIO cats-interop:
 
 TODO: add explanation on AWS env
 
-[Example](scase-lambda-example/src/main/scala/io/jobial/scase/example/greeting/lambda)
+[Example](https://github.com/jobial-io/scase-lambda-example/tree/master/src/main/scala/io/jobial/scase/example/greeting/lambda)
 
 ### AWS SQS
 
-[Example](scase-sqs-example/src/main/scala/io/jobial/scase/example/greeting/sqs)
+[Example](https://github.com/jobial-io/scase-sqs-example/tree/master/src/main/scala/io/jobial/scase/example/greeting/sqs)
 
 ### AWS SNS
 ...
 
 ### AWS CloudFormation
 
-[Example](scase-lambda-example/src/main/scala/io/jobial/scase/example/greeting/lambda)
+[Example](https://github.com/jobial-io/scase-lambda-example/tree/master/src/main/scala/io/jobial/scase/example/greeting/lambda)
 
 ### Apache Pulsar
 
-[Example](scase-pulsar-example/src/main/scala/io/jobial/scase/example/greeting/pulsar)
+[Example](https://github.com/jobial-io/scase-pulsar-example/tree/master/src/main/scala/io/jobial/scase/example/greeting/pulsar)
 
 ### Kafka
 ...
@@ -190,7 +195,7 @@ TODO: add explanation on AWS env
 ...
 ### Local
 
-[Example](scase-core/src/test/scala/io/jobial/scase/local/LocalRequestResponseServiceTest.scala)
+[Example](https://github.com/jobial-io/scase-core/tree/master/src/test/scala/io/jobial/scase/local/LocalRequestResponseServiceTest.scala)
 
 ### Tibco Rendezvous
 ...
@@ -216,6 +221,14 @@ But wait, aren't microservices just HTTP / REST services? In many enterprise env
 
 Of course, nothing prevents anyone from deploying a **Scase** service as an HTTP endpoint. Also, many messaging solutions implement the underlying message passing over HTTP (e.g. AWS Lambda, SQS, SNS).
 
+## Java DSL
+
+Scase provides a Java DSL to allow seamless and idiomatic usage in Java.
+
+[Example](https://github.com/jobial-io/scase-pulsar-tibrvmsg-java-example/tree/master/src/main/java/io/jobial/scase/example/javadsl/greeting/pulsar/tibrvmsg)
+
+Of course, any third party client can talk to a **Scase** service and vice versa, a Scase client can call a non-Scase service.
+
 ## Core concepts
 
 ### Client API
@@ -230,10 +243,10 @@ Of course, nothing prevents anyone from deploying a **Scase** service as an HTTP
 
 Marshalling / unmarshalling is done using the `Marshaller` and Unmarshaller type classes. **Scase** provides implementation for many popular serialization formats and libraries:
 
-* Circe (JSON) ([Example](scase-pulsar-example/src/main/scala/io/jobial/scase/example/greeting/pulsar))
+* Circe (JSON) ([Example](https://github.com/jobial-io/scase-pulsar-example/tree/master/src/main/scala/io/jobial/scase/example/greeting/pulsar))
 * Java serialization
 * Raw bytes
-* Spray JSON ([Example](scase-spray-json-example/src/main/scala/io/jobial/scase/example/greeting/sprayjson))
+* Spray JSON ([Example](https://github.com/jobial-io/scase-spray-json-example/tree/master/src/main/scala/io/jobial/scase/example/greeting/sprayjson))
 
 The marshalling API is designed to be able to deal with both text and binary protocols (e.g. AWS Lambda encodes and passes messages as text, not bytes).
 Support for custom formats can be added by implementing the `Marshaller` and `Unmarshaller` type classes.
@@ -282,10 +295,3 @@ An Akka actor is a low-level concurrency primitive. In this sense, it serves a v
 
 **Scase**, being a thin and lightweight layer, typically adds negligible overhead to the underlying runtime. The performance characteristics are mainly determined by the deployment platform and the pluggable effect type, as well as the application code.
 
-## Java support
-
-A **Scase** client can be seamlessly used in Java using the Java-friendly client extension. Here is how you can create a Java client for an existing service configuration:
-
-...
-
-Of course, any third party client can talk to a **Scase** service and vice versa, a Scase client can call a non-Scase service.
