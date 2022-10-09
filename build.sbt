@@ -15,12 +15,13 @@ name := "scase"
 ThisBuild / organization := "io.jobial"
 ThisBuild / scalaVersion := "2.13.8"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.15", "2.13.8")
-ThisBuild / version := "0.5.3"
+ThisBuild / version := "0.5.4"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
 ThisBuild / javacOptions ++= Seq("-source", "11", "-target", "11")
 ThisBuild / publishArtifact in(Test, packageBin) := true
 ThisBuild / publishArtifact in(Test, packageSrc) := true
 ThisBuild / publishArtifact in(Test, packageDoc) := true
+ThisBuild / resolvers += "Mulesoft" at "https://repository.mulesoft.org/nexus/content/repositories/public/"
 
 import sbt.Defaults.sbtPluginExtra
 import sbt.Keys.{description, libraryDependencies, publishConfiguration}
@@ -60,11 +61,13 @@ lazy val ScalaJava8CompatVersion = "1.0.2"
 lazy val LogbackVersion = "1.2.3"
 lazy val ShapelessVersion = "2.3.3"
 lazy val JodaTimeVersion = "2.11.1"
+lazy val CondenseVersion = "0.5.3"
+lazy val ProguardVersion = "7.2.2"
 
 lazy val root: Project = project
   .in(file("."))
   .settings(commonSettings)
-  .aggregate(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`,
+  .aggregate(`scase-core`, `scase-aws`, `scase-aws-test`, `scase-circe`, `scase-spray-json`,
     `scase-pulsar`, `scase-jms`, `scase-tibco-rv`)
   .dependsOn(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`,
     `scase-pulsar`, `scase-jms`, `scase-tibco-rv`)
@@ -106,6 +109,33 @@ lazy val `scase-aws` = project
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "test->test")
+
+lazy val `scase-aws-test` = project
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.jobial" %% "condense" % CondenseVersion
+    ),
+    cloudformationStackClass := "io.jobial.scase.aws.lambda.TestServiceStack$",
+    Proguard / proguardOptions := Seq(
+      "-injars " + (Test / packageBin).value,
+      "-injars " + (`scase-core` / Test / packageBin).value,
+      "-dontobfuscate", "-dontoptimize", "-dontnote", "-ignorewarnings",
+      "-keep class io.jobial.scase.aws.lambda.TestServiceLambdaRequestHandler** {*;}",
+      "-keep class com.amazonaws.services.lambda.** {*;}",
+      "-keep class scala.Symbol {*;}"
+    ) ++ (Proguard / proguardOptions).value,
+    Proguard / proguardInputFilter := { file =>
+      file.name match {
+        case _ => Some("!META-INF/**,!about.html,!org/apache/commons/logging/**")
+      }
+    },
+    Proguard / proguard / javaOptions := Seq("-Xmx2G"),
+    Proguard / proguardVersion := ProguardVersion
+  )
+  .dependsOn(`scase-core` % "compile->compile;test->test")
+  .dependsOn(`scase-aws` % "compile->compile")
+  .dependsOn(`scase-circe`)
 
 lazy val `scase-spray-json` = project
   .settings(commonSettings)
@@ -155,15 +185,13 @@ lazy val `scase-jms` = project
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "test->test")
 
-ThisBuild / resolvers += "Mulesoft" at "https://repository.mulesoft.org/nexus/content/repositories/public/"
-
 lazy val `scase-tibco-rv` = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
       "joda-time" % "joda-time" % JodaTimeVersion
     ),
-    Compile / unmanagedJars ++= Seq (file(sys.env.get("TIBCO_RV_ROOT").getOrElse(sys.props("tibco.rv.root")) + "/lib/tibrvj.jar"))
+    Compile / unmanagedJars ++= Seq(file(sys.env.get("TIBCO_RV_ROOT").getOrElse(sys.props("tibco.rv.root")) + "/lib/tibrvj.jar"))
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "test->test")
