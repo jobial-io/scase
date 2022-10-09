@@ -6,7 +6,9 @@ import io.jobial.scase.core._
 import io.jobial.scase.marshalling.circe._
 import io.circe.generic.auto._
 import io.jobial.scase.marshalling.Marshaller
+import org.scalatest.Ignore
 
+@Ignore
 class LambdaServiceTest extends ServiceTestSupport with TestServiceLambdaConfig {
 
   "request-response service" should "reply successfully" in {
