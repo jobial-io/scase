@@ -18,9 +18,9 @@ ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.15", "2.13.8")
 ThisBuild / version := "0.5.4"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
 ThisBuild / javacOptions ++= Seq("-source", "11", "-target", "11")
-ThisBuild / publishArtifact in(Test, packageBin) := true
-ThisBuild / publishArtifact in(Test, packageSrc) := true
-ThisBuild / publishArtifact in(Test, packageDoc) := true
+ThisBuild / Test / packageBin / publishArtifact := true
+ThisBuild / Test / packageSrc / publishArtifact := true
+ThisBuild / Test / packageDoc / publishArtifact := true
 ThisBuild / resolvers += "Mulesoft" at "https://repository.mulesoft.org/nexus/content/repositories/public/"
 
 import sbt.Defaults.sbtPluginExtra
@@ -116,12 +116,12 @@ lazy val `scase-aws-test` = project
     libraryDependencies ++= Seq(
       "io.jobial" %% "condense" % CondenseVersion
     ),
-    cloudformationStackClass := "io.jobial.scase.aws.lambda.TestServiceStack$",
+    cloudformationStackClass := "io.jobial.scase.aws.lambda.TestServiceStack",
     Proguard / proguardOptions := Seq(
       "-injars " + (Test / packageBin).value,
       "-injars " + (`scase-core` / Test / packageBin).value,
       "-dontobfuscate", "-dontoptimize", "-dontnote", "-ignorewarnings",
-      "-keep class io.jobial.scase.aws.lambda.TestServiceLambdaRequestHandler** {*;}",
+      "-keep class io.jobial.scase.aws.lambda.** {*;}",
       "-keep class com.amazonaws.services.lambda.** {*;}",
       "-keep class scala.Symbol {*;}"
     ) ++ (Proguard / proguardOptions).value,

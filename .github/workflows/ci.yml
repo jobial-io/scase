@@ -46,6 +46,8 @@ jobs:
     - name: Run tests
       run: |
         . job_env
+        #sbt compile "project scase-aws-test" proguard condense
+        #jar tf /home/runner/work/scase/scase/scase-aws-test/target/scala-2.13/proguard/scase-aws-test_2.13-0.5.4.jar
         sbt coverage +test coverageReport coverageAggregate
     - name: Upload results
       run: |
