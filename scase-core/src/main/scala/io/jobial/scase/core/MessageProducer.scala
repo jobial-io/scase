@@ -10,7 +10,6 @@ trait MessageSendResult[F[_], M] {
 
 trait MessageProducer[F[_], M] {
 
-  // TODO: get rid of Concurrent here...
   def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M]): F[MessageSendResult[F, M]]
 
   def stop: F[Unit]
