@@ -27,14 +27,12 @@ import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
 import java.nio.charset.StandardCharsets
-import scala.concurrent.ExecutionContext
 
 
 case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP: Unmarshaller](
   functionName: String
 )(
-  implicit val awsContext: AwsContext,
-  ec: ExecutionContext
+  implicit val awsContext: AwsContext
 ) extends RequestResponseClient[F, REQ, RESP] with CatsUtils with Logging {
 
   import awsContext.lambdaClient._
