@@ -12,6 +12,8 @@
 
 <br/>
 
+**Scase** is a lightweight functional library that bridges the gap between microservice platforms, messaging APIs and functional Scala code.
+
 **Scase** helps you achieve
 
  * Quick implementation and deployment of serverless functions or microservices
@@ -22,8 +24,6 @@
  * Clean, purely functional internal design and API
  * Pluggable protocol support
  * High performance
-
-**Scase** is a lightweight functional library that bridges the gap between microservice platforms, messaging APIs and functional Scala code.
 
 ## Motivation
 
