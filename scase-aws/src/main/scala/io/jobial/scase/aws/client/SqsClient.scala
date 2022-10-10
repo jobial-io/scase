@@ -44,7 +44,7 @@ trait SqsClient[F[_]] extends S3Client[F] {
   def createQueue(queueName: String) =
     for {
       r <-
-        info(s"creating SQS queue $queueName") >>
+        trace(s"creating SQS queue $queueName") >>
           delay {
             val request = new CreateQueueRequest(queueName)
               .addAttributesEntry("ReceiveMessageWaitTimeSeconds", defaultMaxReceiveMessageWaitTime.toString)

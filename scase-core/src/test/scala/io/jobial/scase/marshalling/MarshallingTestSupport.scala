@@ -18,7 +18,9 @@ import cats.implicits.catsSyntaxEitherId
 import cats.instances.either._
 import cats.tests.StrictCatsEquality
 import io.jobial.scase.core.{ScaseTestHelper, ServiceTestModel, TestException}
+import io.jobial.scase.marshalling.javadsl.Marshalling
 import org.apache.commons.io.output.ByteArrayOutputStream
+import org.scalatest.Assertion
 import org.scalatest.flatspec.AsyncFlatSpec
 import java.io.ByteArrayInputStream
 
@@ -26,8 +28,8 @@ trait MarshallingTestSupport extends AsyncFlatSpec
   with StrictCatsEquality
   with ScaseTestHelper
   with ServiceTestModel {
-  
-  def testMarshalling[M: Marshaller : Unmarshaller : Eq](message: M, testUnmarshalError: Boolean = false) = {
+
+  def testMarshalling[M: Marshaller : Unmarshaller : Eq](message: M, testUnmarshalError: Boolean) = {
     val buf = new ByteArrayOutputStream
 
     for {
@@ -49,12 +51,32 @@ trait MarshallingTestSupport extends AsyncFlatSpec
   def testMarshallingWithDefaultFormats[M: Marshaller : Unmarshaller : Eq](message: M, testUnmarshalError: Boolean = false)
     (implicit eitherMarshaller: Marshaller[Either[Throwable, M]], throwableMarshaller: Marshaller[Throwable],
       eitherUnmarshaller: Unmarshaller[Either[Throwable, M]], throwableUnmarshaller: Unmarshaller[Throwable]
-    ) =
+    ): IO[Assertion] =
     for {
       r <- testMarshalling(message, testUnmarshalError)
-      r <- testMarshalling(message.asRight[Throwable], testUnmarshalError)
-      r <- testMarshalling(TestException("error").asLeft[M]: Either[Throwable, M], testUnmarshalError)
+      r <- testMarshalling(new RuntimeException("error"): Throwable, testUnmarshalError)
+      r <- testMarshalling(new RuntimeException("error").asLeft[M]: Either[Throwable, M], testUnmarshalError)
     } yield r
+
+  def testJavaMarshalling[M: Eq](message: M, marshalling: Marshalling[M]) = {
+    implicit val marshaller = marshalling.marshaller
+    implicit val unmarshaller = marshalling.unmarshaller
+    implicit val throwableMarshaller = marshalling.throwableMarshaller
+    implicit val throwableUnmarshaller = marshalling.throwableUnmarshaller
+    implicit val eitherMarshaller = marshalling.eitherMarshaller
+    implicit val eitherUnmarshaller = marshalling.eitherUnmarshaller
+
+    testMarshallingWithDefaultFormats(message)
+  }
+
+  def testMarshalling[M: Marshaller : Unmarshaller : Eq](message: M, marshalling: Marshalling[M], testUnmarshalError: Boolean = false)
+    (implicit eitherMarshaller: Marshaller[Either[Throwable, M]], throwableMarshaller: Marshaller[Throwable],
+      eitherUnmarshaller: Unmarshaller[Either[Throwable, M]], throwableUnmarshaller: Unmarshaller[Throwable]
+    ) =
+    for {
+      r1 <- testMarshallingWithDefaultFormats(message)
+      r2 <- testJavaMarshalling(message, marshalling)
+    } yield List(r1, r2)
 }
 
 

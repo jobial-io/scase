@@ -7,8 +7,6 @@ import org.scalatest.flatspec.AsyncFlatSpec
 class S3ClientTest extends AsyncFlatSpec with S3Client[IO] with ScaseTestHelper {
   override def awsContext = AwsContext()
 
-  val onGithub = sys.env.get("RUNNER_OS").isDefined
-
   lazy val testBucket = if (onGithub) "jobial-ci" else "cloudtemp-build"
 
   lazy val testPrefix = "test/scase"

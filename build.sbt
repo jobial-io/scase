@@ -86,7 +86,8 @@ lazy val `scase-core` = project
       "commons-io" % "commons-io" % CommonsIoVersion,
       "org.apache.commons" % "commons-lang3" % CommonsLangVersion,
       "ch.qos.logback" % "logback-classic" % LogbackVersion % Test,
-      "com.chuusai" %% "shapeless" % ShapelessVersion
+      "com.chuusai" %% "shapeless" % ShapelessVersion,
+      "com.github.sbt" % "junit-interface" % "0.13.2" % Test      
     )
   )
 

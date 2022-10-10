@@ -9,9 +9,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.OutputStream
-import scala.util.Failure
 import scala.util.Try
-import io.jobial.scase.util._
 
 trait TibrvMsgRawMarshalling {
 
@@ -37,10 +35,8 @@ trait TibrvMsgRawMarshalling {
   implicit val tibrvMsgRawThrowableUnmarshaller = new BinaryFormatUnmarshaller[Throwable] {
     def unmarshalFromInputStream(in: InputStream): Either[Throwable, Throwable] = {
       for {
-        // TODO: improve this
         msg <- Try(new TibrvMsg(toByteArray(in)))
-        t <- Failure(new RuntimeException(msg.get("error").toString))
-      } yield t
+      } yield new RuntimeException(msg.get("error").toString)
     }.toEither
   }
 
