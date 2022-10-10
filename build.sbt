@@ -116,7 +116,7 @@ lazy val `scase-aws-test` = project
     libraryDependencies ++= Seq(
       "io.jobial" %% "condense" % CondenseVersion
     ),
-    cloudformationStackClass := "io.jobial.scase.aws.lambda.TestServiceStack",
+    cloudformationStackClass := "io.jobial.scase.aws.lambda.TestServiceStack$",
     Proguard / proguardOptions := Seq(
       "-injars " + (Test / packageBin).value,
       "-injars " + (`scase-core` / Test / packageBin).value,
