@@ -92,14 +92,14 @@ trait S3Client[F[_]] extends AwsClient[F] {
     l.getObjectSummaries.iterator.asScala.toList ++ listRemaining(l)
   }
 
-  def waitForObjectExists(bucketName: String, key: String, repeat: Int = 10): F[Boolean] =
+  def s3WaitForObjectExists(bucketName: String, key: String, repeat: Int = 10): F[Boolean] =
     if (repeat > 0) for {
       exists <- s3Exists(bucketName, key)
       r <- if (exists)
         pure(true)
       else for {
         _ <- sleep(5.seconds)
-        r <- waitForObjectExists(bucketName, key, repeat - 1)
+        r <- s3WaitForObjectExists(bucketName, key, repeat - 1)
       } yield r
     } yield r
     else pure(false)
