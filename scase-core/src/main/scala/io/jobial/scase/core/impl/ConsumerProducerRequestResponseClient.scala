@@ -91,7 +91,7 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
           trace(s"client received success: ${receiveResult.toString.take(500)}") >>
             pure(DefaultMessageReceiveResult(pure(payload.asInstanceOf[RESPONSE]), receiveResult.attributes, receiveResult.commit, receiveResult.rollback, receiveResult.underlyingMessage[Any], receiveResult.underlyingContext[Any]))
         case Left(t) =>
-          error(s"client received failure: ${receiveResult.toString.take(500)}", t) >>
+          trace(s"client received failure: ${receiveResult.toString.take(500)}", t) >>
             pure(DefaultMessageReceiveResult(raiseError[F, RESPONSE](t), receiveResult.attributes, receiveResult.commit, receiveResult.rollback, receiveResult.underlyingMessage[Any], receiveResult.underlyingContext[Any]))
       }
     } yield DefaultRequestResponseResult(sendResult, result)
@@ -136,7 +136,7 @@ object ConsumerProducerRequestResponseClient extends CatsUtils with Logging {
                   case Some(correlationInfo) =>
                     correlationInfo.responseDeferred.complete(receiveResult)
                   case None =>
-                    error(s"$this received message that cannot be correlated to a request: ${receiveResult.toString.take(500)}")
+                    trace(s"$this received message that cannot be correlated to a request: ${receiveResult.toString.take(500)}")
                 }
                 _ <- correlationsRef.update(_ - correlationId)
                 _ <- whenA(autoCommitResponse)(
@@ -148,7 +148,7 @@ object ConsumerProducerRequestResponseClient extends CatsUtils with Logging {
               }
               yield ()
             case None =>
-              error(s"${System.identityHashCode(this)} received message without correlation id: ${receiveResult.toString.take(500)}")
+              trace(s"${System.identityHashCode(this)} received message without correlation id: ${receiveResult.toString.take(500)}")
           }
         }
       }
