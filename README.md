@@ -8,7 +8,7 @@
 
 **Integrate different Message-Oriented Middlewares and protocols easily**
 
-**Uniform, portable messaging API for your applications**
+**Uniform and portable messaging API for your applications**
 
 <br/>
 
