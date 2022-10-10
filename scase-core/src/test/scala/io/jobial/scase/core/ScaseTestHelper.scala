@@ -12,6 +12,7 @@
  */
 package io.jobial.scase.core
 
+import cats.effect.Concurrent
 import cats.effect.IO
 import cats.tests.StrictCatsEquality
 import io.jobial.scase.core.impl.CatsUtils
@@ -35,6 +36,8 @@ trait ScaseTestHelper {
   implicit val contextShift = IO.contextShift(ec)
 
   implicit val timer = IO.timer(ec)
+  
+  implicit val concurrent = Concurrent[IO]
 
   implicit def runIOResult(r: IO[Assertion]) = r.unsafeToFuture
 
