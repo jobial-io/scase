@@ -4,7 +4,7 @@
 [![Scala version support](https://index.scala-lang.org/jobial-io/scase/scase/latest-by-scala-version.svg?targetType=Js)](https://index.scala-lang.org/jobial-io/scase)
 [![Codecov](https://codecov.io/gh/jobial-io/scase/branch/master/graph/badge.svg?token=WP67SLCC4P)](https://codecov.io/gh/jobial-io/scase)
 
-**Run Scala or Java code as a portable serverless function or microservice, with zero boilerplate and complete type safety**
+**Run Scala or Java code as a portable serverless function or microservice with zero boilerplate and complete type safety**
 
 **Easily integrate different Message-Oriented Middlewares and protocols**
 
@@ -133,7 +133,7 @@ You need to add
 
 ```scala
 libraryDependencies ++= Seq(
-  "io.jobial" %% "scase" % "0.5.3"
+  "io.jobial" %% "scase" % "0.5.4"
 )
 ```
 
@@ -144,7 +144,7 @@ to `build.sbt` or
 <dependency>
     <groupId>io.jobial</groupId>
     <artifactId>scase_${scala.version}</artifactId>
-    <version>0.5.3</version>
+    <version>0.5.4</version>
 </dependency>
 ```
 
