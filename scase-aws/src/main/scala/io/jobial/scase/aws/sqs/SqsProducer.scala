@@ -32,19 +32,15 @@ class SqsProducer[F[_] : Concurrent, M](
     liftIO(initializeQueue(queueUrl, messageRetentionPeriod, visibilityTimeout, cleanup))
 
   def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M]) = {
-    logger.info(s"sending to queue $queueUrl ${message.toString.take(200)}")
-    val r: F[MessageSendResult[F, M]] = for {
+    for {
+      _ <- trace(s"sending to queue $queueUrl ${message.toString.take(200)}")
       r <- sendMessage(queueUrl, Marshaller[M].marshalToText(message), attributes).to[F]
-    } yield {
-      logger.info(s"successfully sent to queue $queueUrl ${message.toString.take(200)}")
-      DefaultMessageSendResult[F, M](unit, unit)
-    }
-
-    r handleErrorWith { t =>
-      logger.error(s"failed sending to queue $queueUrl $message", t)
-      logger.error(s"failure sending to queue $queueUrl ${message.toString.take(200)}", t)
-      r
-    }
+      _ <- trace(s"successfully sent to queue $queueUrl ${message.toString.take(200)}")
+    } yield
+      DefaultMessageSendResult[F, M](unit, unit): MessageSendResult[F, M]
+  }.handleErrorWith { t =>
+    error(s"failed sending to queue $queueUrl ${message.toString.take(200)}", t) >>
+      raiseError(t)
   }
 
   def stop = unit

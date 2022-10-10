@@ -39,6 +39,8 @@ trait ScaseTestHelper {
   
   implicit val concurrent = Concurrent[IO]
 
+  val onGithub = sys.env.get("RUNNER_OS").isDefined
+  
   implicit def runIOResult(r: IO[Assertion]) = r.unsafeToFuture
 
   implicit def fromEitherResult(r: Either[Throwable, Assertion]) = runIOResult(IO.fromEither(r))

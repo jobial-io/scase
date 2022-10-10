@@ -31,9 +31,9 @@ class TibrvMsgSprayJsonMarshallingTest extends MarshallingTestSupport with Tibrv
   implicit val testResponse1Format = jsonFormat2(TestResponse1)
 
   "marshalling" should "work" in {
-    testMarshallingWithDefaultFormats(response1)
+    testMarshalling(response1, new javadsl.TibrvMsgSprayJsonMarshalling[TestResponse1] {})
   }
-  
+
   "marshalling some other type" should "work" in {
     val timestamp = now
     val dateOfBirth = LocalDate.now
