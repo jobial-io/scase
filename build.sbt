@@ -61,7 +61,7 @@ lazy val ScalaJava8CompatVersion = "1.0.2"
 lazy val LogbackVersion = "1.2.3"
 lazy val ShapelessVersion = "2.3.3"
 lazy val JodaTimeVersion = "2.11.1"
-lazy val CondenseVersion = "0.5.3"
+lazy val CondenseVersion = "0.5.4"
 lazy val ProguardVersion = "7.2.2"
 
 lazy val root: Project = project
