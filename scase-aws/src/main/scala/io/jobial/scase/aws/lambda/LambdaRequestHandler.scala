@@ -54,7 +54,7 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP]
 
       val result =
         for {
-          _ <- info(s"received request: ${requestString.take(500)}")
+          _ <- trace(s"received request: ${requestString.take(500)}")
           request <- Concurrent[F].fromEither(serviceConfiguration.requestUnmarshaller.unmarshalFromText(requestString))
           responseDeferred <- Deferred[F, Either[Throwable, RESP]]
           processorResult: F[SendResponseResult[RESP]] =
@@ -91,7 +91,7 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP]
               logger.trace(s"sending success to client for request: $request")
               outputStream.write(serviceConfiguration.responseMarshaller.marshalToText(r).getBytes("utf-8"))
             case Left(t) =>
-              logger.error(s"sending failure to client for request: $request", t)
+              logger.trace(s"sending failure to client for request: $request", t)
               throw t
           }
 

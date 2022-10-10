@@ -25,10 +25,10 @@ import scala.concurrent.duration.FiniteDuration
 
 
 class PulsarConsumer[F[_] : Concurrent : Timer, M](
-  topic: String,
-  patternAutoDiscoveryPeriod: Option[FiniteDuration],
-  subscriptionInitialPosition: Option[SubscriptionInitialPosition],
-  subscriptionInitialPublishTime: Option[Instant],
+  val topic: String,
+  val patternAutoDiscoveryPeriod: Option[FiniteDuration],
+  val subscriptionInitialPosition: Option[SubscriptionInitialPosition],
+  val subscriptionInitialPublishTime: Option[Instant],
   val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]]
 )(implicit context: PulsarContext)
   extends DefaultMessageConsumer[F, M] with CatsUtils with RegexUtils with Logging {
@@ -37,7 +37,6 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
 
   val responseTopicInNamespace = context.fullyQualifiedTopicName(topic)
 
-  // TODO: revisit this
   implicit class ConsumerBuilderExt(builder: ConsumerBuilder[_]) {
     def apply(f: ConsumerBuilder[_] => Option[ConsumerBuilder[_]]): ConsumerBuilder[_] =
       f(builder).getOrElse(builder)
@@ -49,7 +48,7 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
       .newConsumer
       .consumerName(s"consumer-${randomUUID}")
       .subscriptionName(subscriptionName)
-      .apply(b => 
+      .apply(b =>
         if (isProbablyRegex(topic)) {
           logger.trace(s"using topic pattern for $topic")
           Some(b.topicsPattern(context.fullyQualifiedTopicName(topic)))
@@ -65,7 +64,7 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
         subscriptionInitialPosition.map(b.subscriptionInitialPosition)
       )
       .subscribe()
-  
+
   sys.addShutdownHook { () =>
     if (consumer.isConnected)
       consumer.unsubscribe()
@@ -95,7 +94,7 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
               pure(
                 DefaultMessageReceiveResult[F, M](pure(message), attributes,
                   commit = trace(s"committing message $message in $this") >> delay(consumer.acknowledge(pulsarMessage)),
-                  rollback = trace(s"rolling back message $message in $this") >>  delay(consumer.negativeAcknowledge(pulsarMessage)),
+                  rollback = trace(s"rolling back message $message in $this") >> delay(consumer.negativeAcknowledge(pulsarMessage)),
                   underlyingMessageProvided = pure(pulsarMessage),
                   underlyingContextProvided = raiseError(new IllegalStateException("No underlying context"))
                 )
