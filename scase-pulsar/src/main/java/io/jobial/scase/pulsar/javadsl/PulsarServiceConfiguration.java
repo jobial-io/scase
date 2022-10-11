@@ -3,30 +3,34 @@ package io.jobial.scase.pulsar.javadsl;
 import io.jobial.scase.marshalling.javadsl.Marshalling;
 import io.jobial.scase.pulsar.PulsarServiceConfiguration$;
 import org.apache.pulsar.client.api.SubscriptionInitialPosition;
-import scala.None$;
-import scala.Option;
-import scala.Option$;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 
-import static io.jobial.scase.core.javadsl.JavaUtils.javaDurationToScala;
-import static io.jobial.scase.core.javadsl.JavaUtils.javaOptionalToScala;
+import static io.jobial.scase.core.javadsl.JavaUtils.*;
+import static org.apache.pulsar.client.api.SubscriptionInitialPosition.Earliest;
 
 
 public class PulsarServiceConfiguration {
 
     public static <REQ, RESP> PulsarRequestResponseServiceConfiguration<REQ, RESP> requestResponse(
             String requestTopic,
+            Optional<String> responseTopicOverride,
+            Optional<Duration> batchingMaxPublishDelay,
+            Optional<Duration> patternAutoDiscoveryPeriod,
+            Optional<SubscriptionInitialPosition> subscriptionInitialPosition,
+            Optional<Instant> subscriptionInitialPublishTime,
             Marshalling<REQ> requestMarshalling,
-            Marshalling<RESP> responseMarshalling,
-            Duration batchingMaxPublishDelay
+            Marshalling<RESP> responseMarshalling
     ) {
-        return new PulsarRequestResponseServiceConfiguration(PulsarServiceConfiguration$.MODULE$.<REQ, RESP>requestResponse(
+        return new PulsarRequestResponseServiceConfiguration(PulsarServiceConfiguration$.MODULE$.requestResponse(
                 requestTopic,
-                Option$.MODULE$.empty(),
-                scala.concurrent.duration.Duration.fromNanos(batchingMaxPublishDelay.toNanos()),
+                javaOptionalToScala(responseTopicOverride),
+                javaOptionalDurationToScala(batchingMaxPublishDelay),
+                javaOptionalDurationToScala(patternAutoDiscoveryPeriod),
+                javaOptionalToScala(subscriptionInitialPosition),
+                javaOptionalToScala(subscriptionInitialPublishTime),
                 requestMarshalling.marshaller(),
                 requestMarshalling.unmarshaller(),
                 responseMarshalling.marshaller(),
@@ -41,20 +45,35 @@ public class PulsarServiceConfiguration {
             Marshalling<REQ> requestMarshalling,
             Marshalling<RESP> responseMarshalling
     ) {
-        return requestResponse(requestTopic, requestMarshalling, responseMarshalling, Duration.ofMillis(1));
+        return requestResponse(
+                requestTopic,
+                scalaOptionToJava(PulsarServiceConfiguration$.MODULE$.requestResponse$default$2()),
+                scalaOptionDurationToJava(PulsarServiceConfiguration$.MODULE$.requestResponse$default$3()),
+                scalaOptionDurationToJava(PulsarServiceConfiguration$.MODULE$.requestResponse$default$4()),
+                scalaOptionToJava(PulsarServiceConfiguration$.MODULE$.requestResponse$default$5()),
+                scalaOptionToJava(PulsarServiceConfiguration$.MODULE$.requestResponse$default$6()),
+                requestMarshalling,
+                responseMarshalling
+        );
     }
 
     public static <REQ, RESP> PulsarStreamServiceConfiguration<REQ, RESP> stream(
             String requestTopic,
             String responseTopic,
-            Duration batchingMaxPublishDelay,
+            Optional<Duration> batchingMaxPublishDelay,
+            Optional<Duration> patternAutoDiscoveryPeriod,
+            Optional<SubscriptionInitialPosition> subscriptionInitialPosition,
+            Optional<Instant> subscriptionInitialPublishTime,
             Marshalling<REQ> requestMarshalling,
             Marshalling<RESP> responseMarshalling
     ) {
-        return new PulsarStreamServiceConfiguration(PulsarServiceConfiguration$.MODULE$.<REQ, RESP>stream(
+        return new PulsarStreamServiceConfiguration(PulsarServiceConfiguration$.MODULE$.stream(
                 requestTopic,
                 responseTopic,
-                scala.concurrent.duration.Duration.fromNanos(batchingMaxPublishDelay.toNanos()),
+                javaOptionalDurationToScala(batchingMaxPublishDelay),
+                javaOptionalDurationToScala(patternAutoDiscoveryPeriod),
+                javaOptionalToScala(subscriptionInitialPosition),
+                javaOptionalToScala(subscriptionInitialPublishTime),
                 requestMarshalling.marshaller(),
                 requestMarshalling.unmarshaller(),
                 responseMarshalling.marshaller(),
@@ -70,22 +89,37 @@ public class PulsarServiceConfiguration {
             Marshalling<REQ> requestMarshalling,
             Marshalling<RESP> responseMarshalling
     ) {
-        return stream(requestTopic, responseTopic, Duration.ofMillis(1), requestMarshalling, responseMarshalling);
+        return stream(
+                requestTopic,
+                responseTopic,
+                Optional.of(Duration.ofMillis(1)),
+                Optional.of(Duration.ofSeconds(1)),
+                Optional.of(Earliest),
+                Optional.empty(),
+                requestMarshalling,
+                responseMarshalling
+        );
     }
 
     public static <REQ, RESP> PulsarStreamServiceWithErrorTopicConfiguration<REQ, RESP> stream(
             String requestTopic,
             String responseTopic,
             String errorTopic,
-            Duration batchingMaxPublishDelay,
+            Optional<Duration> batchingMaxPublishDelay,
+            Optional<Duration> patternAutoDiscoveryPeriod,
+            Optional<SubscriptionInitialPosition> subscriptionInitialPosition,
+            Optional<Instant> subscriptionInitialPublishTime,
             Marshalling<REQ> requestMarshalling,
             Marshalling<RESP> responseMarshalling
     ) {
-        return new PulsarStreamServiceWithErrorTopicConfiguration(PulsarServiceConfiguration$.MODULE$.<REQ, RESP>stream(
+        return new PulsarStreamServiceWithErrorTopicConfiguration(PulsarServiceConfiguration$.MODULE$.stream(
                 requestTopic,
                 responseTopic,
                 errorTopic,
-                scala.concurrent.duration.Duration.fromNanos(batchingMaxPublishDelay.toNanos()),
+                javaOptionalDurationToScala(batchingMaxPublishDelay),
+                javaOptionalDurationToScala(patternAutoDiscoveryPeriod),
+                javaOptionalToScala(subscriptionInitialPosition),
+                javaOptionalToScala(subscriptionInitialPublishTime),
                 requestMarshalling.marshaller(),
                 requestMarshalling.unmarshaller(),
                 responseMarshalling.marshaller(),
@@ -106,7 +140,10 @@ public class PulsarServiceConfiguration {
                 requestTopic,
                 responseTopic,
                 errorTopic,
-                Duration.ofMillis(1),
+                Optional.of(Duration.ofMillis(1)),
+                Optional.of(Duration.ofSeconds(1)),
+                Optional.of(Earliest),
+                Optional.empty(),
                 requestMarshalling,
                 responseMarshalling
         );
@@ -114,12 +151,31 @@ public class PulsarServiceConfiguration {
 
     public static <M> PulsarMessageSourceServiceConfiguration<M> source(
             String topic,
+            Optional<Duration> patternAutoDiscoveryPeriod,
+            Optional<SubscriptionInitialPosition> subscriptionInitialPosition,
+            Optional<Instant> subscriptionInitialPublishTime,
             Marshalling<M> marshalling
     ) {
-        return new PulsarMessageSourceServiceConfiguration(PulsarServiceConfiguration$.MODULE$.<M>source(
+        return new PulsarMessageSourceServiceConfiguration(PulsarServiceConfiguration$.MODULE$.source(
                 topic,
+                javaOptionalDurationToScala(patternAutoDiscoveryPeriod),
+                javaOptionalToScala(subscriptionInitialPosition),
+                javaOptionalToScala(subscriptionInitialPublishTime),
                 marshalling.unmarshaller()
         ));
+    }
+
+    public static <M> PulsarMessageSourceServiceConfiguration<M> source(
+            String topic,
+            Marshalling<M> marshalling
+    ) {
+        return source(
+                topic,
+                scalaOptionDurationToJava(PulsarServiceConfiguration$.MODULE$.source$default$2()),
+                scalaOptionToJava(PulsarServiceConfiguration$.MODULE$.source$default$3()),
+                scalaOptionToJava(PulsarServiceConfiguration$.MODULE$.source$default$4()),
+                marshalling
+        );
     }
 
     public static <M> PulsarMessageHandlerServiceConfiguration<M> handler(
@@ -144,5 +200,28 @@ public class PulsarServiceConfiguration {
                 marshalling.marshaller(),
                 marshalling.unmarshaller()
         ));
+    }
+
+    public static <M> PulsarMessageDestinationServiceConfiguration<M> destination(
+            String topic,
+            Optional<Duration> batchingMaxPublishDelay,
+            Marshalling<M> marshalling
+    ) {
+        return new PulsarMessageDestinationServiceConfiguration(PulsarServiceConfiguration$.MODULE$.<M>destination(
+                topic,
+                javaOptionalDurationToScala(batchingMaxPublishDelay),
+                marshalling.marshaller()
+        ));
+    }
+
+    public static <M> PulsarMessageDestinationServiceConfiguration<M> destination(
+            String topic,
+            Marshalling<M> marshalling
+    ) {
+        return destination(
+                topic,
+                scalaOptionDurationToJava(PulsarServiceConfiguration$.MODULE$.destination$default$2()),
+                marshalling
+        );
     }
 }

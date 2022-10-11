@@ -37,8 +37,8 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
 
   val responseTopicInNamespace = context.fullyQualifiedTopicName(topic)
 
-  implicit class ConsumerBuilderExt(builder: ConsumerBuilder[_]) {
-    def apply(f: ConsumerBuilder[_] => Option[ConsumerBuilder[_]]): ConsumerBuilder[_] =
+  implicit class ConsumerBuilderExt[T](builder: ConsumerBuilder[T]) {
+    def apply(f: ConsumerBuilder[T] => Option[ConsumerBuilder[T]]): ConsumerBuilder[T] =
       f(builder).getOrElse(builder)
   }
 
