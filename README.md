@@ -133,7 +133,7 @@ You need to add
 
 ```scala
 libraryDependencies ++= Seq(
-  "io.jobial" %% "scase" % "0.5.4"
+  "io.jobial" %% "scase" % "0.5.6"
 )
 ```
 
@@ -144,7 +144,7 @@ to `build.sbt` or
 <dependency>
     <groupId>io.jobial</groupId>
     <artifactId>scase_${scala.version}</artifactId>
-    <version>0.5.4</version>
+    <version>0.5.6</version>
 </dependency>
 ```
 

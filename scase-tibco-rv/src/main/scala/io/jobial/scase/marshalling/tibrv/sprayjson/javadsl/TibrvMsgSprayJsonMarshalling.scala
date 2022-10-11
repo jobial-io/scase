@@ -9,12 +9,11 @@ class TibrvMsgSprayJsonMarshalling[M: JsonFormat] extends Marshalling[M] with io
 
   val unmarshaller = tibrvMsgSprayJsonUnmarshaller[M]
 
-  val eitherMarshaller = tibrvMsgSprayJsonMarshaller[Either[Throwable, M]](eitherFormat[Throwable, M])
+  val eitherMarshaller = tibrvMsgSprayJsonMarshaller[Either[Throwable, M]]
 
   val eitherUnmarshaller = tibrvMsgSprayJsonUnmarshaller[Either[Throwable, M]]
 
   val throwableMarshaller = tibrvMsgSprayJsonMarshaller[Throwable]
 
   val throwableUnmarshaller = tibrvMsgSprayJsonUnmarshaller[Throwable]
-
 }

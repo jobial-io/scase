@@ -15,7 +15,7 @@ name := "scase"
 ThisBuild / organization := "io.jobial"
 ThisBuild / scalaVersion := "2.13.8"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.15", "2.13.8")
-ThisBuild / version := "0.5.6"
+ThisBuild / version := "0.5.7"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
 ThisBuild / javacOptions ++= Seq("-source", "11", "-target", "11")
 ThisBuild / Test / packageBin / publishArtifact := true
@@ -195,5 +195,5 @@ lazy val `scase-tibco-rv` = project
     Compile / unmanagedJars ++= Seq(file(sys.env.get("TIBCO_RV_ROOT").getOrElse(sys.props("tibco.rv.root")) + "/lib/tibrvj.jar"))
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
-  .dependsOn(`scase-circe` % "test->test")
+  .dependsOn(`scase-circe`)
   .dependsOn(`scase-spray-json`)
