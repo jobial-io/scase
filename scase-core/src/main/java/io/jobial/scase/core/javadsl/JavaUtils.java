@@ -9,6 +9,7 @@ import scala.concurrent.Future;
 import scala.runtime.BoxedUnit;
 
 import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -39,9 +40,29 @@ public class JavaUtils {
             return Option$.MODULE$.<T>empty();
         }
     }
+
+    public static <T> Optional<T> scalaOptionToJava(Option<T> o) {
+        if (o.isDefined()) {
+            return Optional.of(o.get());
+        } else {
+            return Optional.empty();
+        }
+    }
     
     public static scala.concurrent.duration.FiniteDuration javaDurationToScala(Duration duration) {
         return scala.concurrent.duration.Duration.fromNanos(duration.toNanos());
+    }
+
+    public static Duration scalaDurationToJava(scala.concurrent.duration.Duration duration) {
+        return Duration.of(duration.toNanos(), ChronoUnit.NANOS);
+    }
+
+    public static Option<scala.concurrent.duration.FiniteDuration> javaOptionalDurationToScala(Optional<Duration> duration) {
+        return javaOptionalToScala(duration.map(d -> javaDurationToScala(d)));
+    }
+
+    public static Optional<Duration> scalaOptionDurationToJava(Option<scala.concurrent.duration.FiniteDuration> duration) {
+        return scalaOptionToJava(duration).map(d -> scalaDurationToJava(d));
     }
 
     public static <A, B> scala.collection.immutable.Map<A, B> javaMapToScala(Map<A, B> map) {
