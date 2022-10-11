@@ -20,7 +20,7 @@ import io.jobial.scase.marshalling.MarshallingUtils
 
 import scala.util.Try
 
-trait CirceDefaultCodecs extends MarshallingUtils {
+trait DefaultCodecs extends MarshallingUtils {
 
   implicit val throwableEncoder: Encoder[Throwable] = new Encoder[Throwable] {
     override def apply(a: Throwable): Json = Json.obj(

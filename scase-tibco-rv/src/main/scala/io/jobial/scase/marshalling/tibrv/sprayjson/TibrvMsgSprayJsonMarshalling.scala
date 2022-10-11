@@ -75,20 +75,20 @@ trait TibrvMsgSprayJsonMarshalling extends ProductFormats with DefaultFormats wi
 
   val localDateClassName = classOf[LocalDate].getName
 
-  implicit val idtDateTimeLocalDateJsFormat = new JsonFormat[LocalDate] {
+  implicit val localDateJsFormat = new JsonFormat[LocalDate] {
     override def write(obj: LocalDate) = JsObject(
       "value" -> JsNumber(obj.toDate.getTime),
-      "$type" -> JsString(dateTimeClassName)
+      "$type" -> JsString(localDateClassName)
     )
 
     override def read(json: JsValue) =
       new LocalDate(json.asInstanceOf[JsNumber].value.toLong)
   }
 
-  implicit val idtDateTimeDateTimeJsFormat = new JsonFormat[DateTime] {
+  implicit val dateTimeJsFormat = new JsonFormat[DateTime] {
     override def write(obj: DateTime) = JsObject(
       "value" -> JsNumber(obj.toDate.getTime),
-      "$type" -> JsString(localDateClassName)
+      "$type" -> JsString(dateTimeClassName)
     )
 
     override def read(json: JsValue) =
@@ -181,7 +181,7 @@ trait TibrvMsgSprayJsonMarshalling extends ProductFormats with DefaultFormats wi
             JsNumber(i)
           case i: java.lang.Double =>
             JsNumber(i)
-          case d: TibrvDate =>
+          case d: Date =>
             JsNumber(d.getTime)
           case m: TibrvMsg =>
             tibrvMsgToJsValue(m)
