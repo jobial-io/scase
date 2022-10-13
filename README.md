@@ -247,6 +247,7 @@ Marshalling / unmarshalling is done using the `Marshaller` and Unmarshaller type
 * Java serialization
 * Raw bytes
 * Spray JSON ([Example](https://github.com/jobial-io/scase-spray-json-example/tree/master/src/main/scala/io/jobial/scase/example/greeting/sprayjson))
+* Tibco Rendezvous ([Example](https://github.com/jobial-io/scase-pulsar-tibrvmsg-java-router-example/tree/master/src/main/scala/io/jobial/scase/example/javadsl/router/pulsar/tibrvmsg))
 
 The marshalling API is designed to be able to deal with both text and binary protocols (e.g. AWS Lambda encodes and passes messages as text, not bytes).
 Support for custom formats can be added by implementing the `Marshaller` and `Unmarshaller` type classes.
