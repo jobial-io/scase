@@ -133,7 +133,7 @@ You need to add
 
 ```scala
 libraryDependencies ++= Seq(
-  "io.jobial" %% "scase" % "0.5.6"
+  "io.jobial" %% "scase" % "0.5.7"
 )
 ```
 
@@ -144,7 +144,7 @@ to `build.sbt` or
 <dependency>
     <groupId>io.jobial</groupId>
     <artifactId>scase_${scala.version}</artifactId>
-    <version>0.5.6</version>
+    <version>0.5.7</version>
 </dependency>
 ```
 
@@ -254,14 +254,14 @@ Support for custom formats can be added by implementing the `Marshaller` and `Un
 ### Request-response type mapping
 
 Mapping a request type to a response type is implemented through the `RequestResponseMapping` multi-parameter type class. For example,
-if someone wants a service to respond with `FooResponse` to `FooRequest`, they need to have an instance of 
+if you want a service to respond with `FooResponse` to `FooRequest`, you need to have an instance of 
 
 ```scala
-RequestResponseMapping[FooRequest, FooResponse]{}
+RequestResponseMapping[FooRequest, FooResponse]
 ```
 
 available. Scase provides a default implementation of this type class for requests
-that extend the `Request[RESPONSE]` trait, allowing the following pattern:
+that extend the `Request[RESPONSE]` trait to support the following pattern:
 
 ```scala
 sealed trait GreetingRequest[RESPONSE] extends Request[RESPONSE]
