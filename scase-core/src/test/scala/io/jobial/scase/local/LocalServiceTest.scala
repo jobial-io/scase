@@ -13,24 +13,27 @@
 package io.jobial.scase.local
 
 import cats.effect.IO
+import cats.effect.concurrent.MVar
 import io.jobial.scase.core._
 import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.local.LocalServiceConfiguration.handler
+import io.jobial.scase.local.LocalServiceConfiguration.requestResponse
 import scala.concurrent.duration.DurationInt
 
 
-class LocalRequestResponseServiceTest
+class LocalServiceTest
   extends ServiceTestSupport with CatsUtils {
 
   "request-response service" should "reply successfully" in {
     for {
-      (service, client) <- LocalServiceConfiguration("hello").serviceAndClient(requestHandler)
+      (service, client) <- requestResponse("hello").serviceAndClient(requestHandler)
       r <- testSuccessfulReply(service, client)
     } yield r
   }
 
   "another request-response service" should "reply successfully" in {
     for {
-      (service, client) <- LocalServiceConfiguration("hello").serviceAndClient(anotherRequestProcessor)
+      (service, client) <- requestResponse("hello").serviceAndClient(anotherRequestProcessor)
       _ <- service.start
       r <- testSuccessfulReply(client, Req1(), Resp1())
     } yield r
@@ -48,7 +51,7 @@ class LocalRequestResponseServiceTest
   }
 
   "request-response service" should "succeed in load test" in {
-    val serviceConfig = LocalServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello")
+    val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse]("hello")
     for {
       service <- serviceConfig.service(requestHandler)
       client <- serviceConfig.client(service)
@@ -57,10 +60,22 @@ class LocalRequestResponseServiceTest
   }
 
   "request-response service" should "succeed in load test with different clients" in {
-    val serviceConfig = LocalServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("hello")
+    val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse]("hello")
     for {
       service <- serviceConfig.service(requestHandler)
       r <- testMultipleRequests(service, serviceConfig.client(service), _ => request1, _ => response1)
+    } yield r
+  }
+
+  "message handler service" should "receive successfully" in {
+    val serviceConfig = handler[TestRequest[_ <: TestResponse]](
+      s"hello")
+
+    for {
+      receivedMessage <- MVar.empty[IO, TestRequest[_ <: TestResponse]]
+      service <- serviceConfig.service(TestMessageHandler(receivedMessage))
+      senderClient <- serviceConfig.client(service)
+      r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)
     } yield r
   }
 

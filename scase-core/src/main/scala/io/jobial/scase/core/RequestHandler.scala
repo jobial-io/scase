@@ -11,7 +11,7 @@ trait RequestContext[F[_]] {
 
   def reply[REQUEST, RESPONSE](request: REQUEST, response: RESPONSE)
     (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendMessageContext: SendMessageContext = SendMessageContext()): SendResponseResult[RESPONSE]
-  
+
   def receiveResult[REQUEST](request: REQUEST): MessageReceiveResult[F, REQUEST]
 
   def requestTimeout: Duration
@@ -22,14 +22,15 @@ trait RequestHandler[F[_], REQ, RESP] {
   type Handler = Function[REQ, F[SendResponseResult[RESP]]]
 
   def handleRequest(implicit context: RequestContext[F]): Handler
-  
+
 }
 
 object RequestHandler {
-  
-  def apply[F[_], REQ, RESP](f: RequestContext[F] => Function[REQ, F[SendResponseResult[RESP]]]) = new RequestHandler[F, REQ, RESP] {
-    def handleRequest(implicit context: RequestContext[F]): Handler = f(context)
-  }
+
+  def apply[F[_], REQ, RESP](handler: RequestContext[F] => Function[REQ, F[SendResponseResult[RESP]]]) =
+    new RequestHandler[F, REQ, RESP] {
+      def handleRequest(implicit context: RequestContext[F]): Handler = handler(context)
+    }
 }
 
 case class UnknownRequest[REQ](request: REQ) extends IllegalStateException

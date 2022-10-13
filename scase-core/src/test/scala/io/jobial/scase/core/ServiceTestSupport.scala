@@ -49,6 +49,11 @@ trait ServiceTestSupport extends AsyncFlatSpec
         raiseError(TestException("exception!!!"))
     }
   }
+  
+  val anotherMessageHandler = MessageHandler[IO, Req](implicit context => {
+    case r: Req1 =>
+      IO(println("hello"))    
+  })
 
   def testSuccessfulReply[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP : Eq](client: RequestResponseClient[IO, REQ, RESP],
     request1: REQUEST, response1: RESPONSE)(implicit mapping: RequestResponseMapping[REQUEST, RESPONSE]): IO[Assertion] =

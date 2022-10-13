@@ -16,6 +16,7 @@ import cats.Eq
 import cats.effect.IO
 import io.jobial.scase.core._
 import io.jobial.scase.local.LocalServiceConfiguration
+import io.jobial.scase.local.LocalServiceConfiguration.requestResponse
 import io.jobial.scase.marshalling.serialization._
 
 class RequestResponseBridgeTest
@@ -41,8 +42,8 @@ class RequestResponseBridgeTest
     } yield assert(response === r)
 
   "request-response bridge" should "work" in {
-    val sourceConfig = LocalServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("source")
-    val destinationConfig = LocalServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("destination")
+    val sourceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse]("source")
+    val destinationConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse]("destination")
     for {
       (destService, destClient) <- destinationConfig.serviceAndClient(requestHandler)
       r <- testRequestResponseBridge(request1, response1, sourceConfig.service[IO], destService, { service =>

@@ -9,8 +9,8 @@ import io.jobial.scase.marshalling.Unmarshaller
 
 // TODO: rename to OneWayService
 class ConsumerMessageHandlerService[F[_] : Concurrent, M: Unmarshaller](
-  consumer: MessageConsumer[F, M],
-  messageHandler: MessageHandler[F, M]
+  val consumer: MessageConsumer[F, M],
+  val messageHandler: MessageHandler[F, M]
 ) extends DefaultService[F] with Logging {
 
   def start: F[ServiceState[F]] = {
@@ -27,4 +27,13 @@ class ConsumerMessageHandlerService[F[_] : Concurrent, M: Unmarshaller](
     } yield
       DefaultServiceState(subscription, this)
   }
+}
+
+object ConsumerMessageHandlerService extends CatsUtils {
+
+  def apply[F[_] : Concurrent, M: Unmarshaller](
+    consumer: MessageConsumer[F, M],
+    messageHandler: MessageHandler[F, M]
+  ) =
+    delay(new ConsumerMessageHandlerService[F, M](consumer, messageHandler))
 }
