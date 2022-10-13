@@ -14,9 +14,10 @@ package io.jobial.scase
 
 import cats.effect.{Concurrent, Timer}
 import io.jobial.scase.core.RequestHandler
+import io.jobial.scase.local.LocalServiceConfiguration.requestResponse
 
 package object local {
 
-  def localServiceAndClient[F[_]: Concurrent: Timer, REQ, RESP](serviceName: String, requestHandler: RequestHandler[F, REQ, RESP]) = 
-    LocalServiceConfiguration[REQ, RESP](serviceName).serviceAndClient[F](requestHandler)
+  def localServiceAndClient[F[_] : Concurrent : Timer, REQ, RESP](serviceName: String, requestHandler: RequestHandler[F, REQ, RESP]) =
+    requestResponse[REQ, RESP](serviceName).serviceAndClient[F](requestHandler)
 }
