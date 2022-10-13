@@ -25,6 +25,13 @@ trait RequestHandler[F[_], REQ, RESP] {
   
 }
 
+object RequestHandler {
+  
+  def apply[F[_], REQ, RESP](f: RequestContext[F] => Function[REQ, F[SendResponseResult[RESP]]]) = new RequestHandler[F, REQ, RESP] {
+    def handleRequest(implicit context: RequestContext[F]): Handler = f(context)
+  }
+}
+
 case class UnknownRequest[REQ](request: REQ) extends IllegalStateException
 
 
