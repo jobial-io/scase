@@ -36,12 +36,10 @@ trait ServiceTestSupport extends AsyncFlatSpec
 
   implicit val sendRequestContext = SendRequestContext(requestTimeout = Some(30.seconds))
 
-  val anotherRequestProcessor = new RequestHandler[IO, Req, Resp] {
-    override def handleRequest(implicit context: RequestContext[IO]): Handler = {
-      case r: Req1 =>
-        r.reply(Resp1())
-    }
-  }
+  val anotherRequestProcessor = RequestHandler[IO, Req, Resp](implicit context => {
+    case r: Req1 =>
+      r.reply(Resp1())
+  })
 
   val requestHandlerWithError = new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
     override def handleRequest(implicit context: RequestContext[IO]) = {
