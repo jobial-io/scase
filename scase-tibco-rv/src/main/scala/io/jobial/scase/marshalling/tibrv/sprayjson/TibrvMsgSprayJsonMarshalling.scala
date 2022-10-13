@@ -1,11 +1,11 @@
 package io.jobial.scase.marshalling.tibrv.sprayjson
 
-import com.tibco.tibrv.TibrvDate
 import com.tibco.tibrv.TibrvMsg
 import com.tibco.tibrv.TibrvMsgField
 import io.jobial.scase.marshalling.BinaryFormatMarshaller
 import io.jobial.scase.marshalling.BinaryFormatUnmarshaller
 import io.jobial.scase.marshalling.sprayjson.DefaultFormats
+import io.jobial.scase.util.TryExtensionUtil
 import org.apache.commons.io.IOUtils.toByteArray
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
@@ -25,7 +25,6 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.util.Date
 import scala.util.Try
-import io.jobial.scase.util._
 
 /**
  * A marshalling implementation for case classes and TibrvMsg piggybacking on Spray Json for the case class
@@ -33,7 +32,7 @@ import io.jobial.scase.util._
  * lossy encoding of JSON.
  */
 trait TibrvMsgSprayJsonMarshalling extends ProductFormats with DefaultFormats with AdditionalFormats
-  with CollectionFormats {
+  with CollectionFormats with TryExtensionUtil {
 
   implicit val stringJsFormat = spray.json.DefaultJsonProtocol.StringJsonFormat
 
@@ -75,20 +74,20 @@ trait TibrvMsgSprayJsonMarshalling extends ProductFormats with DefaultFormats wi
 
   val localDateClassName = classOf[LocalDate].getName
 
-  implicit val idtDateTimeLocalDateJsFormat = new JsonFormat[LocalDate] {
+  implicit val localDateJsFormat = new JsonFormat[LocalDate] {
     override def write(obj: LocalDate) = JsObject(
       "value" -> JsNumber(obj.toDate.getTime),
-      "$type" -> JsString(dateTimeClassName)
+      "$type" -> JsString(localDateClassName)
     )
 
     override def read(json: JsValue) =
       new LocalDate(json.asInstanceOf[JsNumber].value.toLong)
   }
 
-  implicit val idtDateTimeDateTimeJsFormat = new JsonFormat[DateTime] {
+  implicit val dateTimeJsFormat = new JsonFormat[DateTime] {
     override def write(obj: DateTime) = JsObject(
       "value" -> JsNumber(obj.toDate.getTime),
-      "$type" -> JsString(localDateClassName)
+      "$type" -> JsString(dateTimeClassName)
     )
 
     override def read(json: JsValue) =
@@ -181,7 +180,7 @@ trait TibrvMsgSprayJsonMarshalling extends ProductFormats with DefaultFormats wi
             JsNumber(i)
           case i: java.lang.Double =>
             JsNumber(i)
-          case d: TibrvDate =>
+          case d: Date =>
             JsNumber(d.getTime)
           case m: TibrvMsg =>
             tibrvMsgToJsValue(m)
