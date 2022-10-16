@@ -38,7 +38,8 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
                         implicit val sendMessageContext = SendMessageContext(filteredResponse.attributes)
                         for {
                           response <- filteredResponse.message
-                        } yield request ! response
+                          r <- request ! response
+                        } yield r
                       case None =>
                         raiseError[F, SendResponseResult[SOURCERESP]](new RuntimeException)
                     }

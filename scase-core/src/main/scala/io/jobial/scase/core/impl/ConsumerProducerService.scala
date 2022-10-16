@@ -44,10 +44,9 @@ trait ConsumerProducerService[F[_], REQ, RESP] extends CatsUtils with Logging {
               def reply[REQUEST, RESPONSE](req: REQUEST, r: RESPONSE)(
                 implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE],
                 sendMessageContext: SendMessageContext
-              ): SendResponseResult[RESPONSE] = {
-                logger.trace(s"context sending response ${r.toString.take(500)}")
-                DefaultSendResponseResult[RESPONSE](r)
-              }
+              ): F[SendResponseResult[RESPONSE]] =
+                trace(s"context sending response ${r.toString.take(500)}") >>
+                pure(DefaultSendResponseResult[RESPONSE](r))
 
               val requestTimeout = request.requestTimeout.getOrElse(Duration.Inf)
 
