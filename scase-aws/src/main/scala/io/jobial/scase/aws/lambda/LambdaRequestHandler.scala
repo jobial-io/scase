@@ -12,23 +12,27 @@
  */
 package io.jobial.scase.aws.lambda
 
-import cats.Monad
 import cats.effect.Concurrent
 import cats.effect.concurrent.Deferred
 import cats.implicits._
-import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
+import com.amazonaws.services.lambda.runtime.Context
+import com.amazonaws.services.lambda.runtime.RequestStreamHandler
 import io.jobial.scase.core.DefaultMessageReceiveResult
 import io.jobial.scase.core.MessageReceiveResult
 import io.jobial.scase.core.SendMessageContext
 import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultSendResponseResult
-import io.jobial.scase.core.{RequestContext, RequestHandler, RequestResponseMapping, SendResponseResult}
+import io.jobial.scase.core.RequestContext
+import io.jobial.scase.core.RequestHandler
+import io.jobial.scase.core.RequestResponseMapping
+import io.jobial.scase.core.SendResponseResult
 import io.jobial.scase.logging.Logging
 import org.apache.commons.io.IOUtils
 import org.joda.time.DateTime
-import java.io.{InputStream, OutputStream}
-import scala.collection.concurrent.TrieMap
+import java.io.InputStream
+import java.io.OutputStream
 import scala.collection.JavaConverters._
+import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.DurationInt
 
 abstract class LambdaRequestHandler[F[_], REQ, RESP]
@@ -66,8 +70,7 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP]
               override def reply[REQUEST, RESPONSE](request: REQUEST, response: RESPONSE)(
                 implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE],
                 sendMessageContext: SendMessageContext
-              ): SendResponseResult[RESPONSE] =
-                DefaultSendResponseResult[RESPONSE](response)
+              ) = pure(DefaultSendResponseResult[RESPONSE](response))
 
               override def receiveResult[REQUEST](request: REQUEST): MessageReceiveResult[F, REQUEST] =
                 DefaultMessageReceiveResult(pure(request), context.getClientContext.getEnvironment.asScala.toMap, unit, unit,

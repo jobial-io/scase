@@ -10,7 +10,7 @@ trait SendResponseResult[+RESP] {
 trait RequestContext[F[_]] {
 
   def reply[REQUEST, RESPONSE](request: REQUEST, response: RESPONSE)
-    (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendMessageContext: SendMessageContext = SendMessageContext()): SendResponseResult[RESPONSE]
+    (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendMessageContext: SendMessageContext = SendMessageContext()): F[SendResponseResult[RESPONSE]]
 
   def receiveResult[REQUEST](request: REQUEST): MessageReceiveResult[F, REQUEST]
 
