@@ -16,6 +16,12 @@ import cats.effect.IO
 import cats.effect.concurrent.MVar
 import io.jobial.scase.core._
 import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.core.test.Req1
+import io.jobial.scase.core.test.Resp1
+import io.jobial.scase.core.test.ServiceTestSupport
+import io.jobial.scase.core.test.TestMessageHandler
+import io.jobial.scase.core.test.TestRequest
+import io.jobial.scase.core.test.TestResponse
 import io.jobial.scase.local.LocalServiceConfiguration.handler
 import io.jobial.scase.local.LocalServiceConfiguration.requestResponse
 import scala.concurrent.duration.DurationInt

@@ -23,17 +23,14 @@ import scala.concurrent.TimeoutException
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 
-
 class PulsarConsumer[F[_] : Concurrent : Timer, M](
   val topic: String,
   val patternAutoDiscoveryPeriod: Option[FiniteDuration],
   val subscriptionInitialPosition: Option[SubscriptionInitialPosition],
   val subscriptionInitialPublishTime: Option[Instant],
-  val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]]
+  val subscriptionName: String
 )(implicit context: PulsarContext)
   extends DefaultMessageConsumer[F, M] with CatsUtils with RegexUtils with Logging {
-
-  val subscriptionName = s"subscription-${randomUUID}"
 
   val responseTopicInNamespace = context.fullyQualifiedTopicName(topic)
 
@@ -112,21 +109,20 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
   override def toString = super.toString + s" topic: $topic subscription: $subscriptionName"
 }
 
-object PulsarConsumer {
+object PulsarConsumer extends CatsUtils with Logging {
 
   def apply[F[_] : Concurrent : Timer, M](
     topic: String,
     patternAutoDiscoveryPeriod: Option[FiniteDuration] = Some(1.second),
     subscriptionInitialPosition: Option[SubscriptionInitialPosition] = None,
-    subscriptionInitialPublishTime: Option[Instant] = None
+    subscriptionInitialPublishTime: Option[Instant] = None,
+    subscriptionName: String = s"subscription-${randomUUID}"
   )(implicit context: PulsarContext): F[PulsarConsumer[F, M]] =
-    for {
-      subscriptions <- Ref.of[F, List[MessageReceiveResult[F, M] => F[_]]](List())
-    } yield new PulsarConsumer[F, M](
+    delay(new PulsarConsumer[F, M](
       topic,
       patternAutoDiscoveryPeriod,
       subscriptionInitialPosition,
       subscriptionInitialPublishTime,
-      subscriptions
-    )
+      subscriptionName
+    ))
 }

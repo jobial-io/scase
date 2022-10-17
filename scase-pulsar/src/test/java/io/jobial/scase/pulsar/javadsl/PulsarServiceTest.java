@@ -16,6 +16,7 @@ import io.jobial.scase.core.*;
 import io.jobial.scase.core.javadsl.MessageHandler;
 import io.jobial.scase.core.javadsl.RequestHandler;
 import io.jobial.scase.core.javadsl.SendRequestContext;
+import io.jobial.scase.core.test.*;
 import io.jobial.scase.marshalling.serialization.javadsl.SerializationMarshalling;
 import org.junit.Test;
 

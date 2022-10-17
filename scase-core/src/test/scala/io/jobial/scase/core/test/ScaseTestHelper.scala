@@ -10,22 +10,16 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package io.jobial.scase.core
+package io.jobial.scase.core.test
 
 import cats.effect.Concurrent
 import cats.effect.IO
-import cats.tests.StrictCatsEquality
-import io.jobial.scase.core.impl.CatsUtils
-import io.jobial.scase.logging.Logging
 import org.scalactic.source
 import org.scalatest.Assertion
 import org.scalatest.Succeeded
-import org.scalatest.compatible.Assertion
 import org.scalatest.flatspec.AsyncFlatSpec
 import java.util.concurrent.Executors
-import java.util.concurrent.Executors.newCachedThreadPool
-import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.ExecutionContext.fromExecutor
+import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
 trait ScaseTestHelper {

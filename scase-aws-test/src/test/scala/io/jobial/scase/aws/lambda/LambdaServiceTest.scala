@@ -2,8 +2,8 @@ package io.jobial.scase.aws.lambda
 
 import cats.effect.IO
 import io.circe.generic.auto._
-import io.jobial.scase.core.ServiceTestSupport
 import io.jobial.scase.core._
+import io.jobial.scase.core.test.ServiceTestSupport
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.circe._
 

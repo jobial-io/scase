@@ -16,7 +16,8 @@ import cats.effect.IO
 import cats.effect.concurrent.Deferred
 import cats.effect.concurrent.Ref
 import io.jobial.scase.core.impl.CatsUtils
-import io.jobial.scase.core.{ScaseTestHelper, TestRequest1}
+import io.jobial.scase.core.test.ScaseTestHelper
+import io.jobial.scase.core.test.TestRequest1
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.serialization._
 import org.scalatest.flatspec.AsyncFlatSpec

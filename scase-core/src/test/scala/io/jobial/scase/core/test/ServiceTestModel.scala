@@ -10,10 +10,12 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package io.jobial.scase.core
+package io.jobial.scase.core.test
 
 import cats.Eq
 import cats.implicits.catsKernelStdOrderForString
+import io.jobial.scase.core.Request
+import io.jobial.scase.core.RequestResponseMapping
 
 sealed trait TestRequest[RESP] extends Request[RESP]
 

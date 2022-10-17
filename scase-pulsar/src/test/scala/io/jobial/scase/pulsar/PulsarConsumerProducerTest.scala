@@ -16,14 +16,14 @@ import cats.effect.IO
 import cats.effect.concurrent.Deferred
 import cats.effect.concurrent.Ref
 import io.jobial.scase.core.impl.CatsUtils
-import io.jobial.scase.core.ScaseTestHelper
-import io.jobial.scase.core.ServiceTestSupport
-import io.jobial.scase.core.TestRequest1
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.util.Hash.uuid
 import org.scalatest.flatspec.AsyncFlatSpec
 import scala.concurrent.duration.DurationInt
 import io.circe.generic.auto._
+import io.jobial.scase.core.test.ScaseTestHelper
+import io.jobial.scase.core.test.ServiceTestSupport
+import io.jobial.scase.core.test.TestRequest1
 import io.jobial.scase.marshalling.circe._
 
 class PulsarConsumerProducerTest extends ServiceTestSupport {

@@ -1,7 +1,6 @@
 package io.jobial.scase
 
 import cats.Monad
-import cats.effect.IO
 import cats.implicits._
 import shapeless._
 
@@ -74,8 +73,18 @@ package object core {
       } yield message
   }
 
-  implicit def sendResponseResultToIO[T](result: SendResponseResult[T]): IO[SendResponseResult[T]] = IO(result)
+  implicit class MessageExtension[F[_], M](message: M) {
+    
+    def underlyingMessage[T](implicit context: MessageContext[F]) =
+      context.receiveResult(message).underlyingMessage[T]
 
+    def underlyingContext[T](implicit context: MessageContext[F]) =
+      context.receiveResult(message).underlyingContext[T]
+
+    def attributes(implicit context: MessageContext[F]) =
+      context.receiveResult(message).attributes
+  }
+  
   val CorrelationIdKey = "CorrelationId"
 
   val ResponseProducerIdKey = "ResponseProducerId"

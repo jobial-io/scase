@@ -1,7 +1,7 @@
 package io.jobial.scase.marshalling.tibrv.sprayjson
 
-import io.jobial.scase.core.TestRequest1
-import io.jobial.scase.core.TestResponse1
+import io.jobial.scase.core.test.TestRequest1
+import io.jobial.scase.core.test.TestResponse1
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
 import io.jobial.scase.marshalling.tibrv.Address

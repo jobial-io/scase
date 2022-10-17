@@ -18,7 +18,6 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
   implicit requestResponseMapping: RequestResponseMapping[SOURCEREQ, SOURCERESP]
 ) extends CatsUtils with Logging {
 
-
   // TODO: return state here instead?
   def start =
     for {
