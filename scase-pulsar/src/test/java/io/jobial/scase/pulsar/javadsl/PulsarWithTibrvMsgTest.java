@@ -50,7 +50,7 @@ public class PulsarWithTibrvMsgTest {
             response.add("greeting", "hello on " + targetTopic);
 
             // Creating client for response, could be cached...
-            var client = destination(targetTopic, tibrvMarshalling).client();
+            var client = destination(targetTopic, tibrvMarshalling).client().get();
             System.out.println("sending to " + targetTopic);
             client.send(response);
         } catch (Exception e) {
@@ -63,10 +63,10 @@ public class PulsarWithTibrvMsgTest {
         var serviceConfig =
                 requestResponse("hello-test-" + uuid(6), new TibrvMsgRawMarshalling(), tibrvMarshalling);
 
-        var service = serviceConfig.service(requestHandler);
+        var service = serviceConfig.service(requestHandler).get();
         var state = service.start().get();
 
-        var client = serviceConfig.client();
+        var client = serviceConfig.client().get();
         var request = new TibrvMsg();
         request.add("name", "world");
 
@@ -82,19 +82,19 @@ public class PulsarWithTibrvMsgTest {
     public void testMessageHandlerService() throws ExecutionException, InterruptedException, RequestTimeout, TibrvException {
         PulsarMessageHandlerServiceConfiguration<TibrvMsg> serviceConfig =
                 handler("test-topic-" + uuid(6), tibrvMarshalling);
-        var service = serviceConfig.service(messageHandler);
+        var service = serviceConfig.service(messageHandler).get();
         var state = service.start().get();
 
         var testTopicPrefix = "test-topic-response-" + uuid(6) + "-";
         for (int i = 0; i < 10; i++) {
             var topic = testTopicPrefix + i;
-            var client = serviceConfig.client();
+            var client = serviceConfig.client().get();
             var request = new TibrvMsg();
             request.add("target_topic", topic);
             client.send(request).get();
 
             // Receiving the response sent out by the server:
-            source(topic, tibrvMarshalling).client().receive().whenComplete((response, error) ->
+            source(topic, tibrvMarshalling).client().get().receive().whenComplete((response, error) ->
                     System.out.println(response)
             ).get();
         }
