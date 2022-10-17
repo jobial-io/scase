@@ -35,7 +35,9 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
                     filteredResponse <- filterResponse(sourceResult, destinationResult)
                     sendResult <- filteredResponse match {
                       case Some(filteredResponse) =>
-                        implicit val sendMessageContext = SendMessageContext(filteredResponse.attributes)
+                        implicit val sendMessageContext = SendMessageContext(
+                          filteredResponse.attributes ++ sourceResult.attributes.get(CorrelationIdKey).map(correlationId => CorrelationIdKey -> correlationId)
+                        )
                         for {
                           response <- filteredResponse.message
                           r <- request ! response

@@ -8,6 +8,7 @@ import io.jobial.scase.core.MessageConsumer
 import io.jobial.scase.core.MessageProducer
 import io.jobial.scase.core.MessageReceiveResult
 import io.jobial.scase.core.RequestHandler
+import io.jobial.scase.core.SendResponseResult
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
@@ -28,11 +29,11 @@ class ConsumerProducerStreamService[F[_] : Concurrent, REQ, RESP: Marshaller](
   val requestUnmarshaller: Unmarshaller[REQ]
 ) extends DefaultService[F] with ConsumerProducerService[F, REQ, RESP] with Logging {
 
-  def sendResult(request: MessageReceiveResult[F, REQ], response: Deferred[F, Either[Throwable, RESP]], responseAttributes: Map[String, String]) =
+  def sendResult(request: MessageReceiveResult[F, REQ], response: Deferred[F, SendResponseResult[RESP]]) =
     for {
       res <- response.get
       // TODO: make this a Deferred
-      resultAfterSend <- res match {
+      resultAfterSend <- res.response match {
         case Right(r) =>
           for {
             producer <- responseProducersCacheRef match {
@@ -57,7 +58,7 @@ class ConsumerProducerStreamService[F[_] : Concurrent, REQ, RESP: Marshaller](
             }
             _ <- trace(s"sending success for request: ${request.toString.take(500)} on $producer")
             _ <- trace(s"found response producer $producer for request in service: ${request.toString.take(500)}")
-            sendResult <- producer.send(r, responseAttributes)
+            sendResult <- producer.send(r, res.sendMessageContext.attributes)
             // commit request after result is written
             _ <- whenA(autoCommitRequest)(
               trace(s"service committing request: ${request.toString.take(500)} on $producer") >>
@@ -88,7 +89,7 @@ class ConsumerProducerStreamService[F[_] : Concurrent, REQ, RESP: Marshaller](
                 errorProducer(request.responseProducerId)
             }
             _ <- trace(s"found response producer $producer for request in service: ${request.toString.take(500)}")
-            sendResult <- producer.send(t, responseAttributes)
+            sendResult <- producer.send(t, res.sendMessageContext.attributes)
             _ <-
               if (autoCommitFailedRequest)
                 trace(s"service committing request: ${request.toString.take(500)}") >>

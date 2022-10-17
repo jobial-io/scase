@@ -2,7 +2,9 @@ package io.jobial.scase.core.javadsl;
 
 import cats.effect.IO;
 import io.jobial.scase.core.RequestResponseMapping;
+import io.jobial.scase.core.impl.DefaultSendResponseResult;
 import scala.Function1;
+import scala.util.Right;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -12,7 +14,7 @@ public interface RequestHandler<REQ, RESP> extends io.jobial.scase.core.RequestH
 
     default Function1<REQ, IO> handleRequest(io.jobial.scase.core.RequestContext<IO> context) {
         return javaFunctionToScala(request -> completableFutureToIO(handleRequest(request, new RequestContext(context)).thenCompose(response ->
-                ioToCompletableFuture(context.reply(request, response, new RequestResponseMapping<>() {
+                ioToCompletableFuture(context.reply(request, new Right<Throwable, RESP>(response), new RequestResponseMapping<>() {
                 }, new SendMessageContext().getContext())))));
     }
 

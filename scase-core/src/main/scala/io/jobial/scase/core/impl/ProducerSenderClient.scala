@@ -25,6 +25,7 @@ class ProducerSenderClient[F[_] : Concurrent, REQ: Marshaller](
         Map(
           CorrelationIdKey -> correlationId
         ) ++ responseProducerId.map(ResponseProducerIdKey -> _)
+          ++ sendMessageContext.attributes
       )
     } yield sendResult.asInstanceOf[MessageSendResult[F, REQUEST]]
   }

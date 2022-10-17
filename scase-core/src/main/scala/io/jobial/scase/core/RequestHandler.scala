@@ -4,12 +4,14 @@ import scala.concurrent.duration._
 
 trait SendResponseResult[+RESP] {
 
-  def response: RESP
+  def response: Either[Throwable, RESP]
+
+  def sendMessageContext: SendMessageContext
 }
 
 trait RequestContext[F[_]] {
 
-  def reply[REQUEST, RESPONSE](request: REQUEST, response: RESPONSE)
+  def reply[REQUEST, RESPONSE](request: REQUEST, response: Either[Throwable, RESPONSE])
     (implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], sendMessageContext: SendMessageContext = SendMessageContext()): F[SendResponseResult[RESPONSE]]
 
   def receiveResult[REQUEST](request: REQUEST): MessageReceiveResult[F, REQUEST]
