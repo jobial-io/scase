@@ -35,7 +35,8 @@ class PulsarMessageHandlerServiceConfiguration[M: Marshaller : Unmarshaller](
   val requestTopic: String,
   val patternAutoDiscoveryPeriod: Option[FiniteDuration],
   val subscriptionInitialPosition: Option[SubscriptionInitialPosition],
-  val subscriptionInitialPublishTime: Option[Instant]
+  val subscriptionInitialPublishTime: Option[Instant],
+  val subscriptionName: String
 ) extends ServiceConfiguration {
 
   def service[F[_] : Concurrent : Timer](messageHandler: MessageHandler[F, M])(
@@ -46,7 +47,8 @@ class PulsarMessageHandlerServiceConfiguration[M: Marshaller : Unmarshaller](
         requestTopic,
         patternAutoDiscoveryPeriod,
         subscriptionInitialPosition,
-        subscriptionInitialPublishTime
+        subscriptionInitialPublishTime,
+        subscriptionName
       )
       service = new ConsumerMessageHandlerService(
         consumer,
@@ -316,16 +318,19 @@ object PulsarServiceConfiguration {
       batchingMaxPublishDelay
     )
 
-  def handler[M: Marshaller : Unmarshaller](requestTopic: String,
+  def handler[M: Marshaller : Unmarshaller](
+    requestTopic: String,
     patternAutoDiscoveryPeriod: Option[FiniteDuration] = Some(1.second),
     subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Earliest),
-    subscriptionInitialPublishTime: Option[Instant] = None
+    subscriptionInitialPublishTime: Option[Instant] = None,
+    subscriptionName: String = s"subscription-${randomUUID}"
   ) =
     new PulsarMessageHandlerServiceConfiguration[M](requestTopic,
       requestTopic,
       patternAutoDiscoveryPeriod,
       subscriptionInitialPosition,
-      subscriptionInitialPublishTime
+      subscriptionInitialPublishTime,
+      subscriptionName
     )
 
   def source[M: Unmarshaller](

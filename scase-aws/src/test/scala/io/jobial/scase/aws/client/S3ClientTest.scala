@@ -1,7 +1,7 @@
 package io.jobial.scase.aws.client
 
 import cats.effect.IO
-import io.jobial.scase.core.ScaseTestHelper
+import io.jobial.scase.core.test.ScaseTestHelper
 import org.scalatest.flatspec.AsyncFlatSpec
 
 class S3ClientTest extends AsyncFlatSpec with S3Client[IO] with ScaseTestHelper {

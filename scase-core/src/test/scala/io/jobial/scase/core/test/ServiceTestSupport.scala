@@ -10,15 +10,28 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package io.jobial.scase.core
+package io.jobial.scase.core.test
 
 import cats.Eq
 import cats.effect.IO
+import cats.effect.IO.delay
 import cats.effect.IO.raiseError
 import cats.effect.concurrent.MVar
 import cats.effect.concurrent.Ref
 import cats.implicits.catsSyntaxFlatMapOps
 import cats.tests.StrictCatsEquality
+import io.jobial.scase.core.MessageContext
+import io.jobial.scase.core.MessageHandler
+import io.jobial.scase.core.ReceiveTimeout
+import io.jobial.scase.core.ReceiverClient
+import io.jobial.scase.core.RequestContext
+import io.jobial.scase.core.RequestHandler
+import io.jobial.scase.core.RequestResponseClient
+import io.jobial.scase.core.RequestResponseMapping
+import io.jobial.scase.core.RequestTimeout
+import io.jobial.scase.core.SendRequestContext
+import io.jobial.scase.core.SenderClient
+import io.jobial.scase.core.Service
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
 import io.jobial.scase.marshalling.rawbytes.iterableToSequenceSyntax
@@ -38,7 +51,12 @@ trait ServiceTestSupport extends AsyncFlatSpec
 
   val anotherRequestProcessor = RequestHandler[IO, Req, Resp](implicit context => {
     case r: Req1 =>
-      r.reply(Resp1())
+      import io.jobial.scase.core.RequestExtension
+      // this is to make sure extension works
+      delay(r.attributes) >>
+        delay(r.underlyingContext[Any]).attempt >>
+        delay(r.underlyingMessage[Any]).attempt >>
+        r.reply(Resp1())
   })
 
   val requestHandlerWithError = new RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] {
@@ -49,10 +67,15 @@ trait ServiceTestSupport extends AsyncFlatSpec
         raiseError(TestException("exception!!!"))
     }
   }
-  
+
   val anotherMessageHandler = MessageHandler[IO, Req](implicit context => {
     case r: Req1 =>
-      IO(println("hello"))    
+      import io.jobial.scase.core.MessageExtension
+      // this is to make sure extension works
+      delay(r.attributes) >>
+        delay(r.underlyingContext[Any]).attempt >>
+        delay(r.underlyingMessage[Any]).attempt >>
+        delay(println(s"received $r in $this"))
   })
 
   def testSuccessfulReply[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP : Eq](client: RequestResponseClient[IO, REQ, RESP],

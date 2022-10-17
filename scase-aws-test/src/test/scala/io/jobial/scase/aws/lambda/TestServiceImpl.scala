@@ -12,9 +12,9 @@
  */
 package io.jobial.scase.aws.lambda
 
-import io.jobial.scase.core.TestRequest
-import io.jobial.scase.core.TestRequestHandler
-import io.jobial.scase.core.TestResponse
+import io.jobial.scase.core.test.TestRequest
+import io.jobial.scase.core.test.TestRequestHandler
+import io.jobial.scase.core.test.TestResponse
 
 
 class TestServiceLambdaRequestHandler

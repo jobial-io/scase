@@ -1,7 +1,7 @@
 package io.jobial.scase.marshalling.tibrv.circe
 
 import io.circe.generic.auto._
-import io.jobial.scase.core.TestResponse1
+import io.jobial.scase.core.test.TestResponse1
 import io.jobial.scase.marshalling.circe.DefaultCodecs
 import io.jobial.scase.marshalling.tibrv.Employee
 import io.jobial.scase.marshalling.tibrv.TibrvMsgMarshallingTestSupport

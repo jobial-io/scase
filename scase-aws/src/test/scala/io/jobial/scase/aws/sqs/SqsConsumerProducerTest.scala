@@ -15,8 +15,13 @@ package io.jobial.scase.aws.sqs
 import cats.effect.IO
 import cats.effect.concurrent.MVar
 import io.jobial.scase.aws.client.AwsContext
-import io.jobial.scase.core.{TestRequest, TestResponse, _}
+import io.jobial.scase.core._
 import cats.implicits._
+import io.jobial.scase.core.test.ScaseTestHelper
+import io.jobial.scase.core.test.TestRequest
+import io.jobial.scase.core.test.TestRequest1
+import io.jobial.scase.core.test.TestRequest2
+import io.jobial.scase.core.test.TestResponse
 import io.jobial.scase.marshalling.serialization._
 import io.jobial.scase.util.Hash.uuid
 import org.scalatest.flatspec.AsyncFlatSpec

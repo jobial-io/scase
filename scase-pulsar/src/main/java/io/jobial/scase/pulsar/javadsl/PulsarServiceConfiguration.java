@@ -182,7 +182,7 @@ public class PulsarServiceConfiguration {
             String topic,
             Marshalling<M> marshalling
     ) {
-        return handler(topic, Optional.empty(), Optional.empty(), Optional.empty(), marshalling);
+        return handler(topic, Optional.empty(), Optional.empty(), Optional.empty(), PulsarServiceConfiguration$.MODULE$.handler$default$5(), marshalling);
     }
 
     public static <M> PulsarMessageHandlerServiceConfiguration<M> handler(
@@ -190,6 +190,7 @@ public class PulsarServiceConfiguration {
             Optional<Duration> patternAutoDiscoveryPeriod,
             Optional<SubscriptionInitialPosition> subscriptionInitialPosition,
             Optional<Instant> subscriptionInitialPublishTime,
+            String subscriptionName,
             Marshalling<M> marshalling
     ) {
         return new PulsarMessageHandlerServiceConfiguration(PulsarServiceConfiguration$.MODULE$.<M>handler(
@@ -197,6 +198,7 @@ public class PulsarServiceConfiguration {
                 javaOptionalToScala(patternAutoDiscoveryPeriod.map(t -> javaDurationToScala(t))),
                 javaOptionalToScala(subscriptionInitialPosition),
                 javaOptionalToScala(subscriptionInitialPublishTime),
+                subscriptionName,
                 marshalling.marshaller(),
                 marshalling.unmarshaller()
         ));

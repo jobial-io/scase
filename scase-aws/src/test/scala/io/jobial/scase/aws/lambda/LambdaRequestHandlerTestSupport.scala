@@ -20,9 +20,9 @@ import io.jobial.scase.core._
 import io.jobial.scase.marshalling.circe._
 import org.apache.commons.io.output.ByteArrayOutputStream
 import cats.implicits.catsSyntaxParallelSequence_
-
 import java.io.ByteArrayInputStream
 import cats.implicits._
+import io.jobial.scase.core.test.ServiceTestSupport
 
 trait LambdaRequestHandlerTestSupport extends ServiceTestSupport {
 

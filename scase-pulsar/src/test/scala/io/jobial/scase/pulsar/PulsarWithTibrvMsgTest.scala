@@ -3,6 +3,9 @@ package io.jobial.scase.pulsar
 import cats.effect.IO
 import io.circe.generic.auto._
 import io.jobial.scase.core._
+import io.jobial.scase.core.test.ServiceTestSupport
+import io.jobial.scase.core.test.TestRequest
+import io.jobial.scase.core.test.TestResponse
 import io.jobial.scase.marshalling.sprayjson.CirceSprayJsonSupport
 import io.jobial.scase.marshalling.sprayjson.DefaultFormats
 import io.jobial.scase.marshalling.tibrv.sprayjson._
