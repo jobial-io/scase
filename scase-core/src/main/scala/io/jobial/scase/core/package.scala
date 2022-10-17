@@ -18,7 +18,7 @@ package object core {
     /**
      * Syntactic sugar to allow the syntax request ! response.
      */
-    def ![RESPONSE](response: RESPONSE)(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], context: RequestContext[F], sendMessageContext: SendMessageContext = SendMessageContext()) =
+    def ![RESPONSE](response: RESPONSE)(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], context: RequestContext[F], sendMessageContext: SendMessageContext = SendMessageContext()): F[SendResponseResult[RESPONSE]] =
       reply(response)
 
     def underlyingMessage[T](context: RequestContext[F]) =
