@@ -6,15 +6,14 @@ import scala.Function1;
 
 import java.util.concurrent.CompletableFuture;
 
-import static io.jobial.scase.core.javadsl.JavaUtils.completableFutureToIO;
-import static io.jobial.scase.core.javadsl.JavaUtils.javaFunctionToScala;
+import static io.jobial.scase.core.javadsl.JavaUtils.*;
 
 public interface RequestHandler<REQ, RESP> extends io.jobial.scase.core.RequestHandler<IO, REQ, RESP> {
 
     default Function1<REQ, IO> handleRequest(io.jobial.scase.core.RequestContext<IO> context) {
-        return javaFunctionToScala(request -> completableFutureToIO(handleRequest(request, new RequestContext(context)).thenApply(response ->
-                context.reply(request, response, new RequestResponseMapping<REQ, RESP>() {
-                }, new SendMessageContext().getContext()))));
+        return javaFunctionToScala(request -> completableFutureToIO(handleRequest(request, new RequestContext(context)).thenCompose(response ->
+                ioToCompletableFuture(context.reply(request, response, new RequestResponseMapping<>() {
+                }, new SendMessageContext().getContext())))));
     }
 
     CompletableFuture<RESP> handleRequest(REQ request, RequestContext context);

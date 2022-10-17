@@ -66,10 +66,10 @@ public class PulsarServiceTest {
         var serviceConfig =
                 requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest>(), new SerializationMarshalling<TestResponse>());
 
-        var service = serviceConfig.service(requestHandler);
+        var service = serviceConfig.service(requestHandler).get();
         var state = service.start().get();
 
-        var client = serviceConfig.client();
+        var client = serviceConfig.client().get();
         var request = new TestRequest1("world");
         var response = client.sendRequest(request)
                 .whenComplete((r, error) -> System.out.println(r))
@@ -86,7 +86,7 @@ public class PulsarServiceTest {
 
         var service = serviceConfig.service(requestHandler);
 
-        var client = serviceConfig.client();
+        var client = serviceConfig.client().get();
         var request = new TestRequest1("world");
         try {
             client.sendRequest(request, new SendRequestContext(ofSeconds(1))).get();
@@ -100,10 +100,10 @@ public class PulsarServiceTest {
         var serviceConfig =
                 requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest>(), new SerializationMarshalling<TestResponse>());
 
-        var service = serviceConfig.service(requestHandlerWithError);
+        var service = serviceConfig.service(requestHandlerWithError).get();
         var state = service.start().get();
 
-        var client = serviceConfig.client();
+        var client = serviceConfig.client().get();
         var request = new TestRequest1("world");
         try {
             client.sendRequest(request).get();
@@ -119,10 +119,10 @@ public class PulsarServiceTest {
         var serviceConfig =
                 requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest>(), new SerializationMarshalling<TestResponse>());
 
-        var service = serviceConfig.service(requestHandlerWithError);
+        var service = serviceConfig.service(requestHandlerWithError).get();
         var state = service.start().get();
 
-        var client = serviceConfig.client();
+        var client = serviceConfig.client().get();
         var request = new TestRequest2("world");
         try {
             client.sendRequest(request).get();
@@ -138,10 +138,10 @@ public class PulsarServiceTest {
         var serviceConfig =
                 requestResponse("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest>(), new SerializationMarshalling<TestResponse>());
 
-        var service = serviceConfig.service(requestHandlerWithError);
+        var service = serviceConfig.service(requestHandlerWithError).get();
         var state = service.start().get();
 
-        var client = serviceConfig.client();
+        var client = serviceConfig.client().get();
         var request = new TestRequest3("world");
         try {
             client.sendRequest(request).get();
@@ -157,11 +157,11 @@ public class PulsarServiceTest {
         var serviceConfig =
                 stream("hello-test-" + uuid(6), "hello-test-response-" + uuid(6), new SerializationMarshalling<TestRequest>(), new SerializationMarshalling<TestResponse>());
 
-        var service = serviceConfig.service(requestHandler);
+        var service = serviceConfig.service(requestHandler).get();
         var state = service.start().get();
 
-        var senderClient = serviceConfig.senderClient();
-        var receiverClient = serviceConfig.receiverClient();
+        var senderClient = serviceConfig.senderClient().get();
+        var receiverClient = serviceConfig.receiverClient().get();
         var request = new TestRequest1("world");
         senderClient.send(request)
                 .whenComplete((r, error) -> System.out.println(r))
@@ -177,10 +177,10 @@ public class PulsarServiceTest {
         var serviceConfig = handler("hello-test-" + uuid(6), new SerializationMarshalling<TestRequest>());
 
         var received = new CompletableFuture<TestRequest>();
-        var service = serviceConfig.service(messageHandler(received));
+        var service = serviceConfig.service(messageHandler(received)).get();
         var state = service.start().get();
 
-        var client = serviceConfig.client();
+        var client = serviceConfig.client().get();
         var request = new TestRequest1("world");
         client.send(request)
                 .whenComplete((r, error) -> System.out.println(r))
