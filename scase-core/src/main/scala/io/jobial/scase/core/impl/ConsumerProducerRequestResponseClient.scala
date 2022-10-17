@@ -62,7 +62,9 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
         request,
         Map(
           CorrelationIdKey -> correlationId
-        ) ++ responseProducerId.map(responseProducerId => ResponseProducerIdKey -> responseProducerId) ++ sendRequestContext.requestTimeout.map(t => RequestTimeoutKey -> t.toMillis.toString)
+        ) ++ responseProducerId.map(responseProducerId => ResponseProducerIdKey -> responseProducerId)
+          ++ sendRequestContext.requestTimeout.map(t => RequestTimeoutKey -> t.toMillis.toString)
+          ++ sendRequestContext.attributes
       ).asInstanceOf[F[MessageSendResult[F, REQUEST]]]
       _ <- trace(s"waiting for request with correlation id $correlationId")
       receiveResult <- sendRequestContext.requestTimeout match {

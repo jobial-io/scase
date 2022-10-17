@@ -35,18 +35,18 @@ trait ConsumerProducerService[F[_], REQ, RESP] extends CatsUtils with Logging {
       for {
         _ <- trace(s"received request in service: ${request.toString.take(500)}")
         _ <- trace(s"found response producer id ${request.responseProducerId} in request")
-        response <- Deferred[F, Either[Throwable, RESP]]
+        response <- Deferred[F, SendResponseResult[RESP]]
         message <- request.message
         processorResult <- {
           val processorResult =
             delay(requestHandler.handleRequest(new RequestContext[F] {
 
-              def reply[REQUEST, RESPONSE](req: REQUEST, r: RESPONSE)(
+              def reply[REQUEST, RESPONSE](req: REQUEST, r: Either[Throwable, RESPONSE])(
                 implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE],
                 sendMessageContext: SendMessageContext
               ): F[SendResponseResult[RESPONSE]] =
                 trace(s"context sending response ${r.toString.take(500)}") >>
-                pure(DefaultSendResponseResult[RESPONSE](r))
+                  pure(DefaultSendResponseResult(r, sendMessageContext))
 
               val requestTimeout = request.requestTimeout.getOrElse(Duration.Inf)
 
@@ -55,25 +55,28 @@ trait ConsumerProducerService[F[_], REQ, RESP] extends CatsUtils with Logging {
 
             })(message)).flatten
 
+          val responseAttributes = request.correlationId.map(correlationId => Map(CorrelationIdKey -> correlationId)).getOrElse(Map())
+
           val processResultWithErrorHandling = processorResult
             .flatMap {
               result =>
-                trace(s"request processing successful") >>
-                  response.complete(Right(result.response))
-            }
-            .handleErrorWith {
-              case t =>
-                error(s"request processing failed: ${request.toString.take(500)}", t) >>
-                  response.complete(Left(t))
-            }
+                (result.response match {
+                  case Right(r) =>
+                    trace(s"request processing successful")
+                  case Left(t) =>
+                    error(s"request processing failed: ${request.toString.take(500)}", t)
+                }) >> response.complete(DefaultSendResponseResult(result.response, result.sendMessageContext.copy(attributes = responseAttributes ++ result.sendMessageContext.attributes)))
+            }.handleErrorWith {
+            case t =>
+              error(s"request processing failed: ${request.toString.take(500)}", t) >>
+                response.complete(DefaultSendResponseResult(Left(t), SendMessageContext(responseAttributes)))
+          }
 
           // TODO: handle handleRequest timeout
 
-          val responseAttributes = request.correlationId.map(correlationId => Map(CorrelationIdKey -> correlationId)).getOrElse(Map())
-
           // send response when ready
           start(processResultWithErrorHandling) >>
-            sendResult(request, response, responseAttributes).handleErrorWith { t =>
+            sendResult(request, response).handleErrorWith { t =>
               error(s"unhadled error", t) >> raiseError(t)
             }
         }
@@ -82,7 +85,7 @@ trait ConsumerProducerService[F[_], REQ, RESP] extends CatsUtils with Logging {
     r
   }
 
-  def sendResult(request: MessageReceiveResult[F, REQ], response: Deferred[F, Either[Throwable, RESP]], responseAttributes: Map[String, String]): F[MessageSendResult[F, _]]
+  def sendResult(request: MessageReceiveResult[F, REQ], response: Deferred[F, SendResponseResult[RESP]]): F[MessageSendResult[F, _]]
 
   def start: F[ServiceState[F]] =
     for {
@@ -112,6 +115,6 @@ case class DefaultServiceState[F[_] : Sync, M](
     } yield this
 }
 
-case class DefaultSendResponseResult[RESPONSE](response: RESPONSE) extends SendResponseResult[RESPONSE]
+case class DefaultSendResponseResult[RESPONSE](response: Either[Throwable, RESPONSE], sendMessageContext: SendMessageContext) extends SendResponseResult[RESPONSE]
 
 case class ResponseProducerIdNotFound(message: String) extends IllegalStateException(message)

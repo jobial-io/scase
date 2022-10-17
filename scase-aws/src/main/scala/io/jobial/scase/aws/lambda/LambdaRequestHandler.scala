@@ -67,10 +67,10 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP]
               // TODO: revisit this
               val requestTimeout = 15.minutes
 
-              override def reply[REQUEST, RESPONSE](request: REQUEST, response: RESPONSE)(
+              override def reply[REQUEST, RESPONSE](request: REQUEST, response: Either[Throwable, RESPONSE])(
                 implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE],
                 sendMessageContext: SendMessageContext
-              ) = pure(DefaultSendResponseResult[RESPONSE](response))
+              ) = pure(DefaultSendResponseResult[RESPONSE](response, sendMessageContext))
 
               override def receiveResult[REQUEST](request: REQUEST): MessageReceiveResult[F, REQUEST] =
                 DefaultMessageReceiveResult(pure(request), context.getClientContext.getEnvironment.asScala.toMap, unit, unit,
@@ -80,7 +80,7 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP]
           // TODO: use redeem when Cats is upgraded, 2.0.0 simply doesn't support mapping errors to an F[B]...
           _ <- processorResult
             .flatMap { result =>
-              responseDeferred.complete(Right(result.response))
+              responseDeferred.complete(result.response)
             }
             .handleError { t =>
               error(s"request processing failed: $request", t) >>

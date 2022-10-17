@@ -1,14 +1,18 @@
 package io.jobial.scase.core.impl
 
 import cats.effect.Concurrent
-import cats.effect.concurrent.{Deferred, Ref}
+import cats.effect.concurrent.Deferred
+import cats.effect.concurrent.Ref
 import cats.implicits._
-import cats.{Monad, MonadError}
-import io.jobial.scase.core.SendMessageContext
-import io.jobial.scase.core.{CorrelationIdKey, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSendResult, MessageSubscription, RequestContext, RequestHandler, RequestResponseMapping, SendResponseResult, Service, ServiceState}
+import io.jobial.scase.core.MessageConsumer
+import io.jobial.scase.core.MessageProducer
+import io.jobial.scase.core.MessageReceiveResult
+import io.jobial.scase.core.MessageSendResult
+import io.jobial.scase.core.RequestHandler
+import io.jobial.scase.core.SendResponseResult
 import io.jobial.scase.logging.Logging
-import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
-import scala.concurrent.duration.Duration
+import io.jobial.scase.marshalling.Marshaller
+import io.jobial.scase.marshalling.Unmarshaller
 
 
 class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ, RESP: Marshaller](
@@ -24,7 +28,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ, RESP: Marsh
   responseMarshaller: Marshaller[Either[Throwable, RESP]]
 ) extends DefaultService[F] with ConsumerProducerService[F, REQ, RESP] with Logging {
 
-  override def sendResult(request: MessageReceiveResult[F, REQ], response: Deferred[F, Either[Throwable, RESP]], responseAttributes: Map[String, String]): F[MessageSendResult[F, _]] =
+  override def sendResult(request: MessageReceiveResult[F, REQ], response: Deferred[F, SendResponseResult[RESP]]): F[MessageSendResult[F, _]] =
     for {
       res <- response.get
       producer <- responseProducersCacheRef match {
@@ -48,12 +52,11 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ, RESP: Marsh
           responseProducer(request.responseProducerId)
       }
       _ <- trace(s"found response producer $producer for request in service: ${request.toString.take(500)}")
-      // TODO: make this a Deferred
-      resultAfterSend <- res match {
+      resultAfterSend <- res.response match {
         case Right(r) =>
           for {
             _ <- trace(s"sending success for request: ${request.toString.take(500)} on $producer")
-            sendResult <- producer.send(Right(r), responseAttributes)
+            sendResult <- producer.send(Right(r), res.sendMessageContext.attributes)
             // commit request after result is written
             _ <- whenA(autoCommitRequest)(
               trace(s"service committing request: ${request.toString.take(500)} on $producer") >>
@@ -63,7 +66,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ, RESP: Marsh
         case Left(t) =>
           for {
             _ <- error(s"sending failure for request: ${request.toString.take(500)}", t)
-            sendResult <- producer.send(Left(t), responseAttributes)
+            sendResult <- producer.send(Left(t), res.sendMessageContext.attributes)
             _ <- whenA(autoCommitFailedRequest)(
               trace(s"service committing request: ${request.toString.take(500)}") >>
                 request.commit
