@@ -11,6 +11,7 @@ import io.jobial.scase.marshalling.BinaryFormatUnmarshaller
 import org.apache.commons.io.IOUtils.toByteArray
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
+import org.joda.time.LocalDateTime
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.Date
@@ -48,6 +49,8 @@ trait TibrvMsgCirceMarshalling {
 
   val dateTimeClassName = classOf[DateTime].getName
 
+  val localDateTimeClassName = classOf[LocalDateTime].getName
+
   implicit val localDateEncoder = new Encoder[LocalDate] {
     def apply(a: LocalDate) = Json.obj(
       "value" -> Json.fromLong(a.toDate.getTime),
@@ -62,9 +65,18 @@ trait TibrvMsgCirceMarshalling {
     )
   }
 
+  implicit val localDateTimeEncoder = new Encoder[LocalDateTime] {
+    def apply(a: LocalDateTime) = Json.obj(
+      "value" -> Json.fromLong(a.toDate.getTime),
+      "$type" -> localDateTimeClassName.asJson
+    )
+  }
+
   implicit val localDateDecoder = Decoder[Long].map(new LocalDate(_))
 
   implicit val dateTimeDecoder = Decoder[Long].map(new DateTime(_))
+
+  implicit val localDateTimeDecoder = Decoder[Long].map(new LocalDateTime(_))
 
   implicit def tibrvMsgCirceMarshaller[M: Encoder]: BinaryFormatMarshaller[M] = new BinaryFormatMarshaller[M] {
     def marshalToOutputStream(o: M, out: OutputStream) = {
