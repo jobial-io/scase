@@ -9,7 +9,7 @@ package object core {
   implicit class RequestExtension[F[_], REQUEST](request: REQUEST) {
 
     /**
-     * Syntactic sugar to allow the syntax request.reply(...). This version allows sending an explicit error.
+     * Syntactic sugar to allow the syntax request.reply(...). This version can send an explicit error.
      */
     def reply[RESPONSE](response: Either[Throwable, RESPONSE])(implicit requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE], context: RequestContext[F], sendMessageContext: SendMessageContext): F[SendResponseResult[RESPONSE]] =
       context.reply(request, response)
@@ -36,7 +36,7 @@ package object core {
       context.receiveResult(request).attributes
   }
 
-  implicit def requestResultToResponse[F[_] : Monad, REQUEST, RESPONSE](requestResult: RequestResponseResult[F, REQUEST, RESPONSE]) =
+  implicit def requestResultToResponse[F[_], REQUEST, RESPONSE](requestResult: RequestResponseResult[F, REQUEST, RESPONSE]) =
     requestResult.response.message
 
   implicit def sendRequest[F[_], REQUEST, RESPONSE](request: REQUEST)(

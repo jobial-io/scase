@@ -21,12 +21,10 @@ import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
 
-case class LambdaServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
-  functionName: String
+class LambdaServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
+  val serviceName: String,
+  val functionName: String
 ) extends ServiceConfiguration with CatsUtils with Logging {
-
-  // TODO: overload constructor for this
-  lazy val serviceName = functionName
 
   def client[F[_] : Concurrent : ContextShift](implicit awsContext: AwsContext = AwsContext()) =
     delay(LambdaRequestResponseClient[F, REQ, RESP](functionName)(Concurrent[F], Marshaller[REQ], Unmarshaller[RESP], awsContext))
@@ -40,4 +38,9 @@ case class LambdaServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Mars
   lazy val responseUnmarshaller = Unmarshaller[RESP]
 }
 
+object LambdaServiceConfiguration {
 
+  def requestResponse[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
+    functionName: String
+  ) = new LambdaServiceConfiguration[REQ, RESP](functionName, functionName)
+}
