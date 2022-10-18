@@ -191,7 +191,6 @@ trait TibrvMsgCirceMarshalling {
         }).toMap
       }.asJson
 
-      println(tibrvMsgToJsValue(m))
       tibrvMsgToJsValue(m).as[M]
     }
   }
