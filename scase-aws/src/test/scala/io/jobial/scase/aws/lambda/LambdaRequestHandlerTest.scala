@@ -13,6 +13,7 @@
 package io.jobial.scase.aws.lambda
 
 import io.circe.generic.auto._
+import io.jobial.scase.aws.lambda.LambdaServiceConfiguration.requestResponse
 import io.jobial.scase.core._
 import io.jobial.scase.core.test.TestRequest
 import io.jobial.scase.core.test.TestRequestHandler
@@ -28,7 +29,7 @@ class LambdaRequestHandlerTest extends LambdaRequestHandlerTestSupport {
 
 trait TestHandlerLambdaConfig {
 
-  val serviceConfiguration = LambdaServiceConfiguration[TestRequest[_ <: TestResponse], TestResponse]("test")
+  val serviceConfiguration = requestResponse[TestRequest[_ <: TestResponse], TestResponse]("test")
 }
 
 class LambdaTestHandler

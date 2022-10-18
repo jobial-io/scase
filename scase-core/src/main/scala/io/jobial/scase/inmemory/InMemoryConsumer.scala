@@ -44,8 +44,7 @@ object InMemoryConsumer extends CatsUtils {
     _ <- producer.consumers.update(l => consumer :: l.filter(_ != consumer))
     _ <- producerDeferred.complete(producer)
   } yield consumer
-
-
+  
   def apply[F[_] : Concurrent : Timer, M]: F[InMemoryConsumer[F, M]] = apply(None)
 
   def apply[F[_] : Concurrent : Timer, M](producer: InMemoryProducer[F, M]): F[InMemoryConsumer[F, M]] = apply(Some(producer))
