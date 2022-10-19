@@ -14,7 +14,7 @@ trait MessageReceiveResult[F[_], M] {
 
   def requestTimeout = attributes.get(RequestTimeoutKey).map(_.toLong.millis)
 
-  def responseProducerId = attributes.get(ResponseProducerIdKey)
+  def responseProducerId = attributes.get(ResponseProducerIdKey).orElse(attributes.get(ResponseTopicKey))
 
   def commit: F[Unit]
 
