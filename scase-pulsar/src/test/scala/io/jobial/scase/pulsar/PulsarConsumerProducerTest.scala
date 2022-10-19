@@ -34,7 +34,7 @@ class PulsarConsumerProducerTest extends ServiceTestSupport {
     val topic = s"hello-test-${uuid(6)}"
 
     for {
-      consumer <- PulsarConsumer[IO, TestRequest1](topic)
+      consumer <- PulsarConsumer[IO, TestRequest1](Left(topic))
       producer <- PulsarProducer[IO, TestRequest1](topic)
       d <- Deferred[IO, TestRequest1]
       _ <- consumer.subscribe({ m =>

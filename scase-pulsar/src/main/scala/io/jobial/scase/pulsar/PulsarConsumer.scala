@@ -22,17 +22,16 @@ import scala.compat.java8.FutureConverters.toScala
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
+import scala.util.matching.Regex
 
 class PulsarConsumer[F[_] : Concurrent : Timer, M](
-  val topic: String,
+  val topic: Either[String, Regex],
   val patternAutoDiscoveryPeriod: Option[FiniteDuration],
   val subscriptionInitialPosition: Option[SubscriptionInitialPosition],
   val subscriptionInitialPublishTime: Option[Instant],
   val subscriptionName: String
 )(implicit context: PulsarContext)
   extends DefaultMessageConsumer[F, M] with CatsUtils with RegexUtils with Logging {
-
-  val responseTopicInNamespace = context.fullyQualifiedTopicName(topic)
 
   implicit class ConsumerBuilderExt[T](builder: ConsumerBuilder[T]) {
     def apply(f: ConsumerBuilder[T] => Option[ConsumerBuilder[T]]): ConsumerBuilder[T] =
@@ -46,12 +45,13 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
       .consumerName(s"consumer-${randomUUID}")
       .subscriptionName(subscriptionName)
       .apply(b =>
-        if (isProbablyRegex(topic)) {
-          logger.trace(s"using topic pattern for $topic")
-          Some(b.topicsPattern(context.fullyQualifiedTopicName(topic)))
-        } else {
-          logger.trace(s"using simple topic for $topic")
-          Some(b.topic(context.fullyQualifiedTopicName(topic)))
+        topic match {
+          case Left(topic) =>
+            logger.trace(s"using simple topic for $topic")
+            Some(b.topic(context.fullyQualifiedTopicName(topic)))
+          case Right(topic) =>
+            logger.trace(s"using topic pattern for $topic")
+            Some(b.topicsPattern(context.fullyQualifiedTopicName(topic.toString)))
         }
       )
       .apply(b =>
@@ -112,7 +112,7 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
 object PulsarConsumer extends CatsUtils with Logging {
 
   def apply[F[_] : Concurrent : Timer, M](
-    topic: String,
+    topic: Either[String, Regex],
     patternAutoDiscoveryPeriod: Option[FiniteDuration] = Some(1.second),
     subscriptionInitialPosition: Option[SubscriptionInitialPosition] = None,
     subscriptionInitialPublishTime: Option[Instant] = None,
