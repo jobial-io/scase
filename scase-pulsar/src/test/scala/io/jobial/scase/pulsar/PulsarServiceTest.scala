@@ -122,7 +122,7 @@ class PulsarServiceTest
   "message handler service with topic pattern" should "receive successfully" in {
     val requestTopicPrefix = s"persistent://public/default/hello-test-handler-${uuid(6)}"
     val serviceConfig = handler[TestRequest[_ <: TestResponse]](
-      s"$requestTopicPrefix-.*",
+      s"$requestTopicPrefix-.*".r,
       subscriptionInitialPosition = Some(SubscriptionInitialPosition.Earliest)
     )
 

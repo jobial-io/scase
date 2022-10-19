@@ -1,6 +1,7 @@
 package io.jobial.scase.pulsar
 
 import cats.effect.Concurrent
+import cats.effect.IO.raiseError
 import cats.effect.Timer
 import cats.implicits._
 import io.jobial.scase.core.MessageHandler
@@ -29,15 +30,16 @@ import org.apache.pulsar.client.api.SubscriptionInitialPosition.Earliest
 import java.time.Instant
 import java.util.UUID.randomUUID
 import scala.concurrent.duration._
+import scala.util.matching.Regex
 
 class PulsarMessageHandlerServiceConfiguration[M: Marshaller : Unmarshaller](
   val serviceName: String,
-  val requestTopic: String,
+  val requestTopic: Either[String, Regex],
   val patternAutoDiscoveryPeriod: Option[FiniteDuration],
   val subscriptionInitialPosition: Option[SubscriptionInitialPosition],
   val subscriptionInitialPublishTime: Option[Instant],
   val subscriptionName: String
-) extends ServiceConfiguration {
+) extends ServiceConfiguration with CatsUtils with Logging {
 
   def service[F[_] : Concurrent : Timer](messageHandler: MessageHandler[F, M])(
     implicit context: PulsarContext
@@ -58,8 +60,12 @@ class PulsarMessageHandlerServiceConfiguration[M: Marshaller : Unmarshaller](
 
   def client[F[_] : Concurrent : Timer](
     implicit context: PulsarContext
-  ) = destination[M](requestTopic).client[F]
-
+  ) = requestTopic match {
+    case Left(requestTopic) =>
+      destination[M](requestTopic).client[F]
+    case Right(_) =>
+      raiseError(new IllegalStateException("topic pattern is not supported"))
+  }
 }
 
 class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
@@ -80,7 +86,7 @@ class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, 
     implicit context: PulsarContext
   ) =
     for {
-      consumer <- PulsarConsumer[F, REQ](requestTopic)
+      consumer <- PulsarConsumer[F, REQ](Left(requestTopic))
       service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
         consumer, { responseTopicFromMessage =>
           responseTopicOverride.orElse(responseTopicFromMessage) match {
@@ -100,7 +106,7 @@ class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, 
     for {
       producer <- PulsarProducer[F, REQ](requestTopic, batchingMaxPublishDelay)
       responseTopic = responseTopicOverride.getOrElse(s"$requestTopic-response-${randomUUID}")
-      consumer <- PulsarConsumer[F, Either[Throwable, RESP]](responseTopic)
+      consumer <- PulsarConsumer[F, Either[Throwable, RESP]](Left(responseTopic))
       client <- ConsumerProducerRequestResponseClient[F, REQ, RESP](
         consumer,
         () => producer,
@@ -167,7 +173,7 @@ class PulsarStreamServiceWithErrorTopicConfiguration[REQ: Marshaller : Unmarshal
     implicit context: PulsarContext
   ) =
     for {
-      consumer <- PulsarConsumer[F, REQ](requestTopic)
+      consumer <- PulsarConsumer[F, REQ](Left(requestTopic))
       service <- ConsumerProducerStreamService[F, REQ, RESP](
         consumer, { _ =>
           for {
@@ -199,7 +205,7 @@ class PulsarStreamServiceWithErrorTopicConfiguration[REQ: Marshaller : Unmarshal
 }
 
 class PulsarMessageSourceServiceConfiguration[M: Unmarshaller](
-  val sourceTopic: String,
+  val sourceTopic: Either[String, Regex],
   val patternAutoDiscoveryPeriod: Option[FiniteDuration] = Some(1.second),
   val subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Earliest),
   val subscriptionInitialPublishTime: Option[Instant] = None
@@ -325,12 +331,69 @@ object PulsarServiceConfiguration {
     subscriptionInitialPublishTime: Option[Instant] = None,
     subscriptionName: String = s"subscription-${randomUUID}"
   ) =
-    new PulsarMessageHandlerServiceConfiguration[M](requestTopic,
+    new PulsarMessageHandlerServiceConfiguration[M](
       requestTopic,
+      Left(requestTopic),
       patternAutoDiscoveryPeriod,
       subscriptionInitialPosition,
       subscriptionInitialPublishTime,
       subscriptionName
+    )
+
+  def handler[M: Marshaller : Unmarshaller](
+    requestTopic: Regex,
+    patternAutoDiscoveryPeriod: Option[FiniteDuration],
+    subscriptionInitialPosition: Option[SubscriptionInitialPosition],
+    subscriptionInitialPublishTime: Option[Instant],
+    subscriptionName: String
+  ) =
+    new PulsarMessageHandlerServiceConfiguration[M](
+      requestTopic.toString,
+      Right(requestTopic),
+      patternAutoDiscoveryPeriod,
+      subscriptionInitialPosition,
+      subscriptionInitialPublishTime,
+      subscriptionName
+    )
+
+  def handler[M: Marshaller : Unmarshaller](
+    requestTopic: Regex,
+    subscriptionInitialPosition: Option[SubscriptionInitialPosition],
+    subscriptionInitialPublishTime: Option[Instant],
+    subscriptionName: String
+  ) =
+    new PulsarMessageHandlerServiceConfiguration[M](
+      requestTopic.toString,
+      Right(requestTopic),
+      Some(1.second),
+      subscriptionInitialPosition,
+      subscriptionInitialPublishTime,
+      subscriptionName
+    )
+
+  def handler[M: Marshaller : Unmarshaller](
+    requestTopic: Regex,
+    subscriptionInitialPosition: Option[SubscriptionInitialPosition]
+  ) =
+    new PulsarMessageHandlerServiceConfiguration[M](
+      requestTopic.toString,
+      Right(requestTopic),
+      Some(1.second),
+      subscriptionInitialPosition,
+      None,
+      s"subscription-${randomUUID}"
+    )
+
+  def handler[M: Marshaller : Unmarshaller](
+    requestTopic: Regex
+  ) =
+    new PulsarMessageHandlerServiceConfiguration[M](
+      requestTopic.toString,
+      Right(requestTopic),
+      Some(1.second),
+      Some(Earliest),
+      None,
+      s"subscription-${randomUUID}"
     )
 
   def source[M: Unmarshaller](
@@ -339,7 +402,7 @@ object PulsarServiceConfiguration {
     subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Earliest),
     subscriptionInitialPublishTime: Option[Instant] = None
   ) = new PulsarMessageSourceServiceConfiguration(
-    sourceTopic,
+    Left(sourceTopic),
     patternAutoDiscoveryPeriod,
     subscriptionInitialPosition,
     subscriptionInitialPublishTime
