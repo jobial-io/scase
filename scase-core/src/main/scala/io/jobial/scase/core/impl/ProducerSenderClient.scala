@@ -3,8 +3,13 @@ package io.jobial.scase.core.impl
 import cats.Monad
 import cats.effect.Concurrent
 import cats.implicits._
+import io.jobial.scase.core.ResponseTopicKey
 import io.jobial.scase.core.SendMessageContext
-import io.jobial.scase.core.{CorrelationIdKey, MessageProducer, MessageSendResult, RequestTimeoutKey, ResponseProducerIdKey, SendRequestContext, SenderClient}
+import io.jobial.scase.core.CorrelationIdKey
+import io.jobial.scase.core.MessageProducer
+import io.jobial.scase.core.MessageSendResult
+import io.jobial.scase.core.ResponseProducerIdKey
+import io.jobial.scase.core.SenderClient
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 import java.util.UUID.randomUUID
@@ -25,6 +30,7 @@ class ProducerSenderClient[F[_] : Concurrent, REQ: Marshaller](
         Map(
           CorrelationIdKey -> correlationId
         ) ++ responseProducerId.map(ResponseProducerIdKey -> _)
+          ++ responseProducerId.map(ResponseTopicKey -> _)
           ++ sendMessageContext.attributes
       )
     } yield sendResult.asInstanceOf[MessageSendResult[F, REQUEST]]

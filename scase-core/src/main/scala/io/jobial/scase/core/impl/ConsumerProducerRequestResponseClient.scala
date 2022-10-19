@@ -5,10 +5,10 @@ import cats.effect.implicits.catsEffectSyntaxConcurrent
 import cats.effect.{Concurrent, Timer}
 import cats.implicits._
 import cats._
+import io.jobial.scase.core.ResponseTopicKey
 import io.jobial.scase.core.{CorrelationIdKey, DefaultMessageReceiveResult, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSendResult, MessageSubscription, RequestResponseClient, RequestResponseMapping, RequestResponseResult, RequestTimeout, RequestTimeoutKey, ResponseProducerIdKey, SendRequestContext}
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
-
 import java.util.UUID.randomUUID
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration.FiniteDuration
@@ -62,8 +62,9 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
         request,
         Map(
           CorrelationIdKey -> correlationId
-        ) ++ responseProducerId.map(responseProducerId => ResponseProducerIdKey -> responseProducerId)
-          ++ sendRequestContext.requestTimeout.map(t => RequestTimeoutKey -> t.toMillis.toString)
+        ) ++ responseProducerId.map(ResponseProducerIdKey -> _)
+          ++ responseProducerId.map(ResponseTopicKey -> _)
+          ++ sendRequestContext.requestTimeout.map(RequestTimeoutKey -> _.toMillis.toString)
           ++ sendRequestContext.attributes
       ).asInstanceOf[F[MessageSendResult[F, REQUEST]]]
       _ <- trace(s"waiting for request with correlation id $correlationId")

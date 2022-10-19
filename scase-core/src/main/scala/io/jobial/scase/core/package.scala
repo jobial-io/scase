@@ -89,6 +89,9 @@ package object core {
 
   val ResponseProducerIdKey = "ResponseProducerId"
 
+  // TODO: to be removed in the future - it's here for backward compatibility
+  val ResponseTopicKey = "ResponseTopic"
+
   val RequestTimeoutKey = "RequestTimeout"
 
 }
