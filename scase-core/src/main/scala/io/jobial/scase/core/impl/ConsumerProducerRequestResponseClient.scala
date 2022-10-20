@@ -1,14 +1,29 @@
 package io.jobial.scase.core.impl
 
-import cats.effect.concurrent.{Deferred, Ref}
+import cats.effect.concurrent.Deferred
+import cats.effect.concurrent.Ref
 import cats.effect.implicits.catsEffectSyntaxConcurrent
-import cats.effect.{Concurrent, Timer}
+import cats.effect.Concurrent
+import cats.effect.Timer
 import cats.implicits._
-import cats._
 import io.jobial.scase.core.ResponseTopicKey
-import io.jobial.scase.core.{CorrelationIdKey, DefaultMessageReceiveResult, MessageConsumer, MessageProducer, MessageReceiveResult, MessageSendResult, MessageSubscription, RequestResponseClient, RequestResponseMapping, RequestResponseResult, RequestTimeout, RequestTimeoutKey, ResponseProducerIdKey, SendRequestContext}
+import io.jobial.scase.core.CorrelationIdKey
+import io.jobial.scase.core.DefaultMessageReceiveResult
+import io.jobial.scase.core.MessageConsumer
+import io.jobial.scase.core.MessageProducer
+import io.jobial.scase.core.MessageReceiveResult
+import io.jobial.scase.core.MessageSendResult
+import io.jobial.scase.core.MessageSubscription
+import io.jobial.scase.core.RequestResponseClient
+import io.jobial.scase.core.RequestResponseMapping
+import io.jobial.scase.core.RequestResponseResult
+import io.jobial.scase.core.RequestTimeout
+import io.jobial.scase.core.RequestTimeoutKey
+import io.jobial.scase.core.ResponseProducerIdKey
+import io.jobial.scase.core.SendRequestContext
 import io.jobial.scase.logging.Logging
-import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
+import io.jobial.scase.marshalling.Marshaller
+import io.jobial.scase.marshalling.Unmarshaller
 import java.util.UUID.randomUUID
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration.FiniteDuration

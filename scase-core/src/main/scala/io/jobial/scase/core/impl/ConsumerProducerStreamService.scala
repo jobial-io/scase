@@ -29,11 +29,10 @@ class ConsumerProducerStreamService[F[_] : Concurrent, REQ, RESP: Marshaller](
   val requestUnmarshaller: Unmarshaller[REQ]
 ) extends DefaultService[F] with ConsumerProducerService[F, REQ, RESP] with Logging {
 
-  def sendResult(request: MessageReceiveResult[F, REQ], response: Deferred[F, SendResponseResult[RESP]]) =
+  def sendResult(request: MessageReceiveResult[F, REQ], responseDeferred: Deferred[F, SendResponseResult[RESP]]) =
     for {
-      res <- response.get
-      // TODO: make this a Deferred
-      resultAfterSend <- res.response match {
+      response <- responseDeferred.get
+      resultAfterSend <- response.response match {
         case Right(r) =>
           for {
             producer <- responseProducersCacheRef match {
@@ -58,7 +57,7 @@ class ConsumerProducerStreamService[F[_] : Concurrent, REQ, RESP: Marshaller](
             }
             _ <- trace(s"sending success for request: ${request.toString.take(500)} on $producer")
             _ <- trace(s"found response producer $producer for request in service: ${request.toString.take(500)}")
-            sendResult <- producer.send(r, res.sendMessageContext.attributes)
+            sendResult <- producer.send(r, response.sendMessageContext.attributes)
             // commit request after result is written
             _ <- whenA(autoCommitRequest)(
               trace(s"service committing request: ${request.toString.take(500)} on $producer") >>
@@ -89,7 +88,7 @@ class ConsumerProducerStreamService[F[_] : Concurrent, REQ, RESP: Marshaller](
                 errorProducer(request.responseProducerId)
             }
             _ <- trace(s"found response producer $producer for request in service: ${request.toString.take(500)}")
-            sendResult <- producer.send(t, res.sendMessageContext.attributes)
+            sendResult <- producer.send(t, response.sendMessageContext.attributes)
             _ <-
               if (autoCommitFailedRequest)
                 trace(s"service committing request: ${request.toString.take(500)}") >>
