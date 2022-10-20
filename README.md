@@ -155,8 +155,10 @@ to `pom.xml` if you use Maven, where scala.version is either 2.12, 2.13 and 3.0 
 
 ### Cats Effect
 
-Although **Scase** is internally built on Cats Effect, it is implemented using the "tagless final" pattern which makes the API agnostic to the effect type chosen by the application developer. 
-Of course, it supports the effect types provided by Cats Effect itself (IO, for example).
+**Scase** is built around the "tagless final" pattern throughout using Cats type classes, which makes the API as well as the internal implementation
+agnostic to the effect type chosen by the application developer. 
+It supports the effect types provided by Cats Effect (IO) as well as ZIO out of the box. Other effect types can easily be plugged
+into the library as long as they support the minimum requirements (usually a Concurrent and a Timer have to be available for the effect).
 
 ### ZIO
 
