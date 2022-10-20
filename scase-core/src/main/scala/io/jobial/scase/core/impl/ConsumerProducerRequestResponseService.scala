@@ -28,9 +28,9 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ, RESP: Marsh
   responseMarshaller: Marshaller[Either[Throwable, RESP]]
 ) extends DefaultService[F] with ConsumerProducerService[F, REQ, RESP] with Logging {
 
-  override def sendResult(request: MessageReceiveResult[F, REQ], response: Deferred[F, SendResponseResult[RESP]]): F[MessageSendResult[F, _]] =
+  override def sendResult(request: MessageReceiveResult[F, REQ], responseDeferred: Deferred[F, SendResponseResult[RESP]]): F[MessageSendResult[F, _]] =
     for {
-      res <- response.get
+      response <- responseDeferred.get
       producer <- responseProducersCacheRef match {
         case Some(producersCacheRef) =>
           // Producers are cached...
@@ -52,11 +52,11 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ, RESP: Marsh
           responseProducer(request.responseProducerId)
       }
       _ <- trace(s"found response producer $producer for request in service: ${request.toString.take(500)}")
-      resultAfterSend <- res.response match {
+      resultAfterSend <- response.response match {
         case Right(r) =>
           for {
             _ <- trace(s"sending success for request: ${request.toString.take(500)} on $producer")
-            sendResult <- producer.send(Right(r), res.sendMessageContext.attributes)
+            sendResult <- producer.send(Right(r), response.sendMessageContext.attributes)
             // commit request after result is written
             _ <- whenA(autoCommitRequest)(
               trace(s"service committing request: ${request.toString.take(500)} on $producer") >>
@@ -66,7 +66,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ, RESP: Marsh
         case Left(t) =>
           for {
             _ <- error(s"sending failure for request: ${request.toString.take(500)}", t)
-            sendResult <- producer.send(Left(t), res.sendMessageContext.attributes)
+            sendResult <- producer.send(Left(t), response.sendMessageContext.attributes)
             _ <- whenA(autoCommitFailedRequest)(
               trace(s"service committing request: ${request.toString.take(500)}") >>
                 request.commit
