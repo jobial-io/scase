@@ -32,7 +32,7 @@ public class PulsarMessageHandlerServiceConfiguration<M> {
     }
 
     public CompletableFuture<SenderClient<M>> client(PulsarContext pulsarContext) throws ExecutionException, InterruptedException {
-        return JavaUtils.<M>senderClient(config.client(concurrent, timer, pulsarContext.getContext()));
+        return JavaUtils.senderClient(config.client(concurrent, timer, pulsarContext.getContext()));
     }
 
     public CompletableFuture<SenderClient<M>> client() throws ExecutionException, InterruptedException {

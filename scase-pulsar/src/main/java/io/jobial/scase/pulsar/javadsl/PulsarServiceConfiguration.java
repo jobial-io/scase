@@ -193,7 +193,7 @@ public class PulsarServiceConfiguration {
             String subscriptionName,
             Marshalling<M> marshalling
     ) {
-        return new PulsarMessageHandlerServiceConfiguration(PulsarServiceConfiguration$.MODULE$.<M>handler(
+        return new PulsarMessageHandlerServiceConfiguration(PulsarServiceConfiguration$.MODULE$.handler(
                 topic,
                 javaOptionalToScala(patternAutoDiscoveryPeriod.map(t -> javaDurationToScala(t))),
                 javaOptionalToScala(subscriptionInitialPosition),
@@ -209,7 +209,7 @@ public class PulsarServiceConfiguration {
             Optional<Duration> batchingMaxPublishDelay,
             Marshalling<M> marshalling
     ) {
-        return new PulsarMessageDestinationServiceConfiguration(PulsarServiceConfiguration$.MODULE$.<M>destination(
+        return new PulsarMessageDestinationServiceConfiguration(PulsarServiceConfiguration$.MODULE$.destination(
                 topic,
                 javaOptionalDurationToScala(batchingMaxPublishDelay),
                 marshalling.marshaller()
