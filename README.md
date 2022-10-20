@@ -148,7 +148,7 @@ to `build.sbt` or
 </dependency>
 ```
 
-to `pom.xml` if you use Maven, where scala.version is either 2.12, 2.13 and 3.0 coming soon.
+to `pom.xml` if you use Maven, where scala.version is either 2.11, 2.12, 2.13 and 3.0 coming soon.
 
 
 ## Effect types
