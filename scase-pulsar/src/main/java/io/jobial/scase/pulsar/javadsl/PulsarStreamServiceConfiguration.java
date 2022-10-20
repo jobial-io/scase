@@ -30,7 +30,7 @@ public class PulsarStreamServiceConfiguration<REQ, RESP> {
     }
 
     public CompletableFuture<SenderClient<REQ>> senderClient(PulsarContext pulsarContext) throws ExecutionException, InterruptedException {
-        return JavaUtils.<REQ>senderClient(config.senderClient(concurrent, timer, pulsarContext.getContext()));
+        return JavaUtils.senderClient(config.senderClient(concurrent, timer, pulsarContext.getContext()));
     }
 
     public CompletableFuture<SenderClient<REQ>> senderClient() throws ExecutionException, InterruptedException {

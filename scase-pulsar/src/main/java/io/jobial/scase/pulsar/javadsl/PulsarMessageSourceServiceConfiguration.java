@@ -17,7 +17,7 @@ public class PulsarMessageSourceServiceConfiguration<M> {
     }
 
     public CompletableFuture<ReceiverClient<M>> client(PulsarContext pulsarContext) throws ExecutionException, InterruptedException {
-        return JavaUtils.<M>receiverClient(config.client(concurrent, timer, pulsarContext.getContext()));
+        return JavaUtils.receiverClient(config.client(concurrent, timer, pulsarContext.getContext()));
     }
 
     public CompletableFuture<ReceiverClient<M>> client() throws ExecutionException, InterruptedException {
