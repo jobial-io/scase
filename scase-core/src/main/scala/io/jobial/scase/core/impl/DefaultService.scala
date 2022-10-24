@@ -12,6 +12,4 @@ abstract class DefaultService[F[_]](implicit val concurrent: Concurrent[F]) exte
       state <- start
       result <- state.join
     } yield result
-
-  
 }
