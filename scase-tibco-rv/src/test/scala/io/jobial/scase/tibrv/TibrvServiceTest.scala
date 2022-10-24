@@ -1,4 +1,4 @@
-package io.jobial.scase.pulsar
+package io.jobial.scase.tibrv
 
 import cats.effect.IO
 import cats.effect.concurrent.MVar
@@ -12,23 +12,23 @@ import io.jobial.scase.core.test.TestRequest
 import io.jobial.scase.core.test.TestRequest1
 import io.jobial.scase.core.test.TestResponse
 import io.jobial.scase.core.test.TestResponse1
-import io.jobial.scase.marshalling.circe._
-import io.jobial.scase.pulsar.PulsarServiceConfiguration.destination
-import io.jobial.scase.pulsar.PulsarServiceConfiguration.handler
-import io.jobial.scase.pulsar.PulsarServiceConfiguration.requestResponse
-import io.jobial.scase.pulsar.PulsarServiceConfiguration.source
-import io.jobial.scase.pulsar.PulsarServiceConfiguration.stream
+import io.jobial.scase.marshalling.tibrv.circe._
+import io.jobial.scase.tibrv.TibrvServiceConfiguration.destination
+import io.jobial.scase.tibrv.TibrvServiceConfiguration.handler
+import io.jobial.scase.tibrv.TibrvServiceConfiguration.requestResponse
+import io.jobial.scase.tibrv.TibrvServiceConfiguration.source
+import io.jobial.scase.tibrv.TibrvServiceConfiguration.stream
 import io.jobial.scase.util.Hash.uuid
-import org.apache.pulsar.client.api.SubscriptionInitialPosition
+
 import scala.language.postfixOps
 
-class PulsarServiceTest
+class TibrvServiceTest
   extends ServiceTestSupport {
 
-  implicit val pulsarContext = PulsarContext()
+  implicit val tibrvContext = TibrvContext()
 
   "request-response service" should "reply successfully" in {
-    val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"hello-test-${uuid(6)}")
+    val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(s"hello-test-${uuid(6)}"))
 
     for {
       service <- serviceConfig.service(requestHandler)
@@ -38,7 +38,7 @@ class PulsarServiceTest
   }
 
   "another request-response service" should "reply successfully" in {
-    val serviceConfig = requestResponse[Req, Resp](s"another-test-${uuid(6)}")
+    val serviceConfig = requestResponse[Req, Resp](Seq(s"another-test-${uuid(6)}"))
 
     for {
       service <- serviceConfig.service(anotherRequestProcessor)
@@ -48,7 +48,7 @@ class PulsarServiceTest
   }
 
   "request" should "time out if service is not started" in {
-    val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"hello-timeout-test-${uuid(6)}")
+    val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(s"hello-timeout-test-${uuid(6)}"))
 
     for {
       service <- serviceConfig.service(requestHandler)
@@ -58,7 +58,7 @@ class PulsarServiceTest
   }
 
   "request-response service" should "reply with error" in {
-    val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"hello-error-test-${uuid(6)}")
+    val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(s"hello-error-test-${uuid(6)}"))
 
     for {
       service <- serviceConfig.service(requestHandlerWithError)
@@ -69,47 +69,47 @@ class PulsarServiceTest
 
   "stream service" should "reply successfully" in {
     val serviceConfig = stream[TestRequest[_ <: TestResponse], TestResponse](
-      s"hello-test-${uuid(6)}", s"hello-test-response-${uuid(6)}")
+      Seq(s"hello-test-${uuid(6)}"), s"hello-test-response-${uuid(6)}")
 
     for {
       service <- serviceConfig.service(requestHandler)
       senderClient <- serviceConfig.senderClient[IO]
       receiverClient <- serviceConfig.receiverClient[IO]
-      r <- testSuccessfulStreamReply(service, senderClient, receiverClient)
+      r <- testSuccessfulStreamReply(service, senderClient, receiverClient, true)
     } yield r
   }
 
   "stream service with separate error producer" should "reply successfully" in {
-    val responseTopic = s"hello-stream-test-response-${uuid(6)}"
-    val errorTopic = s"hello-stream-test-error-${uuid(6)}"
+    val responseSubject = s"hello-stream-test-response-${uuid(6)}"
+    val errorSubject = s"hello-stream-test-error-${uuid(6)}"
     val serviceConfig = stream[TestRequest[_ <: TestResponse], TestResponse](
-      s"hello-test-${uuid(6)}", responseTopic, errorTopic)
+      Seq(s"hello-test-${uuid(6)}"), responseSubject, errorSubject)
 
     for {
       service <- serviceConfig.service(requestHandler)
       senderClient <- serviceConfig.senderClient[IO]
       responseReceiverClient <- serviceConfig.responseReceiverClient[IO]
       errorReceiverClient <- serviceConfig.errorReceiverClient[IO]
-      r <- testSuccessfulStreamErrorReply(service, senderClient, responseReceiverClient, errorReceiverClient)
+      r <- testSuccessfulStreamErrorReply(service, senderClient, responseReceiverClient, errorReceiverClient, true)
     } yield r
   }
 
   "stream service" should "reply with error" in {
-    val responseTopic = s"hello-stream-error-test-response-${uuid(6)}"
+    val responseSubject = s"hello-stream-error-test-response-${uuid(6)}"
     val serviceConfig = stream[TestRequest[_ <: TestResponse], TestResponse](
-      s"hello-error-test-${uuid(6)}", responseTopic)
+      Seq(s"hello-error-test-${uuid(6)}"), responseSubject)
 
     for {
       service <- serviceConfig.service(requestHandlerWithError)
       senderClient <- serviceConfig.senderClient[IO]
       receiverClient <- serviceConfig.receiverClient[IO]
-      r <- testStreamErrorReply(service, senderClient, receiverClient)
+      r <- testStreamErrorReply(service, senderClient, receiverClient, true)
     } yield r
   }
 
   "message handler service" should "receive successfully" in {
     val serviceConfig = handler[TestRequest[_ <: TestResponse]](
-      s"hello-test-handler-${uuid(6)}")
+      Seq(s"hello-test-handler-${uuid(6)}"))
 
     for {
       receivedMessage <- MVar.empty[IO, TestRequest[_ <: TestResponse]]
@@ -119,37 +119,36 @@ class PulsarServiceTest
     } yield r
   }
 
-  "message handler service with topic pattern" should "receive successfully" in {
-    val requestTopicPrefix = s"persistent://public/default/hello-test-handler-${uuid(6)}"
-    val serviceConfig = handler[TestRequest[_ <: TestResponse]](
-      s"$requestTopicPrefix-.*".r,
-      subscriptionInitialPosition = Some(SubscriptionInitialPosition.Earliest)
-    )
-
-    for {
-      receivedMessage <- MVar.empty[IO, TestRequest[_ <: TestResponse]]
-      senderClient <- destination[TestRequest[_ <: TestResponse]](s"$requestTopicPrefix-a").client[IO]
-      service <- serviceConfig.service(TestMessageHandler(receivedMessage))
-      r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)
-      senderClient <- destination[TestRequest[_ <: TestResponse]](s"$requestTopicPrefix-b").client[IO]
-      r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)
-    } yield r
-  }
+//  "message handler service with subject pattern" should "receive successfully" in {
+//    val requestSubjectPrefix = s"persistent://public/default/hello-test-handler-${uuid(6)}"
+//    val serviceConfig = handler[TestRequest[_ <: TestResponse]](
+//      s"$requestSubjectPrefix-.*".r
+//    )
+//
+//    for {
+//      receivedMessage <- MVar.empty[IO, TestRequest[_ <: TestResponse]]
+//      senderClient <- destination[TestRequest[_ <: TestResponse]](s"$requestSubjectPrefix-a").client[IO]
+//      service <- serviceConfig.service(TestMessageHandler(receivedMessage))
+//      r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)
+//      senderClient <- destination[TestRequest[_ <: TestResponse]](s"$requestSubjectPrefix-b").client[IO]
+//      r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)
+//    } yield r
+//  }
 
   "message destination" should "receive successfully" in {
-    val topic = s"hello-source-${uuid(6)}"
-    val destinationConfig = destination[TestRequest[_ <: TestResponse]](topic)
-    val sourceConfig = source[TestRequest[_ <: TestResponse]](topic)
+    val subject = s"hello-source-${uuid(6)}"
+    val destinationConfig = destination[TestRequest[_ <: TestResponse]](subject)
+    val sourceConfig = source[TestRequest[_ <: TestResponse]](Seq(subject))
 
     for {
       senderClient <- destinationConfig.client[IO]
       receiverClient <- sourceConfig.client[IO]
-      r <- testMessageSourceReceive(senderClient, receiverClient)
+      r <- testMessageSourceReceive(senderClient, receiverClient, true)
     } yield r
   }
   
   "request-response service" should "succeed in load test" in {
-    val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"hello-test-${uuid(6)}")
+    val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(s"hello-test-${uuid(6)}"))
     for {
       service <- serviceConfig.service(requestHandler)
       client <- serviceConfig.client[IO]
@@ -158,7 +157,7 @@ class PulsarServiceTest
   }
 
   "request-response service" should "succeed in load test with different clients" in {
-    val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"hello-test-${uuid(6)}")
+    val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(s"hello-test-${uuid(6)}"))
     for {
       service <- serviceConfig.service(requestHandler)
       r <- testMultipleRequests(service, serviceConfig.client[IO], i => TestRequest1(i.toString), i => TestResponse1(TestRequest1(i.toString), i.toString))

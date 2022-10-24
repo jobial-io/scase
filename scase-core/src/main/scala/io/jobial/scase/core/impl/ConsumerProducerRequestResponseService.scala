@@ -26,7 +26,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ, RESP: Marsh
 )(
   implicit val requestUnmarshaller: Unmarshaller[REQ],
   responseMarshaller: Marshaller[Either[Throwable, RESP]]
-) extends DefaultService[F] with ConsumerProducerService[F, REQ, RESP] with Logging {
+) extends DefaultService[F] with ConsumerProducerService[F, REQ, RESP] {
 
   override def sendResult(request: MessageReceiveResult[F, REQ], responseDeferred: Deferred[F, SendResponseResult[RESP]]): F[MessageSendResult[F, _]] =
     for {

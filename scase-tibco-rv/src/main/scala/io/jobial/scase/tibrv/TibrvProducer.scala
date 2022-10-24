@@ -12,18 +12,16 @@ import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 
 class TibrvProducer[F[_] : Concurrent, M](
-  subject: String
-)(implicit context: TibrvContext
-) extends MessageProducer[F, M] with CatsUtils with Logging {
+  val subject: String
+)(
+  implicit val context: TibrvContext
+) extends MessageProducer[F, M] with TibrvSupport with CatsUtils with Logging {
 
-  lazy val transport =
-    new TibrvRvdTransport(context.service.getOrElse(null), context.network.getOrElse(null), s"${context.host}:${context.port}")
+  lazy val transport = createTransport
 
   def send(message: M, attributes: Map[String, String])(implicit m: Marshaller[M]): F[MessageSendResult[F, M]] =
     for {
-      _ <- delay{
-          if (!Tibrv.isValid) Tibrv.open(Tibrv.IMPL_NATIVE)
-      }
+      _ <- delay(initRv)
       tibrvMsg = new TibrvMsg(Marshaller[M].marshal(message))
       _ = tibrvMsg.setSendSubject(subject)
       r <- delay(transport.send(tibrvMsg)).handleErrorWith { t =>
