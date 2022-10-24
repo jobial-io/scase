@@ -243,14 +243,15 @@ trait ServiceTestSupport extends AsyncFlatSpec
   def testSuccessfulMessageHandlerReceive(
     service: Service[IO],
     senderClient: SenderClient[IO, TestRequest[_ <: TestResponse]],
-    receivedMessage: MVar[IO, TestRequest[_ <: TestResponse]]
+    receivedMessage: MVar[IO, TestRequest[_ <: TestResponse]],
+    stopService: Boolean = true
   ) =
     for {
       h <- service.start
       _ <- senderClient ! request1
       r <- receivedMessage.take
       _ <- senderClient.stop
-      _ <- h.stop
+      _ <- whenA(stopService)(h.stop)
     } yield assert(r.asInstanceOf[TestRequest1] === request1)
 
   def testMessageSourceReceive(

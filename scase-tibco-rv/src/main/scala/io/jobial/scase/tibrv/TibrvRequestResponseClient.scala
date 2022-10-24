@@ -12,7 +12,6 @@
  */
 package io.jobial.scase.tibrv
 
-import cats.Monad
 import cats.effect.Concurrent
 import cats.implicits._
 import com.tibco.tibrv.TibrvMsg
@@ -84,7 +83,7 @@ class TibrvRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP](
       )
     )
 
-  def stop = Monad[F].unit
+  def stop = delay(transport.destroy())
 }
 
 object TibrvRequestResponseClient extends CatsUtils with Logging {

@@ -130,7 +130,7 @@ class PulsarServiceTest
       receivedMessage <- MVar.empty[IO, TestRequest[_ <: TestResponse]]
       senderClient <- destination[TestRequest[_ <: TestResponse]](s"$requestTopicPrefix-a").client[IO]
       service <- serviceConfig.service(TestMessageHandler(receivedMessage))
-      r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)
+      r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage, false)
       senderClient <- destination[TestRequest[_ <: TestResponse]](s"$requestTopicPrefix-b").client[IO]
       r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)
     } yield r

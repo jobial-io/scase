@@ -75,7 +75,7 @@ class TibrvServiceTest
       service <- serviceConfig.service(requestHandler)
       senderClient <- serviceConfig.senderClient[IO]
       receiverClient <- serviceConfig.receiverClient[IO]
-      r <- testSuccessfulStreamReply(service, senderClient, receiverClient, true)
+      r <- testSuccessfulStreamReply(service, senderClient, receiverClient)
     } yield r
   }
 
@@ -90,7 +90,7 @@ class TibrvServiceTest
       senderClient <- serviceConfig.senderClient[IO]
       responseReceiverClient <- serviceConfig.responseReceiverClient[IO]
       errorReceiverClient <- serviceConfig.errorReceiverClient[IO]
-      r <- testSuccessfulStreamErrorReply(service, senderClient, responseReceiverClient, errorReceiverClient, true)
+      r <- testSuccessfulStreamErrorReply(service, senderClient, responseReceiverClient, errorReceiverClient)
     } yield r
   }
 
@@ -103,7 +103,7 @@ class TibrvServiceTest
       service <- serviceConfig.service(requestHandlerWithError)
       senderClient <- serviceConfig.senderClient[IO]
       receiverClient <- serviceConfig.receiverClient[IO]
-      r <- testStreamErrorReply(service, senderClient, receiverClient, true)
+      r <- testStreamErrorReply(service, senderClient, receiverClient)
     } yield r
   }
 
@@ -143,7 +143,7 @@ class TibrvServiceTest
     for {
       senderClient <- destinationConfig.client[IO]
       receiverClient <- sourceConfig.client[IO]
-      r <- testMessageSourceReceive(senderClient, receiverClient, true)
+      r <- testMessageSourceReceive(senderClient, receiverClient)
     } yield r
   }
   
