@@ -86,7 +86,7 @@ trait ConsumerProducerService[F[_], REQ, RESP] extends CatsUtils with Logging {
     } yield processorResult
 
 
-  def sendResult(request: MessageReceiveResult[F, REQ], response: Deferred[F, SendResponseResult[RESP]]): F[MessageSendResult[F, _]]
+  def sendResult(request: MessageReceiveResult[F, REQ], responseDeferred: Deferred[F, SendResponseResult[RESP]]): F[MessageSendResult[F, _]]
 
   def start: F[ServiceState[F]] =
     for {

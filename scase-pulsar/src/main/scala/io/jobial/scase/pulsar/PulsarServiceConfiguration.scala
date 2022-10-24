@@ -102,7 +102,7 @@ class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, 
 
   def client[F[_] : Concurrent : Timer](
     implicit context: PulsarContext
-  ): F[RequestResponseClient[F, REQ, RESP]] = {
+  ): F[RequestResponseClient[F, REQ, RESP]] =
     for {
       producer <- PulsarProducer[F, REQ](requestTopic, batchingMaxPublishDelay)
       responseTopic = responseTopicOverride.getOrElse(s"$requestTopic-response-${randomUUID}")
@@ -113,8 +113,6 @@ class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, 
         Some(responseTopic)
       )
     } yield client
-  }
-
 }
 
 class PulsarStreamServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
