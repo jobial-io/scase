@@ -60,9 +60,6 @@ class TibrvConsumer[F[_] : Concurrent : Timer, M](
       new TibrvListener(eventQueue, this, transport, subject, null)
   }
 
-  override def initialize =
-    pure(rvListeners)
-
   def onMsg(listener: TibrvListener, message: TibrvMsg) = {
     if (subjectFilter(message.getSendSubject))
       receiveResult.put(listener -> message)
@@ -72,6 +69,7 @@ class TibrvConsumer[F[_] : Concurrent : Timer, M](
 
   def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]) =
     for {
+      _ <- pure(rvListeners)
       (listener, tibrvMessage) <- timeout.map(t => liftIO(receiveResult.read).timeout(t)).getOrElse(liftIO(receiveResult.read)).handleErrorWith {
         case t: TimeoutException =>
           trace(s"Receive timed out after $timeout in $this") >>
@@ -97,6 +95,8 @@ class TibrvConsumer[F[_] : Concurrent : Timer, M](
       }
     } yield result
 
+  override def toString = s"${super.toString} subjects: ${subjects}"
+
   def stop =
     delay(rvListeners.map(_.destroy()))
 }
@@ -111,6 +111,6 @@ object TibrvConsumer extends CatsUtils with Logging {
     ioConcurrent: Concurrent[IO]
   ) =
     for {
-      receiveResult <- MVar.empty[IO, (TibrvListener, TibrvMsg)]
+      receiveResult <- liftIO(MVar.empty[IO, (TibrvListener, TibrvMsg)])(Concurrent[F])
     } yield new TibrvConsumer[F, M](receiveResult, subjects, subjectFilter)
 }

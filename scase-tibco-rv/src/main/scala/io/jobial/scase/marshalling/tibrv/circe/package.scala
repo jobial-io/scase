@@ -1,3 +1,5 @@
 package io.jobial.scase.marshalling.tibrv
 
-package object circe extends TibrvMsgCirceMarshalling
+import io.jobial.scase.marshalling.circe.DefaultCodecs
+
+package object circe extends TibrvMsgCirceMarshalling with DefaultCodecs
