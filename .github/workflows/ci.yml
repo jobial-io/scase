@@ -20,8 +20,8 @@ jobs:
          image: rmohr/activemq:latest
          ports:
          - 61616:61616
-       tr:
-         image: ghcr.io/jobial-io/tr:latest
+       rv:
+         image: ghcr.io/jobial-io/rv:latest
          ports:
            - 7500:7500
          credentials:
@@ -43,6 +43,7 @@ jobs:
         . job_env
         aws s3 sync s3://jobial-ci/rv/ /var/tmp/rv/
         echo export TIBCO_RV_ROOT=/var/tmp/rv >>job_env
+        echo export LD_LIBRARY_PATH=/var/tmp/rv/lib >>job_env
     - name: Run tests
       run: |
         . job_env

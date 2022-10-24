@@ -241,21 +241,19 @@ object TibrvServiceConfiguration {
     implicit errorMarshaller: Marshaller[Throwable],
     errorUnmarshaller: Unmarshaller[Throwable],
     ioConcurrent: Concurrent[IO]
-  ) =
-    new TibrvStreamServiceWithErrorSubjectConfiguration[REQ, RESP](
-      requestSubjects.head,
-      requestSubjects,
-      responseSubject,
-      errorSubject
-    )
+  ) = new TibrvStreamServiceWithErrorSubjectConfiguration[REQ, RESP](
+    requestSubjects.head,
+    requestSubjects,
+    responseSubject,
+    errorSubject
+  )
 
   def handler[M: Marshaller : Unmarshaller](
     requestSubjects: Seq[String]
-  ) =
-    new TibrvMessageHandlerServiceConfiguration[M](
-      requestSubjects.head,
-      requestSubjects
-    )
+  ) = new TibrvMessageHandlerServiceConfiguration[M](
+    requestSubjects.head,
+    requestSubjects
+  )
 
   def source[M: Unmarshaller](
     sourceSubjects: Seq[String]
@@ -267,5 +265,4 @@ object TibrvServiceConfiguration {
     subject: String,
     batchingMaxPublishDelay: Option[FiniteDuration] = Some(1.millis)
   ) = new TibrvMessageDestinationServiceConfiguration[M](subject)
-
 }
