@@ -30,7 +30,7 @@ class TibrvConsumer[F[_] : Concurrent : Timer, M](
   subjectFilter: String => Boolean
 )(implicit context: TibrvContext) extends DefaultMessageConsumer[F, M] with TibrvMsgCallback with Logging {
 
-  lazy val rvListeners = {
+  val rvListeners = {
     if (!Tibrv.isValid) Tibrv.open(Tibrv.IMPL_NATIVE)
     
     val eventQueue = new TibrvQueue
