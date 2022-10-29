@@ -34,6 +34,8 @@ trait ScaseTestHelper {
   implicit val concurrent = Concurrent[IO]
 
   val onGithub = sys.env.get("RUNNER_OS").isDefined
+
+  val onMacOS = sys.props.get("os.name").map(_ === "Mac OS X").getOrElse(false)
   
   implicit def runIOResult(r: IO[Assertion]) = r.unsafeToFuture
 
