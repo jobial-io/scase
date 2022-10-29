@@ -35,10 +35,16 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
     command.description("Forward requests and one-way messages from one transport to another") {
       for {
         source <- opt[String]("source", "s").required
+          .description("tibrv://<subject> or pulsar://<topic>")
         destination <- opt[String]("destination", "d").required
+          .description("tibrv:// or pulsar://, no subject or topic should be specified to select destination " +
+            "based on the source topic or subject")
         protocol <- opt[String]("protocol", "p").default("tibrvmsg")
+          .description("The marshalling protocol to use: currently only tibrvmsg is supported")
         tibrvContext <- opt[TibrvContext]("tibrv-context")
+          .description("host:port:network:service")
         pulsarContext <- opt[PulsarContext]("pulsar-context")
+          .description("host:port:tenant:namespace")
       } yield for {
         bridgeContext <- BridgeContext(tibrvContext, pulsarContext)
         (requestResponseBridge, forwarderBridge) <- startBridge(source, destination)(bridgeContext)
