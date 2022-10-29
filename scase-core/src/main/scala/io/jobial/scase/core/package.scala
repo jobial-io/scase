@@ -93,5 +93,4 @@ package object core {
   val ResponseTopicKey = "ResponseTopic"
 
   val RequestTimeoutKey = "RequestTimeout"
-
 }

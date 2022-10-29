@@ -57,6 +57,7 @@ class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscripti
           val messageReceiveResult = DefaultMessageReceiveResult[F, M](
             pure(message),
             attributes,
+            Some(this),
             commit = delay(session.commit),
             rollback = delay(session.rollback),
             underlyingMessageProvided = pure(jmsMessage),

@@ -15,6 +15,8 @@ package io.jobial.scase.core.impl
 import cats.Eq
 import cats.effect.IO
 import io.jobial.scase.core._
+import io.jobial.scase.core.impl.RequestResponseBridge.fixedDestination
+import io.jobial.scase.core.impl.RequestResponseBridge.requestResponseOnlyFilter
 import io.jobial.scase.core.test.ServiceTestSupport
 import io.jobial.scase.core.test.TestRequest
 import io.jobial.scase.core.test.TestResponse
@@ -37,7 +39,7 @@ class RequestResponseBridgeTest
     mapping1: RequestResponseMapping[REQUEST, RESPONSE]
   ) =
     for {
-      bridge <- RequestResponseBridge(source, destClient)
+      bridge <- RequestResponseBridge(source, fixedDestination(destClient), requestResponseOnlyFilter[IO, REQ])
       h <- destination.start
       serviceState <- bridge.start
       client <- sourceClient(serviceState.asInstanceOf[DefaultServiceState[IO, RESP]].service.asInstanceOf[ConsumerProducerRequestResponseService[IO, REQ, RESP]])

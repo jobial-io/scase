@@ -70,7 +70,7 @@ class PulsarMessageHandlerServiceConfiguration[M: Marshaller : Unmarshaller](
 
 class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
   val serviceName: String,
-  val requestTopic: String,
+  val requestTopic: Either[String, Regex],
   val responseTopicOverride: Option[String],
   val batchingMaxPublishDelay: Option[FiniteDuration],
   val patternAutoDiscoveryPeriod: Option[FiniteDuration],
@@ -86,7 +86,7 @@ class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, 
     implicit context: PulsarContext
   ) =
     for {
-      consumer <- PulsarConsumer[F, REQ](Left(requestTopic))
+      consumer <- PulsarConsumer[F, REQ](requestTopic)
       service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
         consumer, { responseTopicFromMessage =>
           responseTopicOverride.orElse(responseTopicFromMessage) match {
@@ -104,8 +104,8 @@ class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, 
     implicit context: PulsarContext
   ): F[RequestResponseClient[F, REQ, RESP]] =
     for {
-      producer <- PulsarProducer[F, REQ](requestTopic, batchingMaxPublishDelay)
-      responseTopic = responseTopicOverride.getOrElse(s"$requestTopic-response-${randomUUID}")
+      producer <- PulsarProducer[F, REQ](requestTopic.left.get, batchingMaxPublishDelay)
+      responseTopic = responseTopicOverride.getOrElse(s"${requestTopic.left.get}-response-${randomUUID}")
       consumer <- PulsarConsumer[F, Either[Throwable, RESP]](Left(responseTopic))
       client <- ConsumerProducerRequestResponseClient[F, REQ, RESP](
         consumer,
@@ -254,12 +254,34 @@ object PulsarServiceConfiguration {
   ): PulsarRequestResponseServiceConfiguration[REQ, RESP] =
     new PulsarRequestResponseServiceConfiguration[REQ, RESP](
       requestTopic,
-      requestTopic,
+      Left(requestTopic),
       responseTopicOverride,
       batchingMaxPublishDelay,
       patternAutoDiscoveryPeriod,
       subscriptionInitialPosition,
       subscriptionInitialPublishTime
+    )
+
+  def requestResponse[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
+    requestTopic: Either[String, Regex]
+  )(
+    //implicit monitoringPublisher: MonitoringPublisher = noPublisher
+    implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
+    responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
+  ): PulsarRequestResponseServiceConfiguration[REQ, RESP] =
+    new PulsarRequestResponseServiceConfiguration[REQ, RESP](
+      requestTopic match {
+        case Right(r) =>
+          r.toString
+        case Left(l) =>
+          l.toString
+      },
+      requestTopic,
+      None,
+      Some(1.millis),
+      Some(1.second),
+      Some(Earliest),
+      None
     )
 
   def stream[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
@@ -404,6 +426,15 @@ object PulsarServiceConfiguration {
     patternAutoDiscoveryPeriod,
     subscriptionInitialPosition,
     subscriptionInitialPublishTime
+  )
+
+  def source[M: Unmarshaller](
+    sourceTopic: Either[String, Regex]
+  ) = new PulsarMessageSourceServiceConfiguration(
+    sourceTopic,
+    Some(1.second),
+    Some(Earliest),
+    None
   )
 
   def destination[M: Marshaller](

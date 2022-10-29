@@ -15,6 +15,7 @@ import com.tibco.tibrv.TibrvQueue
 import com.tibco.tibrv.TibrvRvdTransport
 import io.jobial.scase.core.DefaultMessageReceiveResult
 import io.jobial.scase.core.ReceiveTimeout
+import io.jobial.scase.core.ResponseProducerIdKey
 import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.logging.Logging
@@ -84,7 +85,8 @@ class TibrvConsumer[F[_] : Concurrent : Timer, M](
         case Right(message) =>
           pure(DefaultMessageReceiveResult[F, M](
             pure(message),
-            Map(),
+            Map() ++ Option(tibrvMessage.getReplySubject).map(ResponseProducerIdKey -> _),
+            Some(this),
             commit = unit,
             rollback = unit,
             underlyingMessageProvided = pure(tibrvMessage),

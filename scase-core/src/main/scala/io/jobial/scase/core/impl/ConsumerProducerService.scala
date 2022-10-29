@@ -79,12 +79,11 @@ trait ConsumerProducerService[F[_], REQ, RESP] extends CatsUtils with Logging {
 
         // send response when ready
         start(processResultWithErrorHandling) >>
-          sendResult(request, response).handleErrorWith { t =>
-            error(s"unhadled error", t) >> raiseError(t)
+          sendResult(request, response).map(_ => ()).handleErrorWith { t =>
+            error(s"unhadled error", t)
           }
       }
     } yield processorResult
-
 
   def sendResult(request: MessageReceiveResult[F, REQ], responseDeferred: Deferred[F, SendResponseResult[RESP]]): F[MessageSendResult[F, _]]
 
