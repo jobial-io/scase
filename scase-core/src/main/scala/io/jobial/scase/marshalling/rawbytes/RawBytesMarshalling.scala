@@ -16,7 +16,6 @@ trait RawBytesMarshalling extends CatsUtils {
 
     def marshal[F[_] : Concurrent](o: Array[Byte], out: OutputStream) = delay {
       out.write(o)
-      out
     }
 
     def marshalToText(o: Array[Byte]) =
