@@ -22,8 +22,10 @@ import io.circe.generic.auto._
 
 class TibrvConsumerProducerTest extends ServiceTestSupport {
   implicit val pulsarContext = TibrvContext()
-  
+
   "consumer" should "receive message" in {
+    assume(!onMacOS)
+
     val request = TestRequest1("1")
     val subject = s"TEST.HELLO.${uuid(6)}"
 

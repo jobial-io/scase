@@ -20,6 +20,8 @@ class ScaseBridgeTest extends ServiceTestSupport {
   implicit val pulsarContext = PulsarContext()
 
   "pulsar to rv" should "work" in {
+    assume(!onMacOS)
+    
     val topic = s"hello-test-${uuid(6)}"
     val destinationServiceConfig = TibrvServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(topic))
     val sourceServiceConfig = PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic)
@@ -36,6 +38,8 @@ class ScaseBridgeTest extends ServiceTestSupport {
   }
 
   "rv to pulsar" should "work" in {
+    assume(!onMacOS)
+    
     val topic = s"hello-test-${uuid(6)}"
     val destinationServiceConfig = PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic)
     val sourceServiceConfig = TibrvServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(topic))

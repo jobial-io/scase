@@ -28,6 +28,7 @@ class TibrvServiceTest
   implicit val tibrvContext = TibrvContext()
 
   "request-response service" should "reply successfully" in {
+    assume(!onMacOS)
     val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(s"hello-test-${uuid(6)}"))
 
     for {
@@ -38,6 +39,7 @@ class TibrvServiceTest
   }
 
   "another request-response service" should "reply successfully" in {
+    assume(!onMacOS)
     val serviceConfig = requestResponse[Req, Resp](Seq(s"another-test-${uuid(6)}"))
 
     for {
@@ -48,6 +50,7 @@ class TibrvServiceTest
   }
 
   "request" should "time out if service is not started" in {
+    assume(!onMacOS)
     val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(s"hello-timeout-test-${uuid(6)}"))
 
     for {
@@ -58,6 +61,7 @@ class TibrvServiceTest
   }
 
   "request-response service" should "reply with error" in {
+    assume(!onMacOS)
     val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(s"hello-error-test-${uuid(6)}"))
 
     for {
@@ -68,6 +72,7 @@ class TibrvServiceTest
   }
 
   "stream service" should "reply successfully" in {
+    assume(!onMacOS)
     val serviceConfig = stream[TestRequest[_ <: TestResponse], TestResponse](
       Seq(s"hello-test-${uuid(6)}"), s"hello-test-response-${uuid(6)}")
 
@@ -80,6 +85,7 @@ class TibrvServiceTest
   }
 
   "stream service with separate error producer" should "reply successfully" in {
+    assume(!onMacOS)
     val responseSubject = s"hello-stream-test-response-${uuid(6)}"
     val errorSubject = s"hello-stream-test-error-${uuid(6)}"
     val serviceConfig = stream[TestRequest[_ <: TestResponse], TestResponse](
@@ -95,6 +101,7 @@ class TibrvServiceTest
   }
 
   "stream service" should "reply with error" in {
+    assume(!onMacOS)
     val responseSubject = s"hello-stream-error-test-response-${uuid(6)}"
     val serviceConfig = stream[TestRequest[_ <: TestResponse], TestResponse](
       Seq(s"hello-error-test-${uuid(6)}"), responseSubject)
@@ -108,6 +115,7 @@ class TibrvServiceTest
   }
 
   "message handler service" should "receive successfully" in {
+    assume(!onMacOS)
     val serviceConfig = handler[TestRequest[_ <: TestResponse]](
       Seq(s"hello-test-handler-${uuid(6)}"))
 
@@ -136,6 +144,7 @@ class TibrvServiceTest
 //  }
 
   "message destination" should "receive successfully" in {
+    assume(!onMacOS)
     val subject = s"hello-source-${uuid(6)}"
     val destinationConfig = destination[TestRequest[_ <: TestResponse]](subject)
     val sourceConfig = source[TestRequest[_ <: TestResponse]](Seq(subject))
@@ -148,6 +157,7 @@ class TibrvServiceTest
   }
   
   "request-response service" should "succeed in load test" in {
+    assume(!onMacOS)
     val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(s"hello-test-${uuid(6)}"))
     for {
       service <- serviceConfig.service(requestHandler)
@@ -157,6 +167,7 @@ class TibrvServiceTest
   }
 
   "request-response service" should "succeed in load test with different clients" in {
+    assume(!onMacOS)
     val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(s"hello-test-${uuid(6)}"))
     for {
       service <- serviceConfig.service(requestHandler)
