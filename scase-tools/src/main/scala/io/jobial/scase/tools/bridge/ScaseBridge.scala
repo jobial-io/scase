@@ -115,7 +115,7 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
       message <- r.underlyingMessage[Any]
     } yield message match {
       case m: Message[_] =>
-        val topicName = m.getTopicName 
+        val topicName = m.getTopicName
         Some(topicName.substring(topicName.lastIndexOf("/") + 1))
       case m: TibrvMsg =>
         Some(m.getSendSubject)
@@ -145,7 +145,8 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
       context.withTibrvContext { implicit c =>
         createRequestResponseClient(d =>
           info[IO](s"Creating Tibrv request-response client for $d") >>
-            TibrvServiceConfiguration.requestResponse[TibrvMsg, TibrvMsg](Seq(d)).client[IO])
+            TibrvServiceConfiguration.requestResponse[TibrvMsg, TibrvMsg](Seq(d)).client[IO]
+        )
       }
     else if (destination.startsWith(pulsarScheme))
       context.withPulsarContext { implicit c =>

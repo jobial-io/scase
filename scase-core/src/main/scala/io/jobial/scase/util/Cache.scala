@@ -3,9 +3,9 @@ package io.jobial.scase.util
 import cats.effect.Concurrent
 import cats.effect.Concurrent.memoize
 import cats.effect.concurrent.Ref
-import cats.implicits._ 
+import cats.implicits._
 
-class Cache[F[_]: Concurrent, A, B](store: Ref[F, Map[A, F[B]]]) {
+class Cache[F[_] : Concurrent, A, B](store: Ref[F, Map[A, F[B]]]) {
 
   def getOrCreate(key: A, value: F[B]): F[B] =
     for {
@@ -23,8 +23,8 @@ class Cache[F[_]: Concurrent, A, B](store: Ref[F, Map[A, F[B]]]) {
 }
 
 object Cache {
-  
-  def apply[F[_]: Concurrent, A, B] = {
+
+  def apply[F[_] : Concurrent, A, B] = {
     for {
       store <- Ref.of[F, Map[A, F[B]]](Map())
     } yield new Cache[F, A, B](store)
