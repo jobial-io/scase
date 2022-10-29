@@ -10,7 +10,7 @@ import io.jobial.scase.marshalling.Unmarshaller
 
 class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERESP: Marshaller, DESTREQ: Unmarshaller, DESTRESP: Marshaller](
   source: RequestHandler[F, SOURCEREQ, SOURCERESP] => F[Service[F]],
-  destination: MessageReceiveResult[F, DESTREQ] => F[RequestResponseResult[F, DESTREQ, DESTRESP]],
+  destination: MessageReceiveResult[F, DESTREQ] => F[Option[RequestResponseResult[F, DESTREQ, DESTRESP]]],
   filterRequest: MessageReceiveResult[F, SOURCEREQ] => F[Option[MessageReceiveResult[F, DESTREQ]]],
   filterResponse: (MessageReceiveResult[F, SOURCEREQ], RequestResponseResult[F, DESTREQ, DESTRESP]) => F[Option[MessageReceiveResult[F, SOURCERESP]]],
   stopped: Ref[F, Boolean]
@@ -18,7 +18,6 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
   implicit requestResponseMapping: RequestResponseMapping[SOURCEREQ, SOURCERESP]
 ) extends CatsUtils with Logging {
 
-  // TODO: return state here instead?
   def start =
     for {
       service <- source(new RequestHandler[F, SOURCEREQ, SOURCERESP] {
@@ -31,8 +30,18 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
                 case Some(filteredRequest) =>
                   for {
                     destinationResult <- destination(filteredRequest)
-                    filteredResponse <- filterResponse(sourceResult, destinationResult)
-                    sendResult <- filteredResponse match {
+                    _ <- trace(s"received result from destination: $destinationResult")
+                    filteredResponse <- {
+                      for {
+                        destinationResult <- destinationResult
+                      } yield for {
+                        filteredResponse <-
+                          for {
+                            filteredResponse <- filterResponse(sourceResult, destinationResult)
+                          } yield filteredResponse
+                      } yield filteredResponse
+                    }.sequence
+                    sendResult <- filteredResponse.flatten match {
                       case Some(filteredResponse) =>
                         implicit val sendMessageContext = SendMessageContext(
                           filteredResponse.attributes ++ sourceResult.attributes.get(CorrelationIdKey).map(correlationId => CorrelationIdKey -> correlationId)
@@ -42,11 +51,13 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
                           r <- request ! response
                         } yield r
                       case None =>
-                        raiseError[F, SendResponseResult[SOURCERESP]](new RuntimeException)
+                        trace(s"no destination for request: ${sourceResult}") >>
+                          raiseError[F, SendResponseResult[SOURCERESP]](new IllegalStateException)
                     }
                   } yield sendResult
                 case None =>
-                  raiseError(new RuntimeException)
+                  trace(s"not forwarding request: ${sourceResult}") >>
+                    raiseError[F, SendResponseResult[SOURCERESP]](new IllegalStateException)
               }
             } yield sendResult
         }
@@ -61,12 +72,12 @@ object RequestResponseBridge extends CatsUtils with Logging {
 
   def apply[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERESP: Marshaller, DESTREQ: Unmarshaller, DESTRESP: Marshaller](
     source: RequestHandler[F, SOURCEREQ, SOURCERESP] => F[Service[F]],
-    destination: MessageReceiveResult[F, DESTREQ] => F[RequestResponseResult[F, DESTREQ, DESTRESP]],
+    destination: MessageReceiveResult[F, DESTREQ] => F[Option[RequestResponseResult[F, DESTREQ, DESTRESP]]],
     filterRequest: MessageReceiveResult[F, SOURCEREQ] => F[Option[MessageReceiveResult[F, DESTREQ]]],
     filterResponse: (MessageReceiveResult[F, SOURCEREQ], RequestResponseResult[F, DESTREQ, DESTRESP]) => F[Option[MessageReceiveResult[F, SOURCERESP]]]
   )(
     implicit requestResponseMapping: RequestResponseMapping[SOURCEREQ, SOURCERESP]
-  ) = for {
+  ): F[RequestResponseBridge[F, SOURCEREQ, SOURCERESP, DESTREQ, DESTRESP]] = for {
     stopped <- Ref.of[F, Boolean](false)
   } yield new RequestResponseBridge[F, SOURCEREQ, SOURCERESP, DESTREQ, DESTRESP](
     source,
@@ -78,22 +89,41 @@ object RequestResponseBridge extends CatsUtils with Logging {
 
   def apply[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
     source: RequestHandler[F, REQ, RESP] => F[Service[F]],
-    destination: RequestResponseClient[F, REQ, RESP]
+    destination: MessageReceiveResult[F, REQ] => F[Option[RequestResponseResult[F, REQ, RESP]]],
+    filterRequest: MessageReceiveResult[F, REQ] => F[Option[MessageReceiveResult[F, REQ]]]
   )(
     implicit requestResponseMapping: RequestResponseMapping[REQ, RESP]
-  ) = for {
-    stopped <- Ref.of[F, Boolean](false)
-  } yield new RequestResponseBridge[F, REQ, RESP, REQ, RESP](
-    source,
-    { request =>
-      for {
-        destRequest <- request.message
-        r <- destination.sendRequest(destRequest)
-      } yield r
-    },
-    { result => pure(Some(result)) },
-    { (_, result) => pure(Some(result.response)) },
-    stopped
-  )
+  ): F[RequestResponseBridge[F, REQ, RESP, REQ, RESP]] =
+    RequestResponseBridge[F, REQ, RESP, REQ, RESP](
+      source,
+      destination,
+      filterRequest,
+      { (_, result) => pure(Some(result.response)) }
+    )
 
+  def fixedDestination[F[_] : Concurrent, REQ, RESP](destination: RequestResponseClient[F, REQ, RESP])(implicit requestResponseMapping: RequestResponseMapping[REQ, RESP]) = { r: MessageReceiveResult[F, REQ] =>
+    for {
+      message <- r.message
+      sendResult <- destination.sendRequestWithResponseMapping(message, requestResponseMapping)(SendRequestContext(r.requestTimeout, r.attributes - ResponseProducerIdKey - ResponseTopicKey - CorrelationIdKey))
+    } yield Option(sendResult)
+  }
+
+  def destinationBasedOnSourceRequest[F[_] : Concurrent, REQ, RESP](destination: MessageReceiveResult[F, REQ] => F[Option[RequestResponseClient[F, REQ, RESP]]])(implicit requestResponseMapping: RequestResponseMapping[REQ, RESP]) = { r: MessageReceiveResult[F, REQ] =>
+    for {
+      message <- r.message
+      d <- destination(r)
+      sendResult <- d.map(d => d.sendRequestWithResponseMapping(message, requestResponseMapping)(SendRequestContext(r.requestTimeout, r.attributes - ResponseProducerIdKey - ResponseTopicKey - CorrelationIdKey))).sequence
+    } yield sendResult
+  }
+
+  def allowAllFilter[F[_] : Concurrent, M] = { r: MessageReceiveResult[F, M] =>
+    pure(Option(r))
+  }
+
+  def requestResponseOnlyFilter[F[_] : Concurrent, SOURCEREQ]: MessageReceiveResult[F, SOURCEREQ] => F[Option[MessageReceiveResult[F, SOURCEREQ]]] = { r: MessageReceiveResult[F, SOURCEREQ] =>
+    if (r.responseProducerId.isDefined)
+      pure(Option(r))
+    else
+      pure(None)
+  }
 }

@@ -73,7 +73,7 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP]
               ) = pure(DefaultSendResponseResult[RESPONSE](response, sendMessageContext))
 
               override def receiveResult[REQUEST](request: REQUEST): MessageReceiveResult[F, REQUEST] =
-                DefaultMessageReceiveResult(pure(request), context.getClientContext.getEnvironment.asScala.toMap, unit, unit,
+                DefaultMessageReceiveResult(pure(request), context.getClientContext.getEnvironment.asScala.toMap, None, unit, unit,
                   pure(requestString), pure(context))
 
             })(request)

@@ -14,7 +14,8 @@ package io.jobial.scase.core.impl
 
 import cats.Eq
 import cats.effect.IO
-import io.jobial.scase.core._
+import io.jobial.scase.core.impl.ForwarderBridge.fixedDestination
+import io.jobial.scase.core.impl.ForwarderBridge.oneWayOnlyFilter
 import io.jobial.scase.core.test.ServiceTestSupport
 import io.jobial.scase.core.test.TestRequest1
 import io.jobial.scase.inmemory.InMemoryConsumer
@@ -30,14 +31,14 @@ class ForwarderBridgeTest
       destination <- InMemoryProducer[IO, REQ]
       receiverClient <- ConsumerReceiverClient(source)
       senderClient <- ProducerSenderClient(destination)
-      bridge <- ForwarderBridge(receiverClient, senderClient)
-      _ <- bridge.start
+      bridge <- ForwarderBridge(receiverClient, fixedDestination(senderClient), oneWayOnlyFilter[IO, REQ])
+      bridgeState <- bridge.start
       sourceProducer <- source.producer
       destinationConsumer <- destination.consumer
       _ <- sourceProducer.send(message)
       r <- destinationConsumer.receive(None)
       receivedMessage <- r.message
-      _ <- bridge.stop
+      _ <- bridgeState.stop
       _ <- receiverClient.stop
       _ <- senderClient.stop
     } yield assert(message === receivedMessage)

@@ -15,7 +15,7 @@ name := "scase"
 ThisBuild / organization := "io.jobial"
 ThisBuild / scalaVersion := "2.13.8"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.15", "2.13.8")
-ThisBuild / version := "0.7.5"
+ThisBuild / version := "0.8.0"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
 ThisBuild / javacOptions ++= Seq("-source", "11", "-target", "11")
 ThisBuild / Test / packageBin / publishArtifact := true
@@ -53,7 +53,7 @@ lazy val AwsLambdaJavaCoreVersion = "1.2.1"
 lazy val CommonsIoVersion = "2.8.0"
 lazy val CommonsLangVersion = "3.12.0"
 lazy val CloudformationTemplateGeneratorVersion = "3.10.4"
-lazy val SclapVersion = "1.1.7"
+lazy val SclapVersion = "1.3.0"
 lazy val CirceVersion = "0.12.0-M3"
 lazy val SprayJsonVersion = "1.3.6"
 lazy val PulsarVersion = "2.9.0"
@@ -68,9 +68,9 @@ lazy val root: Project = project
   .in(file("."))
   .settings(commonSettings)
   .aggregate(`scase-core`, `scase-aws`, `scase-aws-test`, `scase-circe`, `scase-spray-json`,
-    `scase-pulsar`, `scase-jms`, `scase-tibco-rv`)
+    `scase-pulsar`, `scase-jms`, `scase-tibco-rv`, `scase-tools`)
   .dependsOn(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`,
-    `scase-pulsar`, `scase-jms`, `scase-tibco-rv`)
+    `scase-pulsar`, `scase-jms`, `scase-tibco-rv`, `scase-tools`)
 
 lazy val `scase-core` = project
   .settings(commonSettings)
@@ -87,7 +87,7 @@ lazy val `scase-core` = project
       "org.apache.commons" % "commons-lang3" % CommonsLangVersion,
       "ch.qos.logback" % "logback-classic" % LogbackVersion % Test,
       "com.chuusai" %% "shapeless" % ShapelessVersion,
-      "com.github.sbt" % "junit-interface" % "0.13.2" % Test      
+      "com.github.sbt" % "junit-interface" % "0.13.2" % Test
     )
   )
 
@@ -197,3 +197,15 @@ lazy val `scase-tibco-rv` = project
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-circe`)
   .dependsOn(`scase-spray-json`)
+
+lazy val `scase-tools` = project
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.jobial" %% "sclap" % SclapVersion,
+      "ch.qos.logback" % "logback-classic" % LogbackVersion
+    )
+  )
+  .dependsOn(`scase-core` % "compile->compile;test->test")
+  .dependsOn(`scase-pulsar`)
+  .dependsOn(`scase-tibco-rv`)

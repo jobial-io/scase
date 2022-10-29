@@ -17,6 +17,7 @@ case class SendRequestContext(
 
 trait RequestResponseClient[F[_], REQ, RESP] {
 
+  // TODO: revisit this, should the mapping be implicit?
   def sendRequestWithResponseMapping[REQUEST <: REQ, RESPONSE <: RESP](request: REQUEST, requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE])
     (implicit sendRequestContext: SendRequestContext): F[RequestResponseResult[F, REQUEST, RESPONSE]]
 

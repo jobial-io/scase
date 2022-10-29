@@ -12,7 +12,7 @@ import io.jobial.scase.marshalling.Unmarshaller
 
 class ForwarderBridge[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
   source: ReceiverClient[F, REQ],
-  destination: MessageReceiveResult[F, RESP] => F[MessageSendResult[F, RESP]],
+  destination: MessageReceiveResult[F, RESP] => F[Option[MessageSendResult[F, RESP]]],
   filter: MessageReceiveResult[F, REQ] => F[Option[MessageReceiveResult[F, RESP]]],
   stopped: Ref[F, Boolean]
 ) extends CatsUtils with Logging {
@@ -31,7 +31,7 @@ class ForwarderBridge[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
         case Some(filteredReceiveResult) =>
           destination(filteredReceiveResult)
         case None =>
-          unit
+          pure(None)
       }
       r <- continueForwarding
     } yield r) handleErrorWith {
@@ -40,25 +40,48 @@ class ForwarderBridge[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
           continueForwarding
     }
 
-  def start: F[Fiber[F, Unit]] = start(forward)
+  def start: F[ServiceState[F]] =
+    start(forward) >> pure(new ServiceState[F] {
+      def stop = stopped.set(true) >> pure(this)
 
-  def stop = stopped.set(true)
+      def join: F[ServiceState[F]] = ???
+    })
 }
 
 object ForwarderBridge extends CatsUtils with Logging {
 
   def apply[F[_] : Concurrent, M: Unmarshaller : Marshaller](
     source: ReceiverClient[F, M],
-    destination: SenderClient[F, M]
+    destination: MessageReceiveResult[F, M] => F[Option[MessageSendResult[F, M]]],
+    filter: MessageReceiveResult[F, M] => F[Option[MessageReceiveResult[F, M]]]
   ) = for {
     stopped <- Ref.of[F, Boolean](false)
   } yield
-    new ForwarderBridge[F, M, M](source, { r =>
-      for {
-        message <- r.message
-        sendResult <- destination.send(message)(SendMessageContext(r.attributes))
-      } yield sendResult
-    }, { r =>
-      pure(Some(DefaultMessageReceiveResult(r.message, r.attributes, unit, unit, r.underlyingMessage, r.underlyingContext)))
-    }, stopped)
+    new ForwarderBridge[F, M, M](source, destination, filter, stopped)
+
+  def fixedDestination[F[_] : Concurrent, M](destination: SenderClient[F, M]) = { r: MessageReceiveResult[F, M] =>
+    for {
+      message <- r.message
+      sendResult <- destination.send(message)(SendMessageContext(r.attributes))
+    } yield Option(sendResult)
+  }
+
+  def destinationBasedOnSource[F[_] : Concurrent, M](destination: MessageReceiveResult[F, M] => F[Option[SenderClient[F, M]]]) = { r: MessageReceiveResult[F, M] =>
+    for {
+      message <- r.message
+      d <- destination(r)
+      sendResult <- d.map(d => d.send(message)(SendMessageContext(r.attributes))).toList.sequence
+    } yield sendResult.headOption
+  }
+
+  def allowAllFilter[F[_] : Concurrent, M] = { r: MessageReceiveResult[F, M] =>
+    pure(Option(r))
+  }
+
+  def oneWayOnlyFilter[F[_] : Concurrent, M]: MessageReceiveResult[F, M] => F[Option[MessageReceiveResult[F, M]]] = { r: MessageReceiveResult[F, M] =>
+    if (r.responseProducerId.isDefined)
+      pure(None)
+    else
+      pure(Option(r))
+  }
 }

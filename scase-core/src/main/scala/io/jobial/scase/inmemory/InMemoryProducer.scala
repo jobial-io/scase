@@ -23,7 +23,12 @@ class InMemoryProducer[F[_] : Concurrent : Timer, M](
         for {
           consumer <- consumers
         } yield
-          start(consumer.receiveResult.put(DefaultMessageReceiveResult[F, M](pure(message), attributes, unit, unit,
+          start(consumer.receiveResult.put(DefaultMessageReceiveResult[F, M](
+            pure(message),
+            attributes,
+            Some(consumer),
+            unit,
+            unit,
             raiseError(new IllegalStateException("No underlying message")),
             raiseError(new IllegalStateException("No underlying context")))
           ))

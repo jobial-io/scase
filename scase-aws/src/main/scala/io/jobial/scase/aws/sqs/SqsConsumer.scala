@@ -83,6 +83,7 @@ class SqsConsumer[F[_] : Concurrent, M](
                 message = pure(unmarshalledMessage),
                 // TODO: add standard attributes returned by getAttributes...
                 attributes = sqsMessage.getMessageAttributes.asScala.toMap.filter(e => Option(e._2.getStringValue).isDefined).mapValues(_.getStringValue).toMap,
+                Some(this),
                 commit =
                   for {
                     o <- outstandingMessagesRef.get

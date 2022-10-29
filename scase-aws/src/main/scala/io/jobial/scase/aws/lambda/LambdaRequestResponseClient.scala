@@ -60,6 +60,7 @@ case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP:
         DefaultMessageReceiveResult[F, RESPONSE](
           pure(m),
           Map(), // TODO: propagate attributes here
+          None,
           unit,
           unit,
           pure(responsePayload),
