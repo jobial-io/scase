@@ -10,8 +10,7 @@ import io.jobial.scase.pulsar.PulsarContext
 import io.jobial.scase.pulsar.PulsarServiceConfiguration
 import io.jobial.scase.tibrv.TibrvContext
 import io.jobial.scase.tibrv.TibrvServiceConfiguration
-import io.jobial.scase.tools.bridge.ScaseBridge.BridgeContext
-import io.jobial.scase.tools.bridge.ScaseBridge.startBridge
+import io.jobial.scase.tools.bridge.ScaseBridge._
 import io.jobial.scase.util.Hash.uuid
 
 class ScaseBridgeTest extends ServiceTestSupport {
@@ -19,9 +18,16 @@ class ScaseBridgeTest extends ServiceTestSupport {
   implicit val tibrvContext = TibrvContext()
   implicit val pulsarContext = PulsarContext()
 
+  "parsing command line" should "work" in {
+    for {
+      _ <- pulsarContextArgumentValueParser.parse("localhost::tenant:namespace")
+      _ <- tibrvContextArgumentValueParser.parse("localhost::network:1")
+    } yield succeed
+  }
+
   "pulsar to rv" should "work" in {
     assume(!onMacOS)
-    
+
     val topic = s"hello-test-${uuid(6)}"
     val destinationServiceConfig = TibrvServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(topic))
     val sourceServiceConfig = PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic)
@@ -39,7 +45,7 @@ class ScaseBridgeTest extends ServiceTestSupport {
 
   "rv to pulsar" should "work" in {
     assume(!onMacOS)
-    
+
     val topic = s"hello-test-${uuid(6)}"
     val destinationServiceConfig = PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic)
     val sourceServiceConfig = TibrvServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(topic))
