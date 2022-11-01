@@ -93,13 +93,13 @@ trait ConsumerProducerService[F[_], REQ, RESP] extends CatsUtils with Logging {
       subscription <- requestConsumer.subscribe(handleRequest)
       _ <- trace(s"subscribed to consumer for processor $requestHandler")
     } yield
-      DefaultServiceState(subscription, requestConsumer, this)
+      new DefaultServiceState[F, REQ](subscription, requestConsumer, this)
 }
 
-case class DefaultServiceState[F[_] : Sync, M](
-  subscription: MessageSubscription[F, M],
-  consumer: MessageConsumer[F, M],
-  service: Service[F]
+class DefaultServiceState[F[_] : Sync, M](
+  val subscription: MessageSubscription[F, M],
+  val consumer: MessageConsumer[F, M],
+  val service: Service[F]
 ) extends ServiceState[F]
   with Logging {
 

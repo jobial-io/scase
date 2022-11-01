@@ -15,7 +15,7 @@ class ForwarderBridge[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
   destination: MessageReceiveResult[F, RESP] => F[Option[MessageSendResult[F, RESP]]],
   filter: MessageReceiveResult[F, REQ] => F[Option[MessageReceiveResult[F, RESP]]],
   stopped: Ref[F, Boolean]
-) extends CatsUtils with Logging {
+) extends DefaultService[F] with CatsUtils with Logging {
 
   def continueForwarding =
     for {
@@ -45,6 +45,8 @@ class ForwarderBridge[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
       def stop = stopped.set(true) >> pure(this)
 
       def join: F[ServiceState[F]] = ???
+      
+      def service = ForwarderBridge.this
     })
 }
 

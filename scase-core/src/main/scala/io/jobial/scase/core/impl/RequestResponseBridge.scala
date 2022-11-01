@@ -1,6 +1,7 @@
 package io.jobial.scase.core.impl
 
 import cats.effect.Concurrent
+import cats.effect.Sync
 import cats.effect.concurrent.Ref
 import cats.implicits._
 import io.jobial.scase.core._
@@ -16,7 +17,7 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
   stopped: Ref[F, Boolean]
 )(
   implicit requestResponseMapping: RequestResponseMapping[SOURCEREQ, SOURCERESP]
-) extends CatsUtils with Logging {
+) extends DefaultService[F] with CatsUtils with Logging {
 
   def start =
     for {
@@ -63,10 +64,19 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
         }
       })
       handler <- service.start
-    } yield handler
+    } yield new RequestResponseBridgeServiceState[F](this, service) {
+      def stop = stopped.set(true) >> pure(this)
 
-  def stop = stopped.set(true)
+      def join: F[ServiceState[F]] =
+        handler.join >> pure(this)
+
+    }
 }
+
+abstract class RequestResponseBridgeServiceState[F[_]: Sync](
+  val service: Service[F],
+  val requestResonseService: Service[F]
+) extends ServiceState[F] 
 
 object RequestResponseBridge extends CatsUtils with Logging {
 

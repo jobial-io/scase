@@ -24,7 +24,7 @@ class ConsumerMessageHandlerService[F[_] : Concurrent, M: Unmarshaller](
         } yield result
       }
     } yield
-      DefaultServiceState(subscription, consumer, this)
+      new DefaultServiceState(subscription, consumer, this)
   }
 }
 

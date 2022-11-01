@@ -63,14 +63,16 @@ lazy val ShapelessVersion = "2.3.3"
 lazy val JodaTimeVersion = "2.11.1"
 lazy val CondenseVersion = "0.5.4"
 lazy val ProguardVersion = "7.2.2"
+lazy val ActivemqVersion = "5.16.3"
+lazy val JmsVersion = "2.0.1"
 
 lazy val root: Project = project
   .in(file("."))
   .settings(commonSettings)
   .aggregate(`scase-core`, `scase-aws`, `scase-aws-test`, `scase-circe`, `scase-spray-json`,
-    `scase-pulsar`, `scase-jms`, `scase-tibco-rv`, `scase-tools`)
+    `scase-pulsar`, `scase-jms`, `scase-activemq`, `scase-tibco-rv`, `scase-tools`)
   .dependsOn(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`,
-    `scase-pulsar`, `scase-jms`, `scase-tibco-rv`, `scase-tools`)
+    `scase-pulsar`, `scase-jms`, `scase-activemq`, `scase-tibco-rv`, `scase-tools`)
 
 lazy val `scase-core` = project
   .settings(commonSettings)
@@ -179,12 +181,21 @@ lazy val `scase-jms` = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "javax.jms" % "javax.jms-api" % "2.0.1",
-      "org.apache.activemq" % "activemq-client" % "5.16.3" % Test
+      "javax.jms" % "javax.jms-api" % JmsVersion,
+      "org.apache.activemq" % "activemq-client" % ActivemqVersion % Test
     )
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "test->test")
+
+lazy val `scase-activemq` = project
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.apache.activemq" % "activemq-client" % ActivemqVersion
+    )
+  )
+  .dependsOn(`scase-jms` % "compile->compile;test->test")
 
 lazy val `scase-tibco-rv` = project
   .settings(commonSettings)
@@ -209,3 +220,4 @@ lazy val `scase-tools` = project
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-pulsar`)
   .dependsOn(`scase-tibco-rv`)
+  .dependsOn(`scase-activemq`)

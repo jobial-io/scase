@@ -8,7 +8,7 @@
         </encoder>
     </appender>
 
-    <root level="${LOG:-INFO}">
+    <root level="${LOG:-TRACE}">
         <appender-ref ref="STDOUT" />
     </root>
     <logger name="org.apache" level="WARN"/>
