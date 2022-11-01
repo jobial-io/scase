@@ -1,5 +1,6 @@
 package io.jobial.scase.tools.bridge
 
+import io.jobial.scase.activemq.ActiveMQContext
 import io.jobial.scase.pulsar.PulsarContext
 import io.jobial.scase.tibrv.TibrvContext
 import io.jobial.sclap.core.ArgumentValueParser
@@ -35,5 +36,19 @@ trait ContextParsers {
     }.toEither
 
     def empty = PulsarContext()
+  }
+
+  implicit val activemqContextArgumentValueParser = new ArgumentValueParser[ActiveMQContext]() {
+    def parse(value: String) = Try {
+      val values = value.split(":").map(v => if (v.isEmpty) None else Some(v))
+      ActiveMQContext(
+        values(0).getOrElse(ActiveMQContext.apply$default$1),
+        values(1).map(_.toInt).getOrElse(ActiveMQContext.apply$default$2),
+        values(2).map(_.toBoolean).getOrElse(ActiveMQContext.apply$default$3),
+        values(3).map(_.toInt).getOrElse(ActiveMQContext.apply$default$4)
+      )
+    }.toEither
+
+    def empty = ActiveMQContext()
   }
 }
