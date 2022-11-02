@@ -86,7 +86,12 @@ class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, 
     implicit context: PulsarContext
   ) =
     for {
-      consumer <- PulsarConsumer[F, REQ](requestTopic)
+      consumer <- PulsarConsumer[F, REQ](
+        requestTopic,
+        patternAutoDiscoveryPeriod,
+        subscriptionInitialPosition,
+        subscriptionInitialPublishTime
+      )
       service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
         consumer, { responseTopicFromMessage =>
           responseTopicOverride.orElse(responseTopicFromMessage) match {
