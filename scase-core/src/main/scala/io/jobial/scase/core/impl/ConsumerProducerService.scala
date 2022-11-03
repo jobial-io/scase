@@ -89,7 +89,7 @@ trait ConsumerProducerService[F[_], REQ, RESP] extends CatsUtils with Logging {
 
   def start: F[ServiceState[F]] =
     for {
-      _ <- trace(s"starting service for processor $requestHandler")
+      _ <- trace(s"starting service for processor $requestHandler on $requestConsumer")
       subscription <- requestConsumer.subscribe(handleRequest)
       _ <- trace(s"subscribed to consumer for processor $requestHandler")
     } yield
