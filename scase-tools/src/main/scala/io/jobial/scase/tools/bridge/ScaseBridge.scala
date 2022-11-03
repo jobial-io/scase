@@ -107,9 +107,9 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
   object BridgeContext {
 
     def apply[M](
-      tibrvContext: Option[TibrvContext],
-      pulsarContext: Option[PulsarContext],
-      activemqContext: Option[ActiveMQContext],
+      tibrvContext: Option[TibrvContext] = None,
+      pulsarContext: Option[PulsarContext] = None,
+      activemqContext: Option[ActiveMQContext] = None,
       marshalling: Marshalling[M]
     ): IO[BridgeContext[M]] = for {
       requestResponseClientCache <- Cache[IO, String, RequestResponseClient[IO, M, M]]

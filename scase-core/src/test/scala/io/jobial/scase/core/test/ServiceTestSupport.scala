@@ -14,6 +14,7 @@ package io.jobial.scase.core.test
 
 import cats.Eq
 import cats.effect.IO
+import cats.effect.IO
 import cats.effect.IO.delay
 import cats.effect.IO.ioEffect.whenA
 import cats.effect.IO.raiseError
@@ -38,7 +39,6 @@ import io.jobial.scase.marshalling.Unmarshaller
 import io.jobial.scase.marshalling.rawbytes.iterableToSequenceSyntax
 import org.scalatest.Assertion
 import org.scalatest.flatspec.AsyncFlatSpec
-
 import scala.concurrent.duration._
 
 trait ServiceTestSupport extends AsyncFlatSpec
@@ -107,6 +107,21 @@ trait ServiceTestSupport extends AsyncFlatSpec
       _ <- client.stop
       _ <- h.stop
     } yield r1
+
+  def testSenderReceiver[M : Eq](
+    senderClient: SenderClient[IO, M],
+    receiverClient: ReceiverClient[IO, M],
+    message: M
+  ): IO[Assertion] =
+    for {
+      _ <- senderClient.send(message)
+      r1 <- receiverClient.receiveWithContext
+      m1 <- r1.message
+      _ <- senderClient ! message
+      m2 <- receiverClient.receive
+    } yield assert(
+      message === m1 && message === m2
+    )
 
   def testSuccessfulStreamReply[REQ, RESP, REQUEST <: REQ, RESPONSE <: RESP : Unmarshaller : Eq](
     senderClient: SenderClient[IO, REQ],

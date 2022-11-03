@@ -60,7 +60,7 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
     //monitoringPublisher.increment(request.getClass.getName)
 
     for {
-      _ <- trace(s"sending ${request.toString.take(500)} with $correlationId using $this")
+      _ <- trace(s"sending ${request.toString.take(500)} with $correlationId using $this on $producer")
       receiveResultDeferred <- Deferred[F, MessageReceiveResult[F, Either[Throwable, RESP]]]
       _ <- correlationsRef.update { correlations =>
         correlations + ((correlationId, CorrelationInfo(
