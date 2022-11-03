@@ -2,7 +2,7 @@ name: Continuous Integration
 
 on:
   push:
-    branches: [ master, tibco-rv ]
+    branches: [ master, tibco-rv, jms-bridge ]
   pull_request:
     branches: [ master ]
 
