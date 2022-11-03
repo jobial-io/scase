@@ -75,7 +75,7 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
 
 abstract class RequestResponseBridgeServiceState[F[_]: Sync](
   val service: Service[F],
-  val requestResonseService: Service[F]
+  val requestResponseService: Service[F]
 ) extends ServiceState[F] 
 
 object RequestResponseBridge extends CatsUtils with Logging {
