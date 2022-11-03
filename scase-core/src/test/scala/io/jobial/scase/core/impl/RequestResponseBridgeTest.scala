@@ -41,7 +41,7 @@ class RequestResponseBridgeTest
       bridge <- RequestResponseBridge(source, fixedDestination(destClient), allowAllFilter[IO, REQ])
       h <- destination.start
       serviceState <- bridge.start
-      client <- sourceClient(serviceState.asInstanceOf[DefaultServiceState[IO, RESP]].service.asInstanceOf[ConsumerProducerRequestResponseService[IO, REQ, RESP]])
+      client <- sourceClient(serviceState.asInstanceOf[RequestResponseBridgeServiceState[IO]].requestResponseService)
       r <- client ? request
     } yield assert(response === r)
 
