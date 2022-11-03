@@ -207,6 +207,9 @@ object JMSServiceConfiguration {
       requestDestination,
       responseDestination
     )
+    
+  private def stripScheme(uri: String) =
+    uri.substring(uri.lastIndexOf('/') + 1)
 
   def requestResponse[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
     serviceName: String,
@@ -216,7 +219,8 @@ object JMSServiceConfiguration {
     implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
     responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
   ): JMSRequestResponseServiceConfiguration[REQ, RESP] = {
-    val responseDestinationName = s"$requestDestination-${uuid(6)}-response"
+    val requestDestinationName = requestDestination.toString
+    val responseDestinationName = s"${stripScheme(requestDestinationName)}-${uuid(6)}-response"
 
     new JMSRequestResponseServiceConfiguration[REQ, RESP](
       serviceName,
@@ -226,9 +230,9 @@ object JMSServiceConfiguration {
         // and the underlying JMS implementation creates queues automatically; neither of these are part of the JMS standard
         // but it works for some impls (ActiveMQ, for example)
         if (destinationName === requestDestination.toString)
-          session.createQueue(responseDestinationName)
+          session.createQueue(stripScheme(responseDestinationName))
         else
-          session.createQueue(destinationName)
+          session.createQueue(stripScheme(destinationName))
       },
       { destination =>
         destination.toString

@@ -71,6 +71,8 @@ class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscripti
     } yield result
 
   def stop = delay(consumer.close())
+  
+  override def toString = super.toString + s" destination: $destination"
 }
 
 object JMSConsumer {
