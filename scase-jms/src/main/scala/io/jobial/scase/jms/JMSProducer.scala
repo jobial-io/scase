@@ -34,6 +34,8 @@ class JMSProducer[F[_] : Concurrent, M](destination: Destination)(implicit sessi
     }
 
   def stop = delay(producer.close())
+  
+  override def toString = super.toString + s" destination: $destination"
 }
 
 object JMSProducer extends CatsUtils {
