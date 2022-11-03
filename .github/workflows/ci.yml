@@ -49,8 +49,8 @@ jobs:
         . job_env
         sbt compile "project scase-aws-test" proguard condense
         #jar tf /home/runner/work/scase/scase/scase-aws-test/target/scala-2.13/proguard/scase-aws-test_2.13-*.jar
-        set -o pipefail
         sbt coverage +test coverageReport coverageAggregate 2>&1 | grep -v 'RV: TIB/Rendezvous Error Not Handled by Process:' | grep -v '{ADV_CLASS='
+        [ ${PIPESTATUS[0]} == 0 ] || exit 1
     - name: Upload results
       run: |
         . job_env
