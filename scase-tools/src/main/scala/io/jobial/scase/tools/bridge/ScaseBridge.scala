@@ -53,7 +53,7 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
       } yield for {
         bridgeContext <-
           if (activemqContext.isDefined)
-            BridgeContext[Any](tibrvContext, pulsarContext, activemqContext, marshalling = new SerializationMarshalling)
+            BridgeContext[Any](tibrvContext, pulsarContext, activemqContext, marshalling = new SerializationMarshalling[Any])
           else
             BridgeContext[TibrvMsg](tibrvContext, pulsarContext, activemqContext, marshalling = new TibrvMsgRawMarshalling)
         (requestResponseBridge, forwarderBridge) <- bridgeContext.runBridge(source, destination)
