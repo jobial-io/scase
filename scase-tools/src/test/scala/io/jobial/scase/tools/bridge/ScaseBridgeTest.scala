@@ -31,29 +31,30 @@ class ScaseBridgeTest extends ServiceTestSupport {
     for {
       _ <- pulsarContextArgumentValueParser.parse("localhost::tenant:namespace")
       _ <- tibrvContextArgumentValueParser.parse("localhost::network:1")
+      _ <- activemqContextArgumentValueParser.parse("localhost:1:true:1")
     } yield succeed
   }
 
-//  "pulsar to rv" should "work" in {
-//    assume(!onMacOS)
-//
-//    val topic = s"hello-test-${uuid(6)}"
-//    import io.jobial.scase.marshalling.tibrv.circe._
-//
-//    testBridge(
-//      TibrvServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(topic)).service(_),
-//      PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).client,
-//      TibrvServiceConfiguration.source[TestRequest1](Seq(topic)).client,
-//      PulsarServiceConfiguration.destination[TestRequest1](topic).client,
-//      s"pulsar://${topic}",
-//      "tibrv://",
-//      BridgeContext(tibrvContext = Some(tibrvContext), pulsarContext = Some(pulsarContext), marshalling = new TibrvMsgRawMarshalling)
-//    )
-//  }
-//
+  "pulsar to rv" should "work" in {
+    assume(!onMacOS)
+
+    val topic = s"hello-test-${uuid(6)}"
+    import io.jobial.scase.marshalling.tibrv.circe._
+
+    testBridge(
+      TibrvServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(topic)).service(_),
+      PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).client,
+      TibrvServiceConfiguration.source[TestRequest1](Seq(topic)).client,
+      PulsarServiceConfiguration.destination[TestRequest1](topic).client,
+      s"pulsar://${topic}",
+      "tibrv://",
+      BridgeContext(tibrvContext = Some(tibrvContext), pulsarContext = Some(pulsarContext), marshalling = new TibrvMsgRawMarshalling)
+    )
+  }
+
 //  "rv to pulsar" should "work" in {
 //    assume(!onMacOS)
-//
+
 //    val topic = s"hello-test-${uuid(6)}"
 //    import io.jobial.scase.marshalling.tibrv.circe._
 //
