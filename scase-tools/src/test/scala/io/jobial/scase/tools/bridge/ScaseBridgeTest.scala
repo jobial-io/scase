@@ -63,8 +63,8 @@ class ScaseBridgeTest extends ServiceTestSupport {
       TibrvServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(topic)).client,
       PulsarServiceConfiguration.source[TestRequest1](topic).client,
       TibrvServiceConfiguration.destination[TestRequest1](topic).client,
-      s"pulsar://${topic}",
-      "tibrv://",
+      s"tibrv://${topic}",
+      "pulsar://",
       BridgeContext(tibrvContext = Some(tibrvContext), pulsarContext = Some(pulsarContext), marshalling = new TibrvMsgRawMarshalling)
     )
   }
