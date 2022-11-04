@@ -65,7 +65,7 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
       })
       handler <- service.start
     } yield new RequestResponseBridgeServiceState[F](this, service) {
-      def stop = stopped.set(true) >> pure(this)
+      def stop = handler.stop >> pure(this)
 
       def join: F[ServiceState[F]] =
         handler.join >> pure(this)
