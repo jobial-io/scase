@@ -52,22 +52,22 @@ class ScaseBridgeTest extends ServiceTestSupport {
     )
   }
 
-//  "rv to pulsar" should "work" in {
-//    assume(!onMacOS)
+  "rv to pulsar" should "work" in {
+    assume(!onMacOS)
 
-//    val topic = s"hello-test-${uuid(6)}"
-//    import io.jobial.scase.marshalling.tibrv.circe._
-//
-//    testBridge(
-//      PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).service(_),
-//      TibrvServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(topic)).client,
-//      PulsarServiceConfiguration.source[TestRequest1](topic).client,
-//      TibrvServiceConfiguration.destination[TestRequest1](topic).client,
-//      s"pulsar://${topic}",
-//      "tibrv://",
-//      BridgeContext(tibrvContext = Some(tibrvContext), pulsarContext = Some(pulsarContext), marshalling = new TibrvMsgRawMarshalling)
-//    )
-//  }
+    val topic = s"hello-test-${uuid(6)}"
+    import io.jobial.scase.marshalling.tibrv.circe._
+
+    testBridge(
+      PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).service(_),
+      TibrvServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(topic)).client,
+      PulsarServiceConfiguration.source[TestRequest1](topic).client,
+      TibrvServiceConfiguration.destination[TestRequest1](topic).client,
+      s"pulsar://${topic}",
+      "tibrv://",
+      BridgeContext(tibrvContext = Some(tibrvContext), pulsarContext = Some(pulsarContext), marshalling = new TibrvMsgRawMarshalling)
+    )
+  }
 
   "pulsar to jms" should "work" in {
     val topic = s"hello-test-${uuid(6)}"
