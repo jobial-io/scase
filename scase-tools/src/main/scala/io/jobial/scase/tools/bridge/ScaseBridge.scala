@@ -20,9 +20,10 @@ import io.jobial.scase.core.impl.RequestResponseBridge.destinationBasedOnSourceR
 import io.jobial.scase.core.impl.RequestResponseBridge.requestResponseOnlyFilter
 import io.jobial.scase.jms.JMSServiceConfiguration
 import io.jobial.scase.logging.Logging
-import io.jobial.scase.marshalling.javadsl.Marshalling
-import io.jobial.scase.marshalling.serialization.javadsl.SerializationMarshalling
-import io.jobial.scase.marshalling.tibrv.raw.javadsl.TibrvMsgRawMarshalling
+import io.jobial.scase.marshalling.Marshalling
+import io.jobial.scase.marshalling.Marshalling._
+import io.jobial.scase.marshalling.serialization.SerializationMarshalling
+import io.jobial.scase.marshalling.tibrv.raw.TibrvMsgRawMarshalling
 import io.jobial.scase.pulsar.PulsarContext
 import io.jobial.scase.pulsar.PulsarServiceConfiguration
 import io.jobial.scase.tibrv.TibrvContext
@@ -132,18 +133,6 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
   }
 
   def stripUriScheme(uri: String) = uri.substring(uri.indexOf("://") + 3)
-
-  implicit def marshaller[M: Marshalling] = implicitly[Marshalling[M]].marshaller
-
-  implicit def unmarshaller[M: Marshalling] = implicitly[Marshalling[M]].unmarshaller
-
-  implicit def eitherMarshaller[M: Marshalling] = implicitly[Marshalling[M]].eitherMarshaller
-
-  implicit def eitherUnmarshaller[M: Marshalling] = implicitly[Marshalling[M]].eitherUnmarshaller
-
-  implicit def throwableMarshaller[M: Marshalling] = implicitly[Marshalling[M]].throwableMarshaller
-
-  implicit def throwableUnmarshaller[M: Marshalling] = implicitly[Marshalling[M]].throwableUnmarshaller
 
   def sourceConfiguration[M: Marshalling](source: String)(implicit context: BridgeContext[M]) =
     if (source.startsWith(pulsarScheme))

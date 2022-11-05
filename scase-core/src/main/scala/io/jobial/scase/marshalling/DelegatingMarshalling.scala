@@ -1,4 +1,4 @@
-package io.jobial.scase.marshalling.javadsl
+package io.jobial.scase.marshalling
 
 trait DelegatingMarshalling[M] extends Marshalling[M] {
 

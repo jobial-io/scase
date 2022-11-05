@@ -17,7 +17,7 @@ import com.tibco.tibrv.TibrvMsg;
 import io.jobial.scase.core.RequestTimeout;
 import io.jobial.scase.core.javadsl.MessageHandler;
 import io.jobial.scase.core.javadsl.RequestHandler;
-import io.jobial.scase.marshalling.tibrv.raw.javadsl.TibrvMsgRawMarshalling;
+import io.jobial.scase.marshalling.tibrv.raw.TibrvMsgRawMarshalling;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutionException;

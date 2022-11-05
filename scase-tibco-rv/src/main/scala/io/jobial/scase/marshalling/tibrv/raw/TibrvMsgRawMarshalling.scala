@@ -1,73 +1,21 @@
 package io.jobial.scase.marshalling.tibrv.raw
 
 import com.tibco.tibrv.TibrvMsg
-import io.jobial.scase.marshalling.BinaryFormatMarshaller
-import io.jobial.scase.marshalling.BinaryFormatUnmarshaller
-import org.apache.commons.io.IOUtils
-import org.apache.commons.io.IOUtils.toByteArray
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.InputStream
-import java.io.OutputStream
-import scala.util.Try
-import io.jobial.scase.util._
+import io.jobial.scase.marshalling.Marshalling
+import io.jobial.scase.marshalling.sprayjson.DefaultFormats
 
-trait TibrvMsgRawMarshalling {
+class TibrvMsgRawMarshalling extends Marshalling[TibrvMsg] with io.jobial.scase.marshalling.tibrv.raw.TibrvMsgRawMarshallingInstances with DefaultFormats {
 
-  implicit val tibrvMsgRawMarshaller = new BinaryFormatMarshaller[TibrvMsg] {
-    def marshalToOutputStream(o: TibrvMsg, out: OutputStream) =
-      out.write(o.getAsBytes)
-  }
+  val marshaller = tibrvMsgRawMarshaller
 
-  implicit val tibrvMsgRawUnmarshaller = new BinaryFormatUnmarshaller[TibrvMsg] {
-    def unmarshalFromInputStream(in: InputStream) =
-      Try(new TibrvMsg(toByteArray(in))).toEither
-  }
+  val unmarshaller = tibrvMsgRawUnmarshaller
 
-  implicit val tibrvMsgRawThrowableMarshaller = new BinaryFormatMarshaller[Throwable] {
-    def marshalToOutputStream(o: Throwable, out: OutputStream) = {
-      val msg = new TibrvMsg
-      // TODO: improve this
-      msg.add("error", o.getMessage)
-      out.write(msg.getAsBytes)
-    }
-  }
+  val eitherMarshaller = tibrvMsgRawEitherMarshaller
 
-  implicit val tibrvMsgRawThrowableUnmarshaller = new BinaryFormatUnmarshaller[Throwable] {
-    def unmarshalFromInputStream(in: InputStream): Either[Throwable, Throwable] = {
-      for {
-        msg <- Try(new TibrvMsg(toByteArray(in)))
-      } yield new RuntimeException(msg.get("error").toString)
-    }.toEither
-  }
+  val eitherUnmarshaller = tibrvMsgRawEitherUnmarshaller
 
-  implicit val tibrvMsgRawEitherMarshaller = new BinaryFormatMarshaller[Either[Throwable, TibrvMsg]] {
-    def marshalToOutputStream(o: Either[Throwable, TibrvMsg], out: OutputStream) = o match {
-      case Left(t) =>
-        tibrvMsgRawThrowableMarshaller.marshalToOutputStream(t, out)
-      case Right(m) =>
-        tibrvMsgRawMarshaller.marshalToOutputStream(m, out)
-    }
-  }
+  val throwableMarshaller = tibrvMsgRawThrowableMarshaller
 
-  implicit val tibrvMsgRawEitherUnmarshaller = new BinaryFormatUnmarshaller[Either[Throwable, TibrvMsg]] {
-    def marshalToOutputStream(o: Either[Throwable, TibrvMsg], out: OutputStream) = o match {
-      case Left(t) =>
-        tibrvMsgRawThrowableMarshaller.marshalToOutputStream(t, out)
-      case Right(m) =>
-        tibrvMsgRawMarshaller.marshalToOutputStream(m, out)
-    }
+  val throwableUnmarshaller = tibrvMsgRawThrowableUnmarshaller
 
-    def unmarshalFromInputStream(in: InputStream): Either[Throwable, Either[Throwable, TibrvMsg]] = {
-      val out = new ByteArrayOutputStream
-      IOUtils.copy(in, out)
-      val buf = out.toByteArray
-      tibrvMsgRawThrowableUnmarshaller.unmarshalFromInputStream(new ByteArrayInputStream(buf)) match {
-        case Left(_) =>
-          tibrvMsgRawUnmarshaller.unmarshalFromInputStream(new ByteArrayInputStream(buf)).right.map(Right(_))
-        case Right(t) =>
-          Right(Left[Throwable, TibrvMsg](t))
-      }
-    }
-  }
 }

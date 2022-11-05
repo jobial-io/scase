@@ -7,13 +7,13 @@ import io.jobial.scase.marshalling.tibrv.Employee
 import io.jobial.scase.marshalling.tibrv.TibrvMsgMarshallingTestSupport
 import io.jobial.scase.marshalling.tibrv.circe
 
-class TibrvMsgCirceMarshallingTest extends TibrvMsgMarshallingTestSupport with TibrvMsgCirceMarshalling with DefaultCodecs {
+class TibrvMsgCirceMarshallingTest extends TibrvMsgMarshallingTestSupport with TibrvMsgCirceMarshallingInstances with DefaultCodecs {
 
   implicit def employeeMarshaller = tibrvMsgCirceMarshaller[Employee]
   
   implicit def employeeUnmarshaller = tibrvMsgCirceUnmarshaller[Employee]
 
   "marshalling" should "work" in {
-    testMarshalling(response1, new circe.javadsl.TibrvMsgCirceMarshalling[TestResponse1] {})
+    testMarshalling(response1, new TibrvMsgCirceMarshalling[TestResponse1] {})
   }
 }

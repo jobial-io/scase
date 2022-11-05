@@ -20,7 +20,6 @@ import cats.tests.StrictCatsEquality
 import io.jobial.scase.core.test.ScaseTestHelper
 import io.jobial.scase.core.test.ServiceTestModel
 import io.jobial.scase.core.test.TestException
-import io.jobial.scase.marshalling.javadsl.Marshalling
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.scalatest.Assertion
 import org.scalatest.flatspec.AsyncFlatSpec

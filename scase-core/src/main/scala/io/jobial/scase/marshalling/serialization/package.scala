@@ -1,3 +1,3 @@
 package io.jobial.scase.marshalling
 
-package object serialization extends SerializationMarshalling
+package object serialization extends SerializationMarshallingInstances
