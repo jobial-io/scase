@@ -206,6 +206,4 @@ trait TibrvMsgSprayJsonMarshallingInstances extends ProductFormats with DefaultF
       Try(tibrvMsgToJsValue(m).convertTo[M]).toEither
     }
   }
-
-  implicit def tibrvMsgSprayJsonMarshalling[T: JsonFormat] = new TibrvMsgSprayJsonMarshalling[T]
 }
