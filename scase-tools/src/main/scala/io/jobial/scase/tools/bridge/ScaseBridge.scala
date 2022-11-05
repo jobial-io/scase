@@ -134,22 +134,6 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
 
   def stripUriScheme(uri: String) = uri.substring(uri.indexOf("://") + 3)
 
-  def sourceConfiguration[M: Marshalling](source: String)(implicit context: BridgeContext[M]) =
-    if (source.startsWith(pulsarScheme))
-      context.withPulsarContext { implicit context =>
-        delay(PulsarServiceConfiguration.requestResponse[M, M](Right(stripUriScheme(source).r)).service[IO](_))
-      }
-    else if (source.startsWith(tibrvScheme))
-      context.withTibrvContext { implicit context =>
-        delay(TibrvServiceConfiguration.requestResponse[M, M](Seq(stripUriScheme(source))).service[IO](_))
-      }
-    else if (source.startsWith(jmsScheme))
-      context.withJMSSession { implicit session =>
-        delay(JMSServiceConfiguration.requestResponse[M, M](source, session.createQueue(stripUriScheme(source))).service[IO](_))
-      }
-    else
-      raiseError(new IllegalStateException(s"${source} not supported"))
-
   def serviceForSource[M: Marshalling](source: String)(implicit context: BridgeContext[M]) =
     if (source.startsWith(pulsarScheme))
       context.withPulsarContext { implicit context =>
