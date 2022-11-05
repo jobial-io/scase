@@ -29,6 +29,4 @@ trait SerializationMarshallingInstances {
       ois.readObject.asInstanceOf[T]
     }.toEither
   }
-  
-  implicit def serializationMarshalling[T] = new SerializationMarshalling[T]
 }

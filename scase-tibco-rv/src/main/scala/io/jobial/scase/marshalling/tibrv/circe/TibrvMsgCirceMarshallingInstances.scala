@@ -194,6 +194,4 @@ trait TibrvMsgCirceMarshallingInstances {
       tibrvMsgToJsValue(m).as[M]
     }
   }
-
-  implicit def tibrvMsgCirceMarshalling[T: Encoder : Decoder] = new TibrvMsgCirceMarshalling[T]
 }

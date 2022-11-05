@@ -70,6 +70,4 @@ trait TibrvMsgRawMarshallingInstances {
       }
     }
   }
-  
-  implicit val tibrvMsgRawMarshalling = new TibrvMsgRawMarshalling 
 }
