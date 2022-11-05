@@ -1,3 +1,3 @@
 package io.jobial.scase.marshalling
 
-package object rawbytes extends RawBytesMarshalling
+package object rawbytes extends RawBytesMarshallingInstances

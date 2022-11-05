@@ -8,7 +8,7 @@ import io.jobial.scase.marshalling.tibrv.Address
 import io.jobial.scase.marshalling.tibrv.Employee
 import io.jobial.scase.marshalling.tibrv.TibrvMsgMarshallingTestSupport
 
-class TibrvMsgSprayJsonMarshallingTest extends TibrvMsgMarshallingTestSupport with TibrvMsgSprayJsonMarshalling {
+class TibrvMsgSprayJsonMarshallingTest extends TibrvMsgMarshallingTestSupport with TibrvMsgSprayJsonMarshallingInstances {
 
   implicit val addressFormat = jsonFormat1(Address)
 
@@ -23,6 +23,6 @@ class TibrvMsgSprayJsonMarshallingTest extends TibrvMsgMarshallingTestSupport wi
   implicit def employeeUnmarshaller: Unmarshaller[Employee] = tibrvMsgSprayJsonUnmarshaller[Employee]
 
   "marshalling" should "work" in {
-    testMarshalling(response1, new javadsl.TibrvMsgSprayJsonMarshalling[TestResponse1] {})
+    testMarshalling(response1, new TibrvMsgSprayJsonMarshalling[TestResponse1] {})
   }
 }

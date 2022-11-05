@@ -13,7 +13,7 @@ import io.jobial.scase.core.test.TestRequest
 import io.jobial.scase.core.test.TestRequest1
 import io.jobial.scase.core.test.TestResponse
 import io.jobial.scase.jms.JMSServiceConfiguration
-import io.jobial.scase.marshalling.tibrv.raw.javadsl.TibrvMsgRawMarshalling
+import io.jobial.scase.marshalling.tibrv.raw.TibrvMsgRawMarshalling
 import io.jobial.scase.pulsar.PulsarContext
 import io.jobial.scase.pulsar.PulsarServiceConfiguration
 import io.jobial.scase.tibrv.TibrvContext
@@ -81,7 +81,7 @@ class ScaseBridgeTest extends ServiceTestSupport {
       PulsarServiceConfiguration.destination[TestRequest1](topic).client,
       s"pulsar://${topic}",
       "jms://",
-      BridgeContext(pulsarContext = Some(pulsarContext), activemqContext = Some(activemqContext), marshalling = new javadsl.SerializationMarshalling[Any])
+      BridgeContext(pulsarContext = Some(pulsarContext), activemqContext = Some(activemqContext), marshalling = new SerializationMarshalling[Any])
     )
   }
 

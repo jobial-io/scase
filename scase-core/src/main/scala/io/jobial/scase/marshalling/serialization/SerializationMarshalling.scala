@@ -1,33 +1,12 @@
 package io.jobial.scase.marshalling.serialization
 
-import io.jobial.scase.marshalling._
-import java.io.InputStream
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
-import java.io.OutputStream
-import java.util.zip.GZIPInputStream
-import java.util.zip.GZIPOutputStream
-import scala.util.Try
-import io.jobial.scase.util._
+import io.jobial.scase.marshalling.DelegatingMarshalling
 
-trait SerializationMarshalling {
+class SerializationMarshalling[M] extends DelegatingMarshalling[M] with io.jobial.scase.marshalling.serialization.SerializationMarshallingInstances {
 
-  // TODO: make gzip optional
+  val marshaller = javaSerializationWithGzipObjectMarshaller[M]
 
-  implicit def javaSerializationWithGzipObjectMarshaller[T] = new BinaryFormatMarshaller[T] {
+  val unmarshaller = javaSerializationWithGzipObjectUnmarshaller[M]
 
-    def marshalToOutputStream(o: T, out: OutputStream) = {
-      val oos = new ObjectOutputStream(new GZIPOutputStream(out))
-      oos.writeObject(o)
-      oos.close
-    }
-  }
-
-  implicit def javaSerializationWithGzipObjectUnmarshaller[T] = new BinaryFormatUnmarshaller[T] {
-    def unmarshalFromInputStream(in: InputStream) = Try {
-      val ois = new ObjectInputStream(new GZIPInputStream(in))
-      ois.readObject.asInstanceOf[T]
-    }.toEither
-  }
-
+  def delegate[M] = new SerializationMarshalling[M]
 }

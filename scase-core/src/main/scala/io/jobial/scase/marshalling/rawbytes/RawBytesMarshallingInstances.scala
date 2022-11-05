@@ -9,7 +9,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.util.Base64
 
-trait RawBytesMarshalling extends CatsUtils {
+trait RawBytesMarshallingInstances extends CatsUtils {
 
   implicit val rawBytesMarshaller = new Marshaller[Array[Byte]] {
     def marshal(o: Array[Byte]): Array[Byte] = o

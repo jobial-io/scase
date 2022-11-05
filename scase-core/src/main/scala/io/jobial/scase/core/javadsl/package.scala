@@ -12,11 +12,11 @@ import scala.util.Success
 import scala.collection.JavaConverters._
 
 package object javadsl {
+  
   val defaultSendRequestContext = io.jobial.scase.core.SendRequestContext()
 
   val defaultSendMessageContext = io.jobial.scase.core.SendMessageContext()
-
-
+  
   def javaMapToScala[A, B](map: java.util.Map[A, B]) = map.asScala.toMap
 
   def scalaFutureToCompletableFuture[T](f: Future[T])(implicit ec: ExecutionContext) = {

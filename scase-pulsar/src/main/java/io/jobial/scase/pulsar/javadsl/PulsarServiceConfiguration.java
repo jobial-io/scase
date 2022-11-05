@@ -1,6 +1,6 @@
 package io.jobial.scase.pulsar.javadsl;
 
-import io.jobial.scase.marshalling.javadsl.Marshalling;
+import io.jobial.scase.marshalling.Marshalling;
 import io.jobial.scase.pulsar.PulsarServiceConfiguration$;
 import org.apache.pulsar.client.api.SubscriptionInitialPosition;
 

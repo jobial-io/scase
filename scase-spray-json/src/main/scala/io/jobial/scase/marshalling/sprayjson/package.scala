@@ -12,4 +12,4 @@
  */
 package io.jobial.scase.marshalling
 
-package object sprayjson extends SprayJsonMarshalling with DefaultFormats
+package object sprayjson extends SprayJsonMarshallingInstances with DefaultFormats
