@@ -54,9 +54,9 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
       } yield for {
         bridgeContext <-
           if (activemqContext.isDefined)
-            BridgeContext[Any](tibrvContext, pulsarContext, activemqContext, marshalling = new SerializationMarshalling[Any])
+            BridgeContext[Any](tibrvContext, pulsarContext, activemqContext)(new SerializationMarshalling[Any])
           else
-            BridgeContext[TibrvMsg](tibrvContext, pulsarContext, activemqContext, marshalling = new TibrvMsgRawMarshalling)
+            BridgeContext[TibrvMsg](tibrvContext, pulsarContext, activemqContext)(new TibrvMsgRawMarshalling)
         (requestResponseBridge, forwarderBridge) <- bridgeContext.runBridge(source, destination)
         _ <- requestResponseBridge.join
         r <- forwarderBridge.join
@@ -67,15 +67,16 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
   val tibrvScheme = "tibrv://"
   val jmsScheme = "jms://"
 
-  case class BridgeContext[M](
+  case class BridgeContext[M: Marshalling](
     tibrvContext: Option[TibrvContext],
     pulsarContext: Option[PulsarContext],
     activemqContext: Option[ActiveMQContext],
     requestResponseClientCache: Cache[IO, String, RequestResponseClient[IO, M, M]],
-    senderClientCache: Cache[IO, String, SenderClient[IO, M]],
-    marshalling: Marshalling[M]
+    senderClientCache: Cache[IO, String, SenderClient[IO, M]]
   ) {
 
+    val marshalling = Marshalling[M]
+    
     def withPulsarContext[T](f: PulsarContext => IO[T]) =
       pulsarContext match {
         case Some(context) =>
@@ -107,15 +108,14 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
 
   object BridgeContext {
 
-    def apply[M](
+    def apply[M: Marshalling](
       tibrvContext: Option[TibrvContext] = None,
       pulsarContext: Option[PulsarContext] = None,
-      activemqContext: Option[ActiveMQContext] = None,
-      marshalling: Marshalling[M]
+      activemqContext: Option[ActiveMQContext] = None
     ): IO[BridgeContext[M]] = for {
       requestResponseClientCache <- Cache[IO, String, RequestResponseClient[IO, M, M]]
       senderClientCache <- Cache[IO, String, SenderClient[IO, M]]
-    } yield BridgeContext[M](tibrvContext, pulsarContext, activemqContext, requestResponseClientCache, senderClientCache, marshalling)
+    } yield BridgeContext[M](tibrvContext, pulsarContext, activemqContext, requestResponseClientCache, senderClientCache)
   }
 
   implicit def requestResponseMapping[M] = new RequestResponseMapping[M, M] {}
