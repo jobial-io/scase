@@ -240,6 +240,15 @@ object JMSServiceConfiguration {
     )
   }
 
+  def requestResponse[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
+    requestDestination: Destination
+  )(
+    //implicit monitoringPublisher: MonitoringPublisher = noPublisher
+    implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
+    responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
+  ): JMSRequestResponseServiceConfiguration[REQ, RESP] =
+    requestResponse(requestDestination.toString, requestDestination)
+
   def handler[M: Marshaller : Unmarshaller](serviceName: String, requestDestination: Destination) =
     new JMSMessageHandlerServiceConfiguration[M](serviceName, requestDestination)
 

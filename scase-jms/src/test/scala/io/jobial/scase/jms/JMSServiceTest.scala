@@ -10,7 +10,10 @@ import io.jobial.scase.core.test.Resp
 import io.jobial.scase.core.test.ServiceTestSupport
 import io.jobial.scase.core.test.TestMessageHandler
 import io.jobial.scase.core.test.TestRequest
+import io.jobial.scase.core.test.TestRequest1
 import io.jobial.scase.core.test.TestResponse
+import io.jobial.scase.core.test.TestResponse1
+import io.jobial.scase.jms.JMSServiceConfiguration._
 import io.jobial.scase.marshalling.circe._
 import io.jobial.scase.util.Hash.uuid
 import javax.jms.Session
@@ -95,7 +98,7 @@ class JMSServiceTest
 
   "message receiver" should "receive successfully" in {
     val queueName = s"hello-source-${uuid(5)}"
-    val destinationConfig = JMSServiceConfiguration.destination[TestRequest[_ <: TestResponse]](
+    val destinationConfig = destination[TestRequest[_ <: TestResponse]](
       session.createQueue(queueName))
     val sourceConfig = JMSServiceConfiguration.source[TestRequest[_ <: TestResponse]](
       session.createQueue(queueName))
@@ -104,6 +107,23 @@ class JMSServiceTest
       senderClient <- destinationConfig.client[IO]
       receiverClient <- sourceConfig.client[IO]
       r <- testMessageSourceReceive(senderClient, receiverClient)
+    } yield r
+  }
+
+  "request-response service" should "succeed in load test" in {
+    val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](session.createQueue(s"hello-test-${uuid(6)}"))
+    for {
+      service <- serviceConfig.service(requestHandler)
+      client <- serviceConfig.client[IO]
+      r <- testMultipleRequests(service, IO.pure(client), i => TestRequest1(i.toString), i => TestResponse1(TestRequest1(i.toString), i.toString))
+    } yield r
+  }
+
+  "request-response service" should "succeed in load test with different clients" in {
+    val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](session.createQueue(s"hello-test-${uuid(6)}"))
+    for {
+      service <- serviceConfig.service(requestHandler)
+      r <- testMultipleRequests(service, serviceConfig.client[IO], i => TestRequest1(i.toString), i => TestResponse1(TestRequest1(i.toString), i.toString))
     } yield r
   }
 }

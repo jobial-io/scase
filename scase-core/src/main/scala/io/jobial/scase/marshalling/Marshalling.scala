@@ -1,5 +1,10 @@
 package io.jobial.scase.marshalling
 
+/**
+ * This helper type class is mainly used in the Java DSL and in the bridge
+ * where bundling together marshallers make sense because implicits are not available 
+ * or practical 
+ */
 trait Marshalling[M] {
 
   def marshaller: Marshaller[M]

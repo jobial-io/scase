@@ -159,6 +159,8 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
         Some(topicName.substring(topicName.lastIndexOf("/") + 1))
       case m: TibrvMsg =>
         Some(m.getSendSubject)
+      case m: javax.jms.Message =>
+        Some(stripUriScheme(m.getJMSDestination.toString))
       case _ =>
         None
     }
@@ -213,6 +215,10 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
     else if (source.startsWith(tibrvScheme))
       context.withTibrvContext { implicit context =>
         TibrvServiceConfiguration.source[M](Seq(stripUriScheme(source))).client[IO]
+      }
+    else if (source.startsWith(jmsScheme))
+      context.withJMSSession { implicit session =>
+        JMSServiceConfiguration.source[M](session.createQueue(stripUriScheme(source))).client[IO]
       }
     else
       raiseError(new IllegalStateException(s"${source} not supported"))
