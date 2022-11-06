@@ -8,10 +8,13 @@ import io.jobial.scase.util._
 import scala.util.Try
 
 trait ContextParsers {
+  
+  def splitValue(value: String) =
+    value.split(":", -1).map(v => if (v.isEmpty) None else Some(v))
 
   implicit val tibrvContextArgumentValueParser = new ArgumentValueParser[TibrvContext]() {
     def parse(value: String) = Try {
-      val values = value.split(":").map(v => if (v.isEmpty) None else Some(v))
+      val values = splitValue(value)
       TibrvContext(
         host = values(0).getOrElse(TibrvContext.apply$default$1),
         port = values(1).map(_.toInt).getOrElse(TibrvContext.apply$default$2),
@@ -25,7 +28,7 @@ trait ContextParsers {
 
   implicit val pulsarContextArgumentValueParser = new ArgumentValueParser[PulsarContext]() {
     def parse(value: String) = Try {
-      val values = value.split(":").map(v => if (v.isEmpty) None else Some(v))
+      val values = splitValue(value)
       PulsarContext(
         values(0).getOrElse(PulsarContext.apply$default$1),
         values(1).map(_.toInt).getOrElse(PulsarContext.apply$default$2),
@@ -40,7 +43,7 @@ trait ContextParsers {
 
   implicit val activemqContextArgumentValueParser = new ArgumentValueParser[ActiveMQContext]() {
     def parse(value: String) = Try {
-      val values = value.split(":").map(v => if (v.isEmpty) None else Some(v))
+      val values = splitValue(value)
       ActiveMQContext(
         values(0).getOrElse(ActiveMQContext.apply$default$1),
         values(1).map(_.toInt).getOrElse(ActiveMQContext.apply$default$2),
