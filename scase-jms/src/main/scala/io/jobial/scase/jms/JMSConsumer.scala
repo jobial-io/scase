@@ -1,12 +1,10 @@
 package io.jobial.scase.jms
 
-import cats.Monad
 import cats.effect.Concurrent
 import cats.effect.concurrent.Ref
 import cats.implicits._
 import io.jobial.scase.core.DefaultMessageReceiveResult
 import io.jobial.scase.core.MessageReceiveResult
-import io.jobial.scase.core.MessageSubscription
 import io.jobial.scase.core.ReceiveTimeout
 import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
@@ -43,9 +41,12 @@ class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscripti
 
   def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]) =
     for {
-      jmsMessage <- delay(Option(consumer.receive(timeout.map(_.toMillis).getOrElse(Long.MaxValue)))).handleErrorWith { t =>
-        error(s"error receiving message", t) >>
-          raiseError(t)
+      jmsMessage <- delay(Option(consumer.receive(timeout.map(_.toMillis).getOrElse(Long.MaxValue)))).handleErrorWith {
+        case t: JMSException =>
+          raiseError(ReceiveTimeout(timeout, t))
+        case t =>
+          error(s"error receiving message", t) >>
+            raiseError(t)
       }
       _ <- trace(s"received message ${jmsMessage.toString.take(200)} on $destination")
       result <- (for {
@@ -66,12 +67,11 @@ class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscripti
           pure(messageReceiveResult)
         case Left(error) =>
           raiseError(error)
-
       }).getOrElse(raiseError(ReceiveTimeout(timeout))) // if null is returned it's a timeout
     } yield result
 
   def stop = delay(consumer.close())
-  
+
   override def toString = super.toString + s" destination: $destination"
 }
 
