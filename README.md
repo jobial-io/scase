@@ -133,7 +133,7 @@ You need to add
 
 ```scala
 libraryDependencies ++= Seq(
-  "io.jobial" %% "scase" % "0.8.0"
+  "io.jobial" %% "scase" % "0.9.0"
 )
 ```
 
@@ -144,7 +144,7 @@ to `build.sbt` or
 <dependency>
     <groupId>io.jobial</groupId>
     <artifactId>scase_${scala.version}</artifactId>
-    <version>0.8.0</version>
+    <version>0.9.0</version>
 </dependency>
 ```
 
@@ -158,7 +158,7 @@ to `pom.xml` if you use Maven, where scala.version is either 2.11, 2.12, 2.13 an
 **Scase** is built around the "tagless final" pattern throughout using Cats type classes, which makes the API as well as the internal implementation
 agnostic to the effect type chosen by the application developer. 
 It supports the effect types provided by Cats Effect (IO) as well as ZIO out of the box. Other effect types can easily be plugged
-into the library as long as they support the minimum requirements (usually a Concurrent and a Timer have to be available for the effect).
+into the library as long as they support the minimum requirements (usually Concurrent and Timer instances have to be available for the effect).
 
 ### ZIO
 
