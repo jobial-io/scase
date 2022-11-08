@@ -45,8 +45,8 @@ class PulsarProducer[F[_] : Concurrent, M](
         .properties(attributes.asJava)
         .value(Marshaller[M].marshal(message))
         .sendAsync()
-      )).handleErrorWith { t =>
-        error(s"failed to send message on $this", t) >> raiseError(t)
+      )).onError { t =>
+        error(s"failed to send message on $this", t)
       }
       _ <- trace(s"sent message ${message.toString.take(200)} on $topic")
     } yield new MessageSendResult[F, M] {
