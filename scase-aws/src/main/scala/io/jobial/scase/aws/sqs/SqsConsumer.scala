@@ -125,9 +125,10 @@ object SqsConsumer {
     cleanup: Boolean = false
   )(
     implicit awsContext: AwsContext
-  ): F[SqsConsumer[F, M]] = for {
-    outstandingMessagesRef <- Ref.of[F, collection.Map[M, String]](identityTrieMap[M, String])
-    receivedMessagesRef <- Ref.of[F, List[Message]](Nil)
-    receivedMessagesSemaphore <- Semaphore[F](1)
-  } yield new SqsConsumer[F, M](queueUrl, outstandingMessagesRef, receivedMessagesRef, receivedMessagesSemaphore, messageRetentionPeriod, visibilityTimeout, cleanup)
+  ): F[SqsConsumer[F, M]] =
+    for {
+      outstandingMessagesRef <- Ref.of[F, collection.Map[M, String]](identityTrieMap[M, String])
+      receivedMessagesRef <- Ref.of[F, List[Message]](Nil)
+      receivedMessagesSemaphore <- Semaphore[F](1)
+    } yield new SqsConsumer[F, M](queueUrl, outstandingMessagesRef, receivedMessagesRef, receivedMessagesSemaphore, messageRetentionPeriod, visibilityTimeout, cleanup)
 }

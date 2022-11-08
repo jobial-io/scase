@@ -73,10 +73,10 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
     }
 }
 
-abstract class RequestResponseBridgeServiceState[F[_]: Sync](
+abstract class RequestResponseBridgeServiceState[F[_] : Sync](
   val service: Service[F],
   val requestResponseService: Service[F]
-) extends ServiceState[F] 
+) extends ServiceState[F]
 
 object RequestResponseBridge extends CatsUtils with Logging {
 
@@ -87,15 +87,16 @@ object RequestResponseBridge extends CatsUtils with Logging {
     filterResponse: (MessageReceiveResult[F, SOURCEREQ], RequestResponseResult[F, DESTREQ, DESTRESP]) => F[Option[MessageReceiveResult[F, SOURCERESP]]]
   )(
     implicit requestResponseMapping: RequestResponseMapping[SOURCEREQ, SOURCERESP]
-  ): F[RequestResponseBridge[F, SOURCEREQ, SOURCERESP, DESTREQ, DESTRESP]] = for {
-    stopped <- Ref.of[F, Boolean](false)
-  } yield new RequestResponseBridge[F, SOURCEREQ, SOURCERESP, DESTREQ, DESTRESP](
-    source,
-    destination,
-    filterRequest,
-    filterResponse,
-    stopped
-  )
+  ): F[RequestResponseBridge[F, SOURCEREQ, SOURCERESP, DESTREQ, DESTRESP]] =
+    for {
+      stopped <- Ref.of[F, Boolean](false)
+    } yield new RequestResponseBridge[F, SOURCEREQ, SOURCERESP, DESTREQ, DESTRESP](
+      source,
+      destination,
+      filterRequest,
+      filterResponse,
+      stopped
+    )
 
   def apply[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
     source: RequestHandler[F, REQ, RESP] => F[Service[F]],

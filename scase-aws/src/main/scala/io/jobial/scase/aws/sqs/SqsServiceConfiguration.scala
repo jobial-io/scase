@@ -27,22 +27,23 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
 
   def service[F[_] : Concurrent](requestHandler: RequestHandler[F, REQ, RESP])(
     implicit awsContext: AwsContext = AwsContext()
-  ) = for {
-    requestConsumer <- SqsConsumer[F, REQ](requestQueueUrl, cleanup = false)
-    service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
-      requestConsumer, { responseQueueUrl =>
-        responseQueueUrl match {
-          case Some(responseQueueUrl) =>
-            for {
-              responseProducer <- SqsProducer[F, Either[Throwable, RESP]](responseQueueUrl, cleanup = true)
-            } yield responseProducer
-          case None =>
-            raiseError(ResponseProducerIdNotFound("Not found response producer id in request"))
-        }
-      }: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
-      requestHandler
-    )
-  } yield service
+  ) =
+    for {
+      requestConsumer <- SqsConsumer[F, REQ](requestQueueUrl, cleanup = false)
+      service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
+        requestConsumer, { responseQueueUrl =>
+          responseQueueUrl match {
+            case Some(responseQueueUrl) =>
+              for {
+                responseProducer <- SqsProducer[F, Either[Throwable, RESP]](responseQueueUrl, cleanup = true)
+              } yield responseProducer
+            case None =>
+              raiseError(ResponseProducerIdNotFound("Not found response producer id in request"))
+          }
+        }: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
+        requestHandler
+      )
+    } yield service
 
   def client[F[_] : Concurrent : Timer](
     implicit awsContext: AwsContext = AwsContext()
@@ -79,13 +80,14 @@ class SqsMessageHandlerServiceConfiguration[REQ: Marshaller : Unmarshaller](
 
   def service[F[_] : Concurrent](messageHandler: MessageHandler[F, REQ])(
     implicit awsContext: AwsContext = AwsContext()
-  ) = for {
-    requestConsumer <- SqsConsumer[F, REQ](requestQueueUrl, cleanup = false)
-    service = new ConsumerMessageHandlerService[F, REQ](
-      requestConsumer,
-      messageHandler
-    )
-  } yield service
+  ) =
+    for {
+      requestConsumer <- SqsConsumer[F, REQ](requestQueueUrl, cleanup = false)
+      service = new ConsumerMessageHandlerService[F, REQ](
+        requestConsumer,
+        messageHandler
+      )
+    } yield service
 
   def client[F[_] : Concurrent](
     implicit awsContext: AwsContext = AwsContext()
