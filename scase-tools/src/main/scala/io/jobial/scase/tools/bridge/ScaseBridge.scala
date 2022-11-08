@@ -76,7 +76,7 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
   ) {
 
     val marshalling = Marshalling[M]
-    
+
     def withPulsarContext[T](f: PulsarContext => IO[T]) =
       pulsarContext match {
         case Some(context) =>
@@ -112,10 +112,11 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
       tibrvContext: Option[TibrvContext] = None,
       pulsarContext: Option[PulsarContext] = None,
       activemqContext: Option[ActiveMQContext] = None
-    ): IO[BridgeContext[M]] = for {
-      requestResponseClientCache <- Cache[IO, String, RequestResponseClient[IO, M, M]]
-      senderClientCache <- Cache[IO, String, SenderClient[IO, M]]
-    } yield BridgeContext[M](tibrvContext, pulsarContext, activemqContext, requestResponseClientCache, senderClientCache)
+    ): IO[BridgeContext[M]] =
+      for {
+        requestResponseClientCache <- Cache[IO, String, RequestResponseClient[IO, M, M]]
+        senderClientCache <- Cache[IO, String, SenderClient[IO, M]]
+      } yield BridgeContext[M](tibrvContext, pulsarContext, activemqContext, requestResponseClientCache, senderClientCache)
   }
 
   implicit def requestResponseMapping[M] = new RequestResponseMapping[M, M] {}

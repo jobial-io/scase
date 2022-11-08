@@ -33,7 +33,7 @@ class TibrvConsumer[F[_] : Concurrent : Timer, M](
 
   val rvListeners = {
     if (!Tibrv.isValid) Tibrv.open(Tibrv.IMPL_NATIVE)
-    
+
     val eventQueue = new TibrvQueue
     eventQueue.setLimitPolicy(
       TibrvQueue.DISCARD_NONE,
@@ -44,13 +44,14 @@ class TibrvConsumer[F[_] : Concurrent : Timer, M](
     val name = s"TibcoRVConsumer${System.identityHashCode(this)}"
     new TibrvDispatcher(s"${name}Dispatcher", eventQueue)
 
-    val networkWithSemicolon = for {
-      network <- context.network
-    } yield
-      if (network.startsWith(";"))
-        network
-      else
-        s";$network"
+    val networkWithSemicolon =
+      for {
+        network <- context.network
+      } yield
+        if (network.startsWith(";"))
+          network
+        else
+          s";$network"
 
     val transport = new TibrvRvdTransport(context.service.getOrElse(null), networkWithSemicolon.getOrElse(null), s"${context.host}:${context.port}")
     transport.setDescription(s"$name@" + InetAddress.getLocalHost.getHostName.toLowerCase)

@@ -46,10 +46,11 @@ class InMemoryConsumerProducerTest extends AsyncFlatSpec with CatsUtils with Log
   }
 
   "multiple consumers" should "all receive the messages" in {
-    val requests = for {
-      i <- 0 until 10
-    } yield
-      TestRequest1(i.toString)
+    val requests =
+      for {
+        i <- 0 until 10
+      } yield
+        TestRequest1(i.toString)
 
     for {
       producer <- InMemoryProducer[IO, TestRequest1]
@@ -75,10 +76,11 @@ class InMemoryConsumerProducerTest extends AsyncFlatSpec with CatsUtils with Log
   }
 
   "multiple subscriptions" should "should receive messages" in {
-    val requests = for {
-      i <- 0 until 10
-    } yield
-      TestRequest1(i.toString)
+    val requests =
+      for {
+        i <- 0 until 10
+      } yield
+        TestRequest1(i.toString)
 
     for {
       producer <- InMemoryProducer[IO, TestRequest1]
