@@ -24,7 +24,7 @@ class TibrvProducer[F[_] : Concurrent, M](
       _ <- delay(initRv)
       tibrvMsg = new TibrvMsg(Marshaller[M].marshal(message))
       _ = tibrvMsg.setSendSubject(subject)
-      r <- delay(transport.send(tibrvMsg)).onError { t =>
+      r <- delay(transport.send(tibrvMsg)).onError { case t =>
         error(s"failed to send message on $this", t)
       }
       _ <- trace(s"sent message ${message.toString.take(200)} on $subject")
