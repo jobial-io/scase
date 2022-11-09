@@ -44,7 +44,7 @@ case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP:
     implicit sendRequestContext: SendRequestContext
   ): F[RequestResponseResult[F, REQUEST, RESPONSE]] =
     for {
-      response <- liftIO(invoke(functionName, Marshaller[REQ].marshalToText(request))).onError { t =>
+      response <- liftIO(invoke(functionName, Marshaller[REQ].marshalToText(request))).onError { case t =>
         error(s"error invoking lambda function $functionName", t)
       }
       responsePayload = new String(response.getPayload.array, StandardCharsets.UTF_8)
