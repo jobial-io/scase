@@ -35,7 +35,7 @@ trait ConsumerProducerService[F[_], REQ, RESP] extends CatsUtils with Logging {
 
   implicit def requestUnmarshaller: Unmarshaller[REQ]
 
-  def handleRequest(request: MessageReceiveResult[F, REQ]) =
+  def handleRequest(request: MessageReceiveResult[F, REQ]) = start {
     for {
       _ <- trace(s"received request with producer id ${request.responseProducerId}: ${request.toString.take(500)}")
       response <- Deferred[F, SendResponseResult[RESP]]
@@ -78,12 +78,13 @@ trait ConsumerProducerService[F[_], REQ, RESP] extends CatsUtils with Logging {
         // TODO: handle handleRequest timeout
 
         // send response when ready
-        start(processResultWithErrorHandling) >>
+        processResultWithErrorHandling >>
           sendResult(request, response).map(_ => ()).handleErrorWith { t =>
             error(s"unhadled error", t)
           }
       }
     } yield processorResult
+  }
 
   def sendResult(request: MessageReceiveResult[F, REQ], responseDeferred: Deferred[F, SendResponseResult[RESP]]): F[MessageSendResult[F, _]]
 

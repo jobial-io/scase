@@ -9,6 +9,8 @@ import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
 
+import scala.concurrent.duration.FiniteDuration
+
 class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERESP: Marshaller, DESTREQ: Unmarshaller, DESTRESP: Marshaller](
   source: RequestHandler[F, SOURCEREQ, SOURCERESP] => F[Service[F]],
   destination: MessageReceiveResult[F, DESTREQ] => F[Option[RequestResponseResult[F, DESTREQ, DESTRESP]]],
@@ -119,11 +121,12 @@ object RequestResponseBridge extends CatsUtils with Logging {
     } yield Option(sendResult)
   }
 
-  def destinationBasedOnSourceRequest[F[_] : Concurrent, REQ, RESP](destination: MessageReceiveResult[F, REQ] => F[Option[RequestResponseClient[F, REQ, RESP]]])(implicit requestResponseMapping: RequestResponseMapping[REQ, RESP]) = { r: MessageReceiveResult[F, REQ] =>
+  def destinationBasedOnSourceRequest[F[_] : Concurrent, REQ, RESP](destination: MessageReceiveResult[F, REQ] => F[Option[RequestResponseClient[F, REQ, RESP]]], timeout: FiniteDuration)(implicit requestResponseMapping: RequestResponseMapping[REQ, RESP]) = { r: MessageReceiveResult[F, REQ] =>
     for {
       message <- r.message
+      requestTimeout = r.requestTimeout.getOrElse(timeout)
       d <- destination(r)
-      sendResult <- d.map(d => d.sendRequestWithResponseMapping(message, requestResponseMapping)(SendRequestContext(r.requestTimeout, r.attributes - ResponseProducerIdKey - ResponseTopicKey - CorrelationIdKey))).sequence
+      sendResult <- d.map(d => d.sendRequestWithResponseMapping(message, requestResponseMapping)(SendRequestContext(Some(requestTimeout), r.attributes - ResponseProducerIdKey - ResponseTopicKey - CorrelationIdKey))).sequence
     } yield sendResult
   }
 

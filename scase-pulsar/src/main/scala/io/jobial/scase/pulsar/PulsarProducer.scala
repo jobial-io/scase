@@ -48,7 +48,7 @@ class PulsarProducer[F[_] : Concurrent, M](
       )).onError { t =>
         error(s"failed to send message on $this", t)
       }
-      _ <- trace(s"sent message ${message.toString.take(200)} on $topic")
+      _ <- trace(s"sent message ${message.toString.take(200)} on ${producer.getTopic} context: $context")
     } yield new MessageSendResult[F, M] {
       def commit = unit
 
