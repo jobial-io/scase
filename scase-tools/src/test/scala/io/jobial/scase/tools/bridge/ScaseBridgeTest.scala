@@ -20,6 +20,8 @@ import io.jobial.scase.tibrv.TibrvServiceConfiguration
 import io.jobial.scase.tools.bridge.ScaseBridge._
 import io.jobial.scase.util.Hash.uuid
 
+import scala.concurrent.duration.DurationInt
+
 class ScaseBridgeTest extends ServiceTestSupport {
 
   implicit val tibrvContext = TibrvContext()
@@ -117,11 +119,10 @@ class ScaseBridgeTest extends ServiceTestSupport {
       bridgeContext <- bridgeContext
       //      sourceSenderClient <- sourceSenderClient
       //      destinationReceiverClient <- destinationReceiverClient
-      (requestResponseBridge, forwarderBridge) <- startBridge(source, destination)(bridgeContext)
+      bridge <- startBridge(source, destination, false, 10.seconds)(bridgeContext)
       r <- testSuccessfulReply(service, client)
       //_ <- testSenderReceiver(sourceSenderClient, destinationReceiverClient, request1)
-      _ <- requestResponseBridge.stop
-      _ <- forwarderBridge.stop
+      _ <- bridge.stop
     } yield r
 
 }

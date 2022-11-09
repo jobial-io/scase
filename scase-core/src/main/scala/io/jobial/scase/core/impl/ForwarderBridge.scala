@@ -1,7 +1,7 @@
 package io.jobial.scase.core.impl
 
 import cats.effect.Concurrent
-import cats.effect.Fiber
+import cats.effect.Timer
 import cats.effect.concurrent.Ref
 import cats.implicits._
 import io.jobial.scase.core.ReceiverClient
@@ -10,7 +10,9 @@ import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
 
-class ForwarderBridge[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
+import scala.concurrent.duration.DurationInt
+
+class ForwarderBridge[F[_] : Concurrent : Timer, REQ: Unmarshaller, RESP: Marshaller](
   source: ReceiverClient[F, REQ],
   destination: MessageReceiveResult[F, RESP] => F[Option[MessageSendResult[F, RESP]]],
   filter: MessageReceiveResult[F, REQ] => F[Option[MessageReceiveResult[F, RESP]]],
@@ -25,7 +27,7 @@ class ForwarderBridge[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
 
   def forward: F[Unit] =
     (for {
-      receiveResult <- source.receiveWithContext
+      receiveResult <- source.receiveWithContext(1.second)
       filteredReceiveResult <- filter(receiveResult)
       sendResult <- filteredReceiveResult match {
         case Some(filteredReceiveResult) =>
@@ -35,6 +37,8 @@ class ForwarderBridge[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
       }
       r <- continueForwarding
     } yield r) handleErrorWith {
+      case t: ReceiveTimeout =>
+        continueForwarding
       case t: Throwable =>
         error(s"error while forwarding in $this", t) >>
           continueForwarding
@@ -44,7 +48,7 @@ class ForwarderBridge[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
     start(forward) >> pure(new ServiceState[F] {
       def stop = stopped.set(true) >> pure(this)
 
-      def join: F[ServiceState[F]] = ???
+      def join: F[ServiceState[F]] = waitFor(stopped.get)(pure(_)) >> pure(this)
 
       def service = ForwarderBridge.this
     })
@@ -52,7 +56,7 @@ class ForwarderBridge[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
 
 object ForwarderBridge extends CatsUtils with Logging {
 
-  def apply[F[_] : Concurrent, M: Unmarshaller : Marshaller](
+  def apply[F[_] : Concurrent : Timer, M: Unmarshaller : Marshaller](
     source: ReceiverClient[F, M],
     destination: MessageReceiveResult[F, M] => F[Option[MessageSendResult[F, M]]],
     filter: MessageReceiveResult[F, M] => F[Option[MessageReceiveResult[F, M]]]

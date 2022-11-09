@@ -31,7 +31,10 @@ import io.jobial.scase.tibrv.TibrvServiceConfiguration
 import io.jobial.scase.util.Cache
 import io.jobial.sclap.CommandLineApp
 import org.apache.pulsar.client.api.Message
+
 import javax.jms.Session
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.FiniteDuration
 
 object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
 
@@ -45,6 +48,10 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
             "based on the source topic or subject")
         protocol <- opt[String]("protocol", "p").default("M")
           .description("The marshalling protocol to use: currently only M is supported")
+        oneWay <- opt[Boolean]("one-way", "o").default(false)
+          .description("Forward one-way only messages - the default is request-response only")
+        timeout <- opt[FiniteDuration]("timeout", "t").default(300.seconds)
+          .description("Request timeout in seconds, unless specified by the client and the transport supports it (TibRV does not)")
         tibrvContext <- opt[TibrvContext]("tibrv-context")
           .description("host:port:network:service")
         pulsarContext <- opt[PulsarContext]("pulsar-context")
@@ -57,9 +64,8 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
             BridgeContext[Any](tibrvContext, pulsarContext, activemqContext)(new SerializationMarshalling[Any])
           else
             BridgeContext[TibrvMsg](tibrvContext, pulsarContext, activemqContext)(new TibrvMsgRawMarshalling)
-        (requestResponseBridge, forwarderBridge) <- bridgeContext.runBridge(source, destination)
-        _ <- requestResponseBridge.join
-        r <- forwarderBridge.join
+        bridge <- bridgeContext.runBridge(source, destination, oneWay, timeout)
+        r <- bridge.join
       } yield r
     }
 
@@ -101,8 +107,8 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
           raiseError(new IllegalStateException("ActiveMQ context is required"))
       }
 
-    def runBridge(source: String, destination: String) =
-      startBridge[M](source, destination)(this)
+    def runBridge(source: String, destination: String, oneWay: Boolean, timeout: FiniteDuration) =
+      startBridge[M](source, destination, oneWay, timeout)(this)
 
   }
 
@@ -121,16 +127,21 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
 
   implicit def requestResponseMapping[M] = new RequestResponseMapping[M, M] {}
 
-  def startBridge[M](source: String, destination: String)(implicit context: BridgeContext[M]) = {
+  def startBridge[M](source: String, destination: String, oneWay: Boolean, timeout: FiniteDuration)(implicit context: BridgeContext[M]) = {
     implicit val marshalling = context.marshalling
-    for {
-      requestResponseSource <- serviceForSource(source)
-      requestResponseClient <- requestResponseClientForDestination(destination)
-      requestResponseBridge <- startRequestResponseBridge(requestResponseSource, requestResponseClient)
-      sourceClient <- clientForSource(source)
-      destinationClient <- clientForDestination(destination)
-      forwarderBridge <- startForwarderBridge(sourceClient, destinationClient)
-    } yield (requestResponseBridge, forwarderBridge)
+
+    if (oneWay)
+      for {
+        sourceClient <- clientForSource(source)
+        destinationClient <- clientForDestination(destination)
+        forwarderBridge <- startForwarderBridge(sourceClient, destinationClient)
+      } yield forwarderBridge
+    else
+      for {
+        requestResponseSource <- serviceForSource(source)
+        requestResponseClient <- requestResponseClientForDestination(destination)
+        requestResponseBridge <- startRequestResponseBridge(requestResponseSource, requestResponseClient, timeout)
+      } yield requestResponseBridge
   }
 
   def stripUriScheme(uri: String) = uri.substring(uri.indexOf("://") + 3)
@@ -211,7 +222,7 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
   def clientForSource[M: Marshalling](source: String)(implicit context: BridgeContext[M]) =
     if (source.startsWith(pulsarScheme))
       context.withPulsarContext { implicit context =>
-        PulsarServiceConfiguration.source[M](Right(source.r)).client[IO]
+        PulsarServiceConfiguration.source[M](Right(stripUriScheme(source).r)).client[IO]
       }
     else if (source.startsWith(tibrvScheme))
       context.withTibrvContext { implicit context =>
@@ -251,12 +262,13 @@ object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
 
   def startRequestResponseBridge[M: Marshalling](
     source: RequestHandler[IO, M, M] => IO[Service[IO]],
-    destination: MessageReceiveResult[IO, M] => IO[Option[RequestResponseClient[IO, M, M]]]
+    destination: MessageReceiveResult[IO, M] => IO[Option[RequestResponseClient[IO, M, M]]],
+    timeout: FiniteDuration
   )(
     implicit mapping: RequestResponseMapping[M, M]
   ) =
     for {
-      bridge <- RequestResponseBridge(source, destinationBasedOnSourceRequest(destination), requestResponseOnlyFilter[IO, M])
+      bridge <- RequestResponseBridge(source, destinationBasedOnSourceRequest(destination, timeout), requestResponseOnlyFilter[IO, M])
       serviceState <- bridge.start
     } yield serviceState
 
