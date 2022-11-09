@@ -79,7 +79,7 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
         case t =>
           raiseError(t)
       }
-      _ <- trace(s"received message ${new String(pulsarMessage.getData).take(200)} in $this")
+      _ <- trace(s"received message ${pulsarMessage.getMessageId} in $this")
       result <-
         if (subscriptionInitialPublishTime.map(pulsarMessage.getPublishTime < _.toEpochMilli).getOrElse(false))
           trace(s"dropping message ${new String(pulsarMessage.getData).take(200)} with publish time ${pulsarMessage.getPublishTime} < $subscriptionInitialPublishTime on $topic") >>
@@ -88,17 +88,18 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
           result <- Unmarshaller[M].unmarshal(pulsarMessage.getData) match {
             case Right(message) =>
               val attributes = pulsarMessage.getProperties.asScala.toMap
-              pure(
-                DefaultMessageReceiveResult[F, M](
-                  pure(message),
-                  attributes,
-                  Some(this),
-                  commit = trace(s"committing message $message in $this") >> delay(consumer.acknowledge(pulsarMessage)),
-                  rollback = trace(s"rolling back message $message in $this") >> delay(consumer.negativeAcknowledge(pulsarMessage)),
-                  underlyingMessageProvided = pure(pulsarMessage),
-                  underlyingContextProvided = raiseError(new IllegalStateException("No underlying context"))
+              trace(s"unmarshalled message ${message.toString.take(200)} in $this") >>
+                pure(
+                  DefaultMessageReceiveResult[F, M](
+                    pure(message),
+                    attributes,
+                    Some(this),
+                    commit = trace(s"committing message $message in $this") >> delay(consumer.acknowledge(pulsarMessage)),
+                    rollback = trace(s"rolling back message $message in $this") >> delay(consumer.negativeAcknowledge(pulsarMessage)),
+                    underlyingMessageProvided = pure(pulsarMessage),
+                    underlyingContextProvided = raiseError(new IllegalStateException("No underlying context"))
+                  )
                 )
-              )
             case Left(error) =>
               raiseError(error)
           }
