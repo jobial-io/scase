@@ -74,12 +74,12 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
         timeout.map(t => f.orTimeout(t.toMillis, TimeUnit.MILLISECONDS)).getOrElse(f)
       }).handleErrorWith {
         case t: TimeoutException =>
-          trace(s"Receive timed out after $timeout in $this ${consumer.isConnected}") >>
+          trace(s"Receive timed out after $timeout in $this ${consumer.isConnected} context: $context") >>
             raiseError(ReceiveTimeout(timeout, t))
         case t =>
           raiseError(t)
       }
-      _ <- trace(s"received message in consumer ${new String(pulsarMessage.getData).take(200)} on $topic in $this")
+      _ <- trace(s"received message ${new String(pulsarMessage.getData).take(200)} in $this")
       result <-
         if (subscriptionInitialPublishTime.map(pulsarMessage.getPublishTime < _.toEpochMilli).getOrElse(false))
           trace(s"dropping message ${new String(pulsarMessage.getData).take(200)} with publish time ${pulsarMessage.getPublishTime} < $subscriptionInitialPublishTime on $topic") >>
@@ -109,7 +109,7 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
     delay(consumer.unsubscribe()) >>
       delay(consumer.close())
 
-  override def toString = super.toString + s" topic: $topic subscription: $subscriptionName"
+  override def toString = super.toString + s" topic: ${context.fullyQualifiedTopicName(topic.left.toOption.getOrElse(topic.right.get.toString))} subscription: $subscriptionName"
 }
 
 object PulsarConsumer extends CatsUtils with Logging {
