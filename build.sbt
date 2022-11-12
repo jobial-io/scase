@@ -42,7 +42,9 @@ lazy val commonSettings = Seq(
   scalacOptions ++= (if (scalaBinaryVersion.value != "2.13") Seq("-Ypartial-unification") else Seq())
 )
 
-lazy val CatsVersion = "2.0.0"
+lazy val CatsVersion = "2.7.0"
+lazy val CatsEffectVersion = "3.3.0"
+lazy val KittensVersion = "2.3.2"
 lazy val CatsTestkitScalatestVersion = "1.0.0-RC1"
 lazy val ScalaLoggingVersion = "3.9.2"
 lazy val ScalatestVersion = "3.2.3"
@@ -53,7 +55,7 @@ lazy val AwsLambdaJavaCoreVersion = "1.2.1"
 lazy val CommonsIoVersion = "2.8.0"
 lazy val CommonsLangVersion = "3.12.0"
 lazy val CloudformationTemplateGeneratorVersion = "3.10.4"
-lazy val SclapVersion = "1.3.0"
+lazy val SclapVersion = "1.3.6"
 lazy val CirceVersion = "0.12.0-M3"
 lazy val SprayJsonVersion = "1.3.6"
 lazy val PulsarVersion = "2.9.0"
@@ -69,19 +71,25 @@ lazy val JmsVersion = "2.0.1"
 lazy val root: Project = project
   .in(file("."))
   .settings(commonSettings)
-  .aggregate(`scase-core`, `scase-aws`, `scase-aws-test`, `scase-circe`, `scase-spray-json`,
-    `scase-pulsar`, `scase-jms`, `scase-activemq`, `scase-tibco-rv`, `scase-tools`)
-  .dependsOn(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`,
-    `scase-pulsar`, `scase-jms`, `scase-activemq`, `scase-tibco-rv`, `scase-tools`)
+  .aggregate(
+    `scase-core`, `scase-aws`, `scase-aws-test`, `scase-circe`, `scase-spray-json`,
+    `scase-pulsar`, `scase-jms`, `scase-activemq`, `scase-tibco-rv`, `scase-tools`,
+    `scase-http`
+  )
+  .dependsOn(
+    `scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`,
+    `scase-pulsar`, `scase-jms`, `scase-activemq`, `scase-tibco-rv`, `scase-tools`,
+    `scase-http`
+  )
 
 lazy val `scase-core` = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-core" % CatsVersion,
-      "org.typelevel" %% "cats-effect" % CatsVersion,
+      "org.typelevel" %% "cats-core" % CatsVersion force(),
+      "org.typelevel" %% "cats-effect" % CatsEffectVersion force(),
       "org.typelevel" %% "cats-testkit-scalatest" % CatsTestkitScalatestVersion % Test,
-      "org.typelevel" %% "kittens" % CatsVersion % Test,
+      "org.typelevel" %% "kittens" % KittensVersion % Test,
       "com.typesafe.scala-logging" %% "scala-logging" % ScalaLoggingVersion,
       "com.lihaoyi" %% "sourcecode" % SourcecodeVersion,
       "org.scalatest" %% "scalatest" % ScalatestVersion % Test,
@@ -90,7 +98,9 @@ lazy val `scase-core` = project
       "ch.qos.logback" % "logback-classic" % LogbackVersion % Test,
       "com.chuusai" %% "shapeless" % ShapelessVersion,
       "com.github.sbt" % "junit-interface" % "0.13.2" % Test
-    )
+    ),
+    libraryDependencySchemes += "org.typelevel" % "cats-core" % "always",
+    libraryDependencySchemes += "org.typelevel" % "cats-effect" % "always"
   )
 
 lazy val `scase-aws` = project
@@ -106,7 +116,7 @@ lazy val `scase-aws` = project
       "com.amazonaws" % "aws-lambda-java-core" % AwsLambdaJavaCoreVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-java-sdk-sts" % AwsVersion excludeAll ("commons-logging"),
       "org.typelevel" %% "cats-core" % CatsVersion,
-      "org.typelevel" %% "cats-effect" % CatsVersion,
+      "org.typelevel" %% "cats-effect" % CatsEffectVersion,
       "com.typesafe.scala-logging" %% "scala-logging" % ScalaLoggingVersion
     )
   )
@@ -213,11 +223,22 @@ lazy val `scase-tools` = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "io.jobial" %% "sclap" % SclapVersion,
+      "io.jobial" %% "sclap" % SclapVersion exclude("org.typelevel", "cats-effect"),
       "ch.qos.logback" % "logback-classic" % LogbackVersion
-    )
+    ),
+    libraryDependencySchemes += "org.typelevel" % "cats-core" % "always",
+    libraryDependencySchemes += "org.typelevel" % "cats-effect" % "always"
+
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-pulsar`)
   .dependsOn(`scase-tibco-rv`)
   .dependsOn(`scase-activemq`)
+
+lazy val `scase-http` = project
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-dsl" % "1.0.0-M30" exclude("org.typelevel", "cats-effect")
+    )
+  )
