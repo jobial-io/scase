@@ -39,15 +39,17 @@ import scala.concurrent.duration.FiniteDuration
 object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
 
   def run =
-    command.description("Forward requests and one-way messages from one transport to another") {
+    command.description(""""
+Forward requests and one-way messages from one transport to another.
+""") {
       for {
         source <- opt[String]("source", "s").required
           .description("tibrv://<subject> or pulsar://<topic> or jms://<destination>")
         destination <- opt[String]("destination", "d").required
           .description("tibrv:// or pulsar:// or jms://, no subject or topic should be specified to select destination " +
             "based on the source topic or subject")
-        protocol <- opt[String]("protocol", "p").default("M")
-          .description("The marshalling protocol to use: currently only M is supported")
+        protocol <- opt[String]("protocol", "p").default("TibrvMsg")
+          .description("The marshalling protocol to use: currently TibrvMsg and Serialization are supported")
         oneWay <- opt[Boolean]("one-way", "o").default(false)
           .description("Forward one-way only messages - the default is request-response only")
         timeout <- opt[FiniteDuration]("timeout", "t").default(300.seconds)
