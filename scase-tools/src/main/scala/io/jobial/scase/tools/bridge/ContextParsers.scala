@@ -4,11 +4,10 @@ import io.jobial.scase.activemq.ActiveMQContext
 import io.jobial.scase.pulsar.PulsarContext
 import io.jobial.scase.tibrv.TibrvContext
 import io.jobial.sclap.core.ArgumentValueParser
-import io.jobial.scase.util._
 import scala.util.Try
 
 trait ContextParsers {
-  
+
   def splitValue(value: String) =
     value.split(":", -1).map(v => if (v.isEmpty) None else Some(v))
 

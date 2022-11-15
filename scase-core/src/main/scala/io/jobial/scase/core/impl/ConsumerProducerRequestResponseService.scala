@@ -1,8 +1,7 @@
 package io.jobial.scase.core.impl
 
-import cats.effect.Concurrent
-import cats.effect.concurrent.Deferred
-import cats.effect.concurrent.Ref
+import cats.effect.Deferred
+import cats.effect.Ref
 import cats.implicits._
 import io.jobial.scase.core.MessageConsumer
 import io.jobial.scase.core.MessageProducer
@@ -15,7 +14,7 @@ import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
 
 
-class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ, RESP: Marshaller](
+class ConsumerProducerRequestResponseService[F[_] : TemporalEffect, REQ, RESP: Marshaller](
   val responseProducersCacheRef: Option[Ref[F, Map[Option[String], MessageProducer[F, Either[Throwable, RESP]]]]],
   val requestConsumer: MessageConsumer[F, REQ],
   val responseProducer: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
@@ -80,7 +79,7 @@ class ConsumerProducerRequestResponseService[F[_] : Concurrent, REQ, RESP: Marsh
 
 object ConsumerProducerRequestResponseService extends CatsUtils with Logging {
 
-  def apply[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
+  def apply[F[_] : TemporalEffect, REQ: Unmarshaller, RESP: Marshaller](
     requestConsumer: MessageConsumer[F, REQ],
     responseProducer: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
     requestHandler: RequestHandler[F, REQ, RESP],

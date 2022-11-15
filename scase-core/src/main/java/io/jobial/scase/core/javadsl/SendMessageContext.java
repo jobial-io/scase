@@ -10,7 +10,7 @@ public class SendMessageContext {
 
     public SendMessageContext() {
     }
-    
+
     public void setAttributes(Map<String, String> attributes) {
         context = context.copy(javaMapToScala(attributes));
     }

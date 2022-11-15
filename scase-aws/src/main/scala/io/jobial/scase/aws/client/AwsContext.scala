@@ -14,7 +14,6 @@ package io.jobial.scase.aws.client
 
 import cats.effect.IO
 import com.amazonaws.auth.AWSCredentials
-import scala.concurrent.ExecutionContext.Implicits.global
 
 case class AwsContext(
   credentials: Option[AWSCredentials] = None,
@@ -23,11 +22,7 @@ case class AwsContext(
 ) {
 
   implicit val awsContext = this
-
-  implicit val contextShift = IO.contextShift(global)
   
-  implicit val timer = IO.timer(global)
-
   // Amazon recommends sharing and reusing clients  
   lazy val sqsClient = SqsClient[IO]
 

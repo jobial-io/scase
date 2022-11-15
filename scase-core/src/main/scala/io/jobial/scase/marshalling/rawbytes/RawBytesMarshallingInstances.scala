@@ -1,7 +1,7 @@
 package io.jobial.scase.marshalling.rawbytes
 
-import cats.effect.Concurrent
 import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.core.impl.ConcurrentEffect
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
 import org.apache.commons.io.IOUtils
@@ -14,7 +14,7 @@ trait RawBytesMarshallingInstances extends CatsUtils {
   implicit val rawBytesMarshaller = new Marshaller[Array[Byte]] {
     def marshal(o: Array[Byte]): Array[Byte] = o
 
-    def marshal[F[_] : Concurrent](o: Array[Byte], out: OutputStream) = delay {
+    def marshal[F[_] : ConcurrentEffect](o: Array[Byte], out: OutputStream) = delay {
       out.write(o)
     }
 
@@ -26,7 +26,7 @@ trait RawBytesMarshallingInstances extends CatsUtils {
 
     def unmarshal(bytes: Array[Byte]) = Right(bytes)
 
-    def unmarshal[F[_] : Concurrent](in: InputStream) =
+    def unmarshal[F[_] : ConcurrentEffect](in: InputStream) =
       delay(IOUtils.toByteArray(in))
 
     def unmarshalFromText(text: String) =

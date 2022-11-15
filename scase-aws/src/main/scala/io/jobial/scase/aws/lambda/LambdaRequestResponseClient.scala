@@ -12,7 +12,7 @@
  */
 package io.jobial.scase.aws.lambda
 
-import cats.effect.Concurrent
+import cats.effect.LiftIO
 import cats.implicits._
 import io.jobial.scase.aws.client.AwsContext
 import io.jobial.scase.core.DefaultMessageReceiveResult
@@ -21,6 +21,7 @@ import io.jobial.scase.core.RequestResponseMapping
 import io.jobial.scase.core.RequestResponseResult
 import io.jobial.scase.core.SendRequestContext
 import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.core.impl.ConcurrentEffect
 import io.jobial.scase.core.impl.DefaultMessageSendResult
 import io.jobial.scase.core.impl.DefaultRequestResponseResult
 import io.jobial.scase.logging.Logging
@@ -29,7 +30,7 @@ import io.jobial.scase.marshalling.Unmarshaller
 import java.nio.charset.StandardCharsets
 
 
-case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP: Unmarshaller](
+case class LambdaRequestResponseClient[F[_] : ConcurrentEffect : LiftIO, REQ: Marshaller, RESP: Unmarshaller](
   functionName: String
 )(
   implicit val awsContext: AwsContext

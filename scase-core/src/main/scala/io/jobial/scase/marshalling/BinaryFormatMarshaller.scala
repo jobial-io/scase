@@ -1,7 +1,7 @@
 package io.jobial.scase.marshalling
 
-import cats.effect.Concurrent
 import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.core.impl.ConcurrentEffect
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.util.Base64
@@ -15,7 +15,7 @@ trait BinaryFormatMarshaller[M] extends Marshaller[M] with CatsUtils {
     b.toByteArray
   }
 
-  def marshal[F[_] : Concurrent](o: M, out: OutputStream) =
+  def marshal[F[_] : ConcurrentEffect](o: M, out: OutputStream) =
     delay(marshalToOutputStream(o, out))
 
   def marshalToOutputStream(o: M, out: OutputStream)

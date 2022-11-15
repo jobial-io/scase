@@ -14,8 +14,8 @@ name := "scase"
 
 ThisBuild / organization := "io.jobial"
 ThisBuild / scalaVersion := "2.13.8"
-ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.15", "2.13.8")
-ThisBuild / version := "0.9.2"
+ThisBuild / crossScalaVersions := Seq("2.12.15", "2.13.8")
+ThisBuild / version := "2.0.0"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
 ThisBuild / javacOptions ++= Seq("-source", "11", "-target", "11")
 ThisBuild / Test / packageBin / publishArtifact := true
@@ -43,11 +43,11 @@ lazy val commonSettings = Seq(
 )
 
 lazy val CatsVersion = "2.7.0"
-lazy val CatsEffectVersion = "3.3.0"
+lazy val CatsEffectVersion = "3.3.14"
 lazy val KittensVersion = "2.3.2"
 lazy val CatsTestkitScalatestVersion = "1.0.0-RC1"
-lazy val ScalaLoggingVersion = "3.9.2"
-lazy val ScalatestVersion = "3.2.3"
+lazy val ScalaLoggingVersion = "3.9.5"
+lazy val ScalatestVersion = "3.2.14"
 lazy val SourcecodeVersion = "0.2.3"
 lazy val AwsVersion = "1.11.557"
 lazy val AmazonSqsJavaExtendedClientLibVersion = "1.2.2"
@@ -55,7 +55,7 @@ lazy val AwsLambdaJavaCoreVersion = "1.2.1"
 lazy val CommonsIoVersion = "2.8.0"
 lazy val CommonsLangVersion = "3.12.0"
 lazy val CloudformationTemplateGeneratorVersion = "3.10.4"
-lazy val SclapVersion = "1.3.6"
+lazy val SclapVersion = "2.0.0"
 lazy val CirceVersion = "0.12.0-M3"
 lazy val SprayJsonVersion = "1.3.6"
 lazy val PulsarVersion = "2.9.0"
@@ -72,7 +72,7 @@ lazy val root: Project = project
   .in(file("."))
   .settings(commonSettings)
   .aggregate(
-    `scase-core`, `scase-aws`, `scase-aws-test`, `scase-circe`, `scase-spray-json`,
+    `scase-core`, `scase-aws`, /*`scase-aws-test`,*/ `scase-circe`, `scase-spray-json`,
     `scase-pulsar`, `scase-jms`, `scase-activemq`, `scase-tibco-rv`, `scase-tools`,
     `scase-http`
   )
@@ -123,32 +123,33 @@ lazy val `scase-aws` = project
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "test->test")
 
-lazy val `scase-aws-test` = project
-  .settings(commonSettings)
-  .settings(
-    libraryDependencies ++= Seq(
-      "io.jobial" %% "condense" % CondenseVersion
-    ),
-    cloudformationStackClass := "io.jobial.scase.aws.lambda.TestServiceStack$",
-    Proguard / proguardOptions := Seq(
-      "-injars " + (Test / packageBin).value,
-      "-injars " + (`scase-core` / Test / packageBin).value,
-      "-dontobfuscate", "-dontoptimize", "-dontnote", "-ignorewarnings",
-      "-keep class io.jobial.scase.aws.lambda.** {*;}",
-      "-keep class com.amazonaws.services.lambda.** {*;}",
-      "-keep class scala.Symbol {*;}"
-    ) ++ (Proguard / proguardOptions).value,
-    Proguard / proguardInputFilter := { file =>
-      file.name match {
-        case _ => Some("!META-INF/**,!about.html,!org/apache/commons/logging/**")
-      }
-    },
-    Proguard / proguard / javaOptions := Seq("-Xmx2G"),
-    Proguard / proguardVersion := ProguardVersion
-  )
-  .dependsOn(`scase-core` % "compile->compile;test->test")
-  .dependsOn(`scase-aws` % "compile->compile")
-  .dependsOn(`scase-circe`)
+// TODO: add this back when condense 2 has been released
+//lazy val `scase-aws-test` = project
+//  .settings(commonSettings)
+//  .settings(
+//    libraryDependencies ++= Seq(
+//      "io.jobial" %% "condense" % CondenseVersion
+//    ),
+//    cloudformationStackClass := "io.jobial.scase.aws.lambda.TestServiceStack$",
+//    Proguard / proguardOptions := Seq(
+//      "-injars " + (Test / packageBin).value,
+//      "-injars " + (`scase-core` / Test / packageBin).value,
+//      "-dontobfuscate", "-dontoptimize", "-dontnote", "-ignorewarnings",
+//      "-keep class io.jobial.scase.aws.lambda.** {*;}",
+//      "-keep class com.amazonaws.services.lambda.** {*;}",
+//      "-keep class scala.Symbol {*;}"
+//    ) ++ (Proguard / proguardOptions).value,
+//    Proguard / proguardInputFilter := { file =>
+//      file.name match {
+//        case _ => Some("!META-INF/**,!about.html,!org/apache/commons/logging/**")
+//      }
+//    },
+//    Proguard / proguard / javaOptions := Seq("-Xmx2G"),
+//    Proguard / proguardVersion := ProguardVersion
+//  )
+//  .dependsOn(`scase-core` % "compile->compile;test->test")
+//  .dependsOn(`scase-aws` % "compile->compile")
+//  .dependsOn(`scase-circe`)
 
 lazy val `scase-spray-json` = project
   .settings(commonSettings)
@@ -225,10 +226,7 @@ lazy val `scase-tools` = project
     libraryDependencies ++= Seq(
       "io.jobial" %% "sclap" % SclapVersion exclude("org.typelevel", "cats-effect"),
       "ch.qos.logback" % "logback-classic" % LogbackVersion
-    ),
-    libraryDependencySchemes += "org.typelevel" % "cats-core" % "always",
-    libraryDependencySchemes += "org.typelevel" % "cats-effect" % "always"
-
+    )
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-pulsar`)

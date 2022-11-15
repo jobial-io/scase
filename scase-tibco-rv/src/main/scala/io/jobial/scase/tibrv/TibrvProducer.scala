@@ -1,17 +1,15 @@
 package io.jobial.scase.tibrv
 
-import cats.effect.Concurrent
 import cats.implicits._
-import com.tibco.tibrv.Tibrv
 import com.tibco.tibrv.TibrvMsg
-import com.tibco.tibrv.TibrvRvdTransport
 import io.jobial.scase.core.MessageProducer
 import io.jobial.scase.core.MessageSendResult
 import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.core.impl.ConcurrentEffect
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 
-class TibrvProducer[F[_] : Concurrent, M](
+class TibrvProducer[F[_] : ConcurrentEffect, M](
   val subject: String
 )(
   implicit val context: TibrvContext
@@ -41,7 +39,7 @@ class TibrvProducer[F[_] : Concurrent, M](
 
 object TibrvProducer extends CatsUtils {
 
-  def apply[F[_] : Concurrent, M](
+  def apply[F[_] : ConcurrentEffect, M](
     subject: String
   )(implicit context: TibrvContext) =
     delay(new TibrvProducer[F, M](subject))

@@ -14,7 +14,8 @@ package io.jobial.scase.util
 
 import java.math.BigInteger
 import java.security.MessageDigest
-import java.util.{Arrays, UUID}
+import java.util.Arrays
+import java.util.UUID
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 

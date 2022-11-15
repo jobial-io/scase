@@ -13,12 +13,11 @@
 package io.jobial.scase.marshalling.circe
 
 import io.circe.Decoder.Result
-import io.circe.syntax.EncoderOps
-import io.circe.{Decoder, Encoder, HCursor, Json}
-import cats.syntax.either._
+import io.circe.Decoder
+import io.circe.Encoder
+import io.circe.HCursor
+import io.circe.Json
 import io.jobial.scase.marshalling.MarshallingUtils
-
-import scala.util.Try
 
 trait DefaultCodecs extends MarshallingUtils {
 

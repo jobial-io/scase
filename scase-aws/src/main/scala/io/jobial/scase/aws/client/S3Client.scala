@@ -12,15 +12,14 @@
  */
 package io.jobial.scase.aws.client
 
-import cats.effect.Concurrent
-import cats.effect.IO
-import cats.effect.Timer
+import cats.effect.unsafe.IORuntime
 import cats.implicits._
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model._
 import com.amazonaws.util.IOUtils
+import io.jobial.scase.core.impl.TemporalEffect
 import java.io.ByteArrayInputStream
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
@@ -115,12 +114,12 @@ trait S3Client[F[_]] extends AwsClient[F] {
 
 object S3Client {
 
-  def apply[F[_] : Concurrent : Timer](implicit context: AwsContext) =
+  def apply[F[_] : TemporalEffect](implicit context: AwsContext) =
     new S3Client[F] {
       def awsContext = context
 
-      val concurrent = Concurrent[F]
+      val temporal = TemporalEffect[F]
 
-      val timer = Timer[F]
+      val runtime = IORuntime.global
     }
 }

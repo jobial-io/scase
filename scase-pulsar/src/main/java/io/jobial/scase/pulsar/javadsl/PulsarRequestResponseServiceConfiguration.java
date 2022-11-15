@@ -1,6 +1,6 @@
 package io.jobial.scase.pulsar.javadsl;
 
-import cats.effect.*;
+import cats.effect.IO;
 import io.jobial.scase.core.RequestHandler;
 import io.jobial.scase.core.javadsl.JavaUtils;
 import io.jobial.scase.core.javadsl.RequestResponseClient;
@@ -9,7 +9,7 @@ import io.jobial.scase.core.javadsl.Service;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import static io.jobial.scase.core.javadsl.JavaUtils.*;
+import static io.jobial.scase.core.javadsl.JavaUtils.ioAsyncEffect;
 
 public class PulsarRequestResponseServiceConfiguration<REQ, RESP> {
 
@@ -20,7 +20,7 @@ public class PulsarRequestResponseServiceConfiguration<REQ, RESP> {
     }
 
     public CompletableFuture<Service> service(RequestHandler<IO, REQ, RESP> requestHandler, PulsarContext pulsarContext) throws ExecutionException, InterruptedException {
-        return JavaUtils.service(config.service(requestHandler, concurrent, timer, pulsarContext.getContext()));
+        return JavaUtils.service(config.service(requestHandler, ioAsyncEffect, pulsarContext.getContext()));
     }
 
     public CompletableFuture<Service> service(RequestHandler<IO, REQ, RESP> requestHandler) throws ExecutionException, InterruptedException {
@@ -28,7 +28,7 @@ public class PulsarRequestResponseServiceConfiguration<REQ, RESP> {
     }
 
     public CompletableFuture<RequestResponseClient<REQ, RESP>> client(PulsarContext pulsarContext) throws ExecutionException, InterruptedException {
-        return JavaUtils.<REQ, RESP>requestResponseClient(config.client(concurrent, timer, pulsarContext.getContext()));
+        return JavaUtils.<REQ, RESP>requestResponseClient(config.client(ioAsyncEffect, pulsarContext.getContext()));
     }
 
     public CompletableFuture<RequestResponseClient<REQ, RESP>> client() throws ExecutionException, InterruptedException {

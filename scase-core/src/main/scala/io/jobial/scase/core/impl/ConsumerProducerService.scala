@@ -1,9 +1,7 @@
 package io.jobial.scase.core.impl
 
-import cats.effect.Sync
-import cats.effect.concurrent.Deferred
+import cats.effect.Deferred
 import cats.implicits._
-import io.jobial.scase.core.SendMessageContext
 import io.jobial.scase.core.CorrelationIdKey
 import io.jobial.scase.core.MessageConsumer
 import io.jobial.scase.core.MessageReceiveResult
@@ -12,6 +10,7 @@ import io.jobial.scase.core.MessageSubscription
 import io.jobial.scase.core.RequestContext
 import io.jobial.scase.core.RequestHandler
 import io.jobial.scase.core.RequestResponseMapping
+import io.jobial.scase.core.SendMessageContext
 import io.jobial.scase.core.SendResponseResult
 import io.jobial.scase.core.Service
 import io.jobial.scase.core.ServiceState
@@ -97,7 +96,7 @@ trait ConsumerProducerService[F[_], REQ, RESP] extends CatsUtils with Logging {
       new DefaultServiceState[F, REQ](subscription, requestConsumer, this)
 }
 
-class DefaultServiceState[F[_] : Sync, M](
+class DefaultServiceState[F[_] : ConcurrentEffect, M](
   val subscription: MessageSubscription[F, M],
   val consumer: MessageConsumer[F, M],
   val service: Service[F]

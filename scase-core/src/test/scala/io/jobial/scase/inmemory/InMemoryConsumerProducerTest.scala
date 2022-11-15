@@ -12,9 +12,10 @@
  */
 package io.jobial.scase.inmemory
 
+import cats.effect.Async
+import cats.effect.Deferred
 import cats.effect.IO
-import cats.effect.concurrent.Deferred
-import cats.effect.concurrent.Ref
+import cats.effect.Ref
 import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.test.ScaseTestHelper
 import io.jobial.scase.core.test.TestRequest1
@@ -22,8 +23,11 @@ import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.serialization._
 import org.scalatest.flatspec.AsyncFlatSpec
 import scala.concurrent.duration.DurationInt
+//import cats.effect.implicits._
 
 class InMemoryConsumerProducerTest extends AsyncFlatSpec with CatsUtils with Logging with ScaseTestHelper {
+
+  implicitly[Async[IO]]
 
   "consumer" should "receive message" in {
     val request = TestRequest1("1")
@@ -70,7 +74,7 @@ class InMemoryConsumerProducerTest extends AsyncFlatSpec with CatsUtils with Log
         } yield consumer
       }.parSequence
       _ <- requests.map(producer.send(_)).parSequence
-      _ <- sleep(1.second)
+      _ <- IO.sleep(1.second)
       r <- results.get
     } yield assert(r.sortBy(_.id) === (requests ++ requests ++ requests).toList.sortBy(_.id))
   }
@@ -100,7 +104,7 @@ class InMemoryConsumerProducerTest extends AsyncFlatSpec with CatsUtils with Log
         } yield consumer
       }.parSequence
       _ <- requests.map(producer.send(_)).parSequence
-      _ <- sleep(1.second)
+      _ <- IO.sleep(1.second)
       r <- results.get
     } yield assert(r.sortBy(_.id) === requests.toList.sortBy(_.id))
   }

@@ -1,6 +1,5 @@
 package io.jobial.scase.core
 
-
 case class SendMessageContext(
   attributes: Map[String, String] = Map()
 )

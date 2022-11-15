@@ -1,8 +1,7 @@
 package io.jobial.scase.jms
 
 import cats.effect.IO
-import cats.effect.concurrent.Deferred
-import cats.effect.concurrent.MVar
+import cats.effect.std.Queue
 import io.circe.generic.auto._
 import io.jobial.scase.core._
 import io.jobial.scase.core.test.Req
@@ -89,7 +88,7 @@ class JMSServiceTest
       s"hello-test-handler-${uuid(5)}", session.createQueue(s"hello-test-handler-${uuid(5)}"))
 
     for {
-      receivedMessage <- MVar.empty[IO, TestRequest[_ <: TestResponse]]
+      receivedMessage <- Queue.bounded[IO, TestRequest[_ <: TestResponse]](1)
       service <- serviceConfig.service(TestMessageHandler(receivedMessage))
       senderClient <- serviceConfig.client[IO]
       r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)

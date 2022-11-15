@@ -1,22 +1,23 @@
 package io.jobial.scase.core
 
-import cats.effect.ContextShift
 import cats.effect.IO
+import io.jobial.scase.core.impl.AsyncEffect
+import io.jobial.scase.core.impl.ConcurrentEffect
+import io.jobial.scase.core.impl.TemporalEffect
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
 import java.util.function.BiConsumer
+import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.Success
-import scala.collection.JavaConverters._
 
 package object javadsl {
-  
+
   val defaultSendRequestContext = io.jobial.scase.core.SendRequestContext()
 
   val defaultSendMessageContext = io.jobial.scase.core.SendMessageContext()
-  
+
   def javaMapToScala[A, B](map: java.util.Map[A, B]) = map.asScala.toMap
 
   def scalaFutureToCompletableFuture[T](f: Future[T])(implicit ec: ExecutionContext) = {
@@ -30,7 +31,7 @@ package object javadsl {
     completableFuture
   }
 
-  def completableFutureToIO[T](f: CompletableFuture[T])(implicit cs: ContextShift[IO]) =
+  def completableFutureToIO[T](f: CompletableFuture[T]) =
     IO.fromFuture(IO(completableFutureToScalaFuture(f)))
 
   def completableFutureToScalaFuture[T](f: CompletableFuture[T]) = {
@@ -51,4 +52,10 @@ package object javadsl {
 
   def javaRunnableToScala(f: java.lang.Runnable): () => Unit =
     () => f.run()
+
+  val ioConcurrentEffect = ConcurrentEffect[IO]
+
+  val ioTemporalEffect = TemporalEffect[IO]
+
+  val ioAsyncEffect = AsyncEffect[IO]
 }

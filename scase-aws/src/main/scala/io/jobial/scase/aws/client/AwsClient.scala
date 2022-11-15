@@ -12,25 +12,25 @@
  */
 package io.jobial.scase.aws.client
 
-import cats.effect.Concurrent
-import cats.effect.Timer
-import java.util.concurrent.{ExecutionException, ExecutorService, Executors}
+import cats.effect.unsafe.IORuntime
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSStaticCredentialsProvider
-import com.amazonaws.client.builder.{AwsAsyncClientBuilder, AwsSyncClientBuilder, ExecutorFactory}
+import com.amazonaws.client.builder.AwsAsyncClientBuilder
+import com.amazonaws.client.builder.AwsSyncClientBuilder
+import com.amazonaws.client.builder.ExecutorFactory
 import com.amazonaws.endpointdiscovery.DaemonThreadFactory
 import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.core.impl.TemporalEffect
 import io.jobial.scase.logging.Logging
-import scala.concurrent.Future.failed
-import scala.concurrent.{ExecutionContext, Future}
+import java.util.concurrent.Executors
 
 trait AwsClient[F[_]] extends CatsUtils with Logging {
 
   def awsContext: AwsContext
 
-  protected implicit def concurrent: Concurrent[F]
+  protected implicit def temporal: TemporalEffect[F]
 
-  protected implicit def timer: Timer[F]
+  protected implicit def runtime: IORuntime
 
 
   /**

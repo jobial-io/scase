@@ -1,12 +1,12 @@
 package io.jobial.scase.core.impl
 
-import cats.effect.concurrent.Deferred
-import cats.effect.concurrent.Ref
-import cats.effect.implicits.catsEffectSyntaxConcurrent
-import cats.effect.Concurrent
-import cats.effect.Timer
+import cats.FlatMap
+import cats.effect.Deferred
+import cats.effect.Ref
+import cats.effect.Sync
+import cats.effect.implicits.genTemporalOps
+//import cats.effect.implicits.catsEffectSyntaxConcurrent
 import cats.implicits._
-import io.jobial.scase.core.ResponseTopicKey
 import io.jobial.scase.core.CorrelationIdKey
 import io.jobial.scase.core.DefaultMessageReceiveResult
 import io.jobial.scase.core.MessageConsumer
@@ -20,6 +20,7 @@ import io.jobial.scase.core.RequestResponseResult
 import io.jobial.scase.core.RequestTimeout
 import io.jobial.scase.core.RequestTimeoutKey
 import io.jobial.scase.core.ResponseProducerIdKey
+import io.jobial.scase.core.ResponseTopicKey
 import io.jobial.scase.core.SendRequestContext
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
@@ -28,7 +29,7 @@ import java.util.UUID.randomUUID
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration.FiniteDuration
 
-class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Marshaller, RESP](
+class ConsumerProducerRequestResponseClient[F[_] : TemporalEffect, REQ: Marshaller, RESP](
   correlationsRef: Ref[F, Map[String, CorrelationInfo[F, REQ, RESP]]],
   messageSubscription: MessageSubscription[F, Either[Throwable, RESP]],
   messageConsumer: MessageConsumer[F, Either[Throwable, RESP]],
@@ -42,6 +43,10 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
 ) extends RequestResponseClient[F, REQ, RESP] with CatsUtils with Logging {
 
   val holdOntoOutstandingRequest = true
+
+  implicitly[Sync[F]]
+
+  implicitly[FlatMap[F]]
 
   def logOutsanding =
     for {
@@ -132,7 +137,7 @@ case class DefaultRequestResponseResult[F[_], REQUEST, RESPONSE](request: Messag
 
 object ConsumerProducerRequestResponseClient extends CatsUtils with Logging {
 
-  def apply[F[_] : Concurrent : Timer, REQ: Marshaller, RESP](
+  def apply[F[_] : TemporalEffect, REQ: Marshaller, RESP](
     messageConsumer: MessageConsumer[F, Either[Throwable, RESP]],
     messageProducer: () => MessageProducer[F, REQ],
     responseProducerId: Option[String],

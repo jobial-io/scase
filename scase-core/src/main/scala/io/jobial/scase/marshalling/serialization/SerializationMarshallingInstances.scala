@@ -8,7 +8,6 @@ import java.io.OutputStream
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 import scala.util.Try
-import io.jobial.scase.util._
 
 trait SerializationMarshallingInstances {
 

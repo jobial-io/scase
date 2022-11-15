@@ -1,13 +1,25 @@
 package io.jobial.scase.aws.sqs
 
-import cats.effect.{Concurrent, ContextShift, IO, Timer}
+import cats.effect.LiftIO
 import cats.implicits._
 import io.jobial.scase.aws.client.AwsContext
+import io.jobial.scase.core.MessageHandler
+import io.jobial.scase.core.MessageProducer
+import io.jobial.scase.core.RequestHandler
+import io.jobial.scase.core.RequestResponseClient
+import io.jobial.scase.core.SenderClient
+import io.jobial.scase.core.ServiceConfiguration
 import io.jobial.scase.core.impl.CatsUtils
-import io.jobial.scase.core.impl.{ConsumerMessageHandlerService, ConsumerProducerRequestResponseClient, ConsumerProducerRequestResponseService, ProducerSenderClient, ResponseProducerIdNotFound}
-import io.jobial.scase.core.{MessageHandler, MessageProducer, RequestHandler, RequestResponseClient, SenderClient, ServiceConfiguration}
+import io.jobial.scase.core.impl.ConcurrentEffect
+import io.jobial.scase.core.impl.ConsumerMessageHandlerService
+import io.jobial.scase.core.impl.ConsumerProducerRequestResponseClient
+import io.jobial.scase.core.impl.ConsumerProducerRequestResponseService
+import io.jobial.scase.core.impl.ProducerSenderClient
+import io.jobial.scase.core.impl.ResponseProducerIdNotFound
+import io.jobial.scase.core.impl.TemporalEffect
 import io.jobial.scase.logging.Logging
-import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
+import io.jobial.scase.marshalling.Marshaller
+import io.jobial.scase.marshalling.Unmarshaller
 import io.jobial.scase.util.Hash.uuid
 
 case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
@@ -25,7 +37,7 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
 
   val responseQueueUrl = responseQueueName.getOrElse(s"$requestQueueName-response-${uuid(8)}")
 
-  def service[F[_] : Concurrent](requestHandler: RequestHandler[F, REQ, RESP])(
+  def service[F[_] : TemporalEffect : LiftIO](requestHandler: RequestHandler[F, REQ, RESP])(
     implicit awsContext: AwsContext = AwsContext()
   ) =
     for {
@@ -45,7 +57,7 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
       )
     } yield service
 
-  def client[F[_] : Concurrent : Timer](
+  def client[F[_] : TemporalEffect : LiftIO](
     implicit awsContext: AwsContext = AwsContext()
   ): F[RequestResponseClient[F, REQ, RESP]] = {
     for {
@@ -59,7 +71,7 @@ case class SqsRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller
     } yield client
   }
 
-  def senderClient[F[_] : Concurrent : Timer](
+  def senderClient[F[_] : ConcurrentEffect : LiftIO](
     implicit awsContext: AwsContext = AwsContext()
   ): F[SenderClient[F, REQ]] = {
     for {
@@ -78,7 +90,7 @@ class SqsMessageHandlerServiceConfiguration[REQ: Marshaller : Unmarshaller](
 
   val requestQueueUrl = requestQueueName
 
-  def service[F[_] : Concurrent](messageHandler: MessageHandler[F, REQ])(
+  def service[F[_] : TemporalEffect : LiftIO](messageHandler: MessageHandler[F, REQ])(
     implicit awsContext: AwsContext = AwsContext()
   ) =
     for {
@@ -89,7 +101,7 @@ class SqsMessageHandlerServiceConfiguration[REQ: Marshaller : Unmarshaller](
       )
     } yield service
 
-  def client[F[_] : Concurrent](
+  def client[F[_] : ConcurrentEffect : LiftIO](
     implicit awsContext: AwsContext = AwsContext()
   ): F[SenderClient[F, REQ]] = {
     for {

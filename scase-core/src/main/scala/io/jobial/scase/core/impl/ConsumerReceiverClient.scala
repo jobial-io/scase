@@ -37,7 +37,7 @@ class ConsumerReceiverClient[F[_] : Concurrent, M: Unmarshaller](
 
 object ConsumerReceiverClient extends CatsUtils {
 
-  def apply[F[_] : Concurrent, M: Unmarshaller](
+  def apply[F[_] : ConcurrentEffect, M: Unmarshaller](
     messageConsumer: MessageConsumer[F, M]
   ) = delay(new ConsumerReceiverClient(messageConsumer))
 }

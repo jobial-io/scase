@@ -1,6 +1,10 @@
 package io.jobial.scase.core.javadsl;
 
-import cats.effect.*;
+import cats.effect.IO;
+import cats.effect.unsafe.IORuntime;
+import io.jobial.scase.core.impl.AsyncEffect;
+import io.jobial.scase.core.impl.ConcurrentEffect;
+import io.jobial.scase.core.impl.TemporalEffect;
 import io.jobial.scase.util.Hash$;
 import scala.*;
 import scala.concurrent.ExecutionContext;
@@ -22,11 +26,11 @@ public class JavaUtils {
     }
 
     public static <T> CompletableFuture<T> ioToCompletableFuture(IO<T> io) {
-        return scalaFutureToCompletableFuture(io.unsafeToFuture());
+        return scalaFutureToCompletableFuture(io.unsafeToFuture(runtime));
     }
 
     public static <T> IO<T> completableFutureToIO(final CompletableFuture<T> f) {
-        return io.jobial.scase.core.javadsl.package$.MODULE$.completableFutureToIO(f, contextShift);
+        return io.jobial.scase.core.javadsl.package$.MODULE$.completableFutureToIO(f);
     }
 
     private static <T> Future<T> completableFutureToScalaFuture(CompletableFuture<T> f) {
@@ -48,7 +52,7 @@ public class JavaUtils {
             return Optional.empty();
         }
     }
-    
+
     public static scala.concurrent.duration.FiniteDuration javaDurationToScala(Duration duration) {
         return scala.concurrent.duration.Duration.fromNanos(duration.toNanos());
     }
@@ -104,9 +108,11 @@ public class JavaUtils {
 
     public static ExecutionContext executionContext = ExecutionContext$.MODULE$.global();
 
-    public static ContextShift<IO> contextShift = IO.contextShift(executionContext);
+    public static IORuntime runtime = cats.effect.unsafe.implicits.global();
 
-    public static Concurrent<IO> concurrent = IO$.MODULE$.ioConcurrentEffect(contextShift);
+    public static ConcurrentEffect<IO> ioConcurrentEffect = (ConcurrentEffect<IO>) package$.MODULE$.ioConcurrentEffect();
 
-    public static Timer<IO> timer = IO$.MODULE$.timer(executionContext);
+    public static TemporalEffect<IO> ioTemporalEffect = (TemporalEffect<IO>) package$.MODULE$.ioTemporalEffect();
+
+    public static AsyncEffect<IO> ioAsyncEffect = (AsyncEffect<IO>) package$.MODULE$.ioAsyncEffect();
 }

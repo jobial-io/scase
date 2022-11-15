@@ -13,18 +13,16 @@
 package io.jobial.scase.aws.lambda
 
 import cats.effect._
-import io.jobial.scase.core.RequestHandler
-
-import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.DurationInt
+import cats.effect.unsafe.IORuntime
+import io.jobial.scase.core.impl.ConcurrentEffect
 
 abstract class IOLambdaRequestHandler[REQ, RESP]
   extends LambdaRequestHandler[IO, REQ, RESP] {
 
-  implicit lazy val cs = IO.contextShift(ExecutionContext.global)
+  implicit lazy val runtime = IORuntime.global
 
-  implicit lazy val concurrent = IO.ioConcurrentEffect(cs)
+  implicit lazy val concurrent = ConcurrentEffect[IO]
 
   def runResult(result: IO[_]) =
-    result.unsafeRunSync  
+    result.unsafeRunSync
 }

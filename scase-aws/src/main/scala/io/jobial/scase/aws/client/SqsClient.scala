@@ -12,9 +12,8 @@
  */
 package io.jobial.scase.aws.client
 
-import cats.effect.Concurrent
 import cats.effect.IO
-import cats.effect.Timer
+import cats.effect.unsafe.IORuntime
 import cats.implicits._
 import com.amazon.sqs.javamessaging.AmazonSQSExtendedClient
 import com.amazon.sqs.javamessaging.ExtendedClientConfiguration
@@ -22,6 +21,7 @@ import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.AmazonSQSAsyncClientBuilder
 import com.amazonaws.services.sqs.buffered.AmazonSQSBufferedAsyncClient
 import com.amazonaws.services.sqs.model._
+import io.jobial.scase.core.impl.TemporalEffect
 import java.util
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
@@ -165,13 +165,13 @@ trait SqsClient[F[_]] extends S3Client[F] {
 
 object SqsClient {
 
-  def apply[F[_] : Timer : Concurrent](implicit context: AwsContext) = {
+  def apply[F[_] : TemporalEffect](implicit context: AwsContext) = {
     new SqsClient[F] {
       val awsContext = context
 
-      val concurrent = Concurrent[F]
+      val temporal = TemporalEffect[F]
 
-      val timer = Timer[F]
+      val runtime = IORuntime.global
     }
   }
 }

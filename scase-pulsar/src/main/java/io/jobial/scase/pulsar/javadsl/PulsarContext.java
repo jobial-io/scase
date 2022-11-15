@@ -14,7 +14,7 @@ public class PulsarContext {
     public io.jobial.scase.pulsar.PulsarContext getContext() {
         return context;
     }
-    
+
     public PulsarContext withHost(String host) {
         return new PulsarContext(context.copy(host, context.port(), context.tenant(), context.namespace(), context.useDaemonThreadsInClient()));
     }

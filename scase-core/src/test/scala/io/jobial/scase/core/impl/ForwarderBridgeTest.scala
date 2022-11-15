@@ -42,7 +42,7 @@ class ForwarderBridgeTest
       _ <- receiverClient.stop
       _ <- senderClient.stop
     } yield assert(message === receivedMessage)
-  
+
   "forwarder bridge" should "successfully forward" in {
     testForwarderBridge(TestRequest1("hello"))
   }

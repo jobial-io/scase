@@ -5,7 +5,7 @@ import scala.annotation.implicitNotFound
 /**
  * Type class to bind a request message type to a response type.
  * It makes request-response mapping pluggable, without enforcing any kind of convention on the implementor.
- * 
+ *
  * @tparam REQUEST
  * @tparam RESPONSE
  */

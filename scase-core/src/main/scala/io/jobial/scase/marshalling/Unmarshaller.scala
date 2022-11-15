@@ -1,12 +1,12 @@
 package io.jobial.scase.marshalling
 
-import cats.effect.Concurrent
+import io.jobial.scase.core.impl.ConcurrentEffect
 import java.io.InputStream
 
 trait Unmarshaller[M] {
   def unmarshal(bytes: Array[Byte]): Either[Throwable, M]
 
-  def unmarshal[F[_] : Concurrent](in: InputStream): F[M]
+  def unmarshal[F[_] : ConcurrentEffect](in: InputStream): F[M]
 
   def unmarshalFromText(text: String): Either[Throwable, M]
 }

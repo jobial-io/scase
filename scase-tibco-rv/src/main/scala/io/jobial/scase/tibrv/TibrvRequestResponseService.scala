@@ -1,7 +1,6 @@
 package io.jobial.scase.tibrv
 
-import cats.effect.Concurrent
-import cats.effect.concurrent.Deferred
+import cats.effect.Deferred
 import cats.implicits._
 import com.tibco.tibrv.TibrvListener
 import com.tibco.tibrv.TibrvMsg
@@ -10,6 +9,7 @@ import io.jobial.scase.core.MessageSendResult
 import io.jobial.scase.core.RequestHandler
 import io.jobial.scase.core.SendResponseResult
 import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.core.impl.ConcurrentEffect
 import io.jobial.scase.core.impl.ConsumerProducerService
 import io.jobial.scase.core.impl.DefaultMessageSendResult
 import io.jobial.scase.core.impl.DefaultService
@@ -18,7 +18,7 @@ import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
 
 
-class TibrvRequestResponseService[F[_] : Concurrent, REQ, RESP: Marshaller](
+class TibrvRequestResponseService[F[_] : ConcurrentEffect, REQ, RESP: Marshaller](
   val requestConsumer: TibrvConsumer[F, REQ],
   val requestHandler: RequestHandler[F, REQ, RESP]
 )(
@@ -45,7 +45,7 @@ class TibrvRequestResponseService[F[_] : Concurrent, REQ, RESP: Marshaller](
 
 object TibrvRequestResponseService extends CatsUtils with Logging {
 
-  def apply[F[_] : Concurrent, REQ, RESP: Marshaller](
+  def apply[F[_] : ConcurrentEffect, REQ, RESP: Marshaller](
     requestConsumer: TibrvConsumer[F, REQ],
     requestHandler: RequestHandler[F, REQ, RESP]
   )(

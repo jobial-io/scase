@@ -12,11 +12,11 @@
  */
 package io.jobial.scase.aws.client
 
-import cats.effect.Concurrent
-import cats.effect.Timer
-import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
+import cats.effect.unsafe.IORuntime
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder
+import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
+import io.jobial.scase.core.impl.TemporalEffect
 
 trait StsClient[F[_]] extends AwsClient[F] {
 
@@ -28,12 +28,12 @@ trait StsClient[F[_]] extends AwsClient[F] {
 
 object StsClient {
 
-  def apply[F[_] : Concurrent : Timer](implicit context: AwsContext) =
+  def apply[F[_] : TemporalEffect](implicit context: AwsContext) =
     new StsClient[F] {
       def awsContext = context
 
-      val concurrent = Concurrent[F]
+      val temporal = TemporalEffect[F]
 
-      val timer = Timer[F]
+      val runtime = IORuntime.global
     }
 }

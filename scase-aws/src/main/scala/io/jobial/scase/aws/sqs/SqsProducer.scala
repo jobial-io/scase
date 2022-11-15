@@ -1,22 +1,19 @@
 package io.jobial.scase.aws.sqs
 
-import cats.{Monad, Traverse}
-import cats.effect.{Concurrent, IO}
-import cats.effect.concurrent.Ref
+import cats.effect.LiftIO
 import cats.implicits._
-import io.jobial.scase.aws.client.{AwsContext, SqsClient}
+import io.jobial.scase.aws.client.AwsContext
 import io.jobial.scase.core._
+import io.jobial.scase.core.impl.ConcurrentEffect
 import io.jobial.scase.core.impl.DefaultMessageSendResult
 import io.jobial.scase.logging.Logging
-import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
-
-import scala.collection.JavaConverters._
+import io.jobial.scase.marshalling.Marshaller
 import scala.concurrent.duration._
 
 /**
  * Producer implementation for AWS SQS.
  */
-class SqsProducer[F[_] : Concurrent, M](
+class SqsProducer[F[_] : ConcurrentEffect : LiftIO, M](
   queueUrl: String,
   messageRetentionPeriod: Option[Duration] = Some(1.hour),
   visibilityTimeout: Option[Duration] = Some(10.minutes),
@@ -48,7 +45,7 @@ class SqsProducer[F[_] : Concurrent, M](
 
 object SqsProducer {
 
-  def apply[F[_] : Concurrent, M](
+  def apply[F[_] : ConcurrentEffect : LiftIO, M](
     queueUrl: String,
     messageRetentionPeriod: Option[Duration] = Some(1.hour),
     visibilityTimeout: Option[Duration] = Some(10.minutes),

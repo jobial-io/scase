@@ -13,7 +13,7 @@ public class Service {
     public Service(io.jobial.scase.core.Service<IO> service) {
         this.service = service;
     }
-    
+
     public CompletableFuture<ServiceState> start() {
         return ioToCompletableFuture(service.start())
                 .thenApply(r -> new ServiceState((io.jobial.scase.core.ServiceState<IO>) r));

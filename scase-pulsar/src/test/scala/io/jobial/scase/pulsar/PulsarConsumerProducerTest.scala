@@ -12,23 +12,17 @@
  */
 package io.jobial.scase.pulsar
 
+import cats.effect.Deferred
 import cats.effect.IO
-import cats.effect.concurrent.Deferred
-import cats.effect.concurrent.Ref
-import io.jobial.scase.core.impl.CatsUtils
-import io.jobial.scase.logging.Logging
-import io.jobial.scase.util.Hash.uuid
-import org.scalatest.flatspec.AsyncFlatSpec
-import scala.concurrent.duration.DurationInt
 import io.circe.generic.auto._
-import io.jobial.scase.core.test.ScaseTestHelper
 import io.jobial.scase.core.test.ServiceTestSupport
 import io.jobial.scase.core.test.TestRequest1
 import io.jobial.scase.marshalling.circe._
+import io.jobial.scase.util.Hash.uuid
 
 class PulsarConsumerProducerTest extends ServiceTestSupport {
   implicit val pulsarContext = PulsarContext()
-  
+
   "consumer" should "receive message" in {
     val request = TestRequest1("1")
     val topic = s"hello-test-${uuid(6)}"

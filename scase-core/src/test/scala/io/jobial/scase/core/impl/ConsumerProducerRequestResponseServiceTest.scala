@@ -13,9 +13,9 @@
 package io.jobial.scase.core.impl
 
 import cats.Eq
+import cats.effect.Deferred
 import cats.effect.IO
 import cats.effect.IO.raiseError
-import cats.effect.concurrent.Deferred
 import cats.implicits._
 import io.jobial.scase.core._
 import io.jobial.scase.core.test.ServiceTestSupport
@@ -25,7 +25,6 @@ import io.jobial.scase.core.test.TestRequest1
 import io.jobial.scase.core.test.TestRequest2
 import io.jobial.scase.core.test.TestResponse
 import io.jobial.scase.inmemory.InMemoryConsumer
-import io.jobial.scase.inmemory.InMemoryProducer
 import io.jobial.scase.marshalling.serialization._
 
 class ConsumerProducerRequestResponseServiceTest

@@ -1,13 +1,15 @@
 package io.jobial.scase.core.impl
 
-import cats.effect.Concurrent
 import cats.implicits._
+import io.jobial.scase.core.MessageConsumer
+import io.jobial.scase.core.MessageContext
+import io.jobial.scase.core.MessageHandler
 import io.jobial.scase.core.MessageReceiveResult
-import io.jobial.scase.core.{MessageConsumer, MessageContext, MessageHandler, Service, ServiceState}
+import io.jobial.scase.core.ServiceState
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
 
-class ConsumerMessageHandlerService[F[_] : Concurrent, M: Unmarshaller](
+class ConsumerMessageHandlerService[F[_] : TemporalEffect, M: Unmarshaller](
   val consumer: MessageConsumer[F, M],
   val messageHandler: MessageHandler[F, M]
 ) extends DefaultService[F] with Logging {
@@ -30,7 +32,7 @@ class ConsumerMessageHandlerService[F[_] : Concurrent, M: Unmarshaller](
 
 object ConsumerMessageHandlerService extends CatsUtils {
 
-  def apply[F[_] : Concurrent, M: Unmarshaller](
+  def apply[F[_] : TemporalEffect, M: Unmarshaller](
     consumer: MessageConsumer[F, M],
     messageHandler: MessageHandler[F, M]
   ) =

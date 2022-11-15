@@ -12,11 +12,11 @@
  */
 package io.jobial.scase.aws.lambda
 
-import cats.effect.Concurrent
-import cats.effect.ContextShift
+import cats.effect.LiftIO
 import io.jobial.scase.aws.client.AwsContext
 import io.jobial.scase.core.ServiceConfiguration
 import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.core.impl.ConcurrentEffect
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
@@ -26,8 +26,8 @@ class LambdaServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marshalle
   val functionName: String
 ) extends ServiceConfiguration with CatsUtils with Logging {
 
-  def client[F[_] : Concurrent : ContextShift](implicit awsContext: AwsContext = AwsContext()) =
-    delay(LambdaRequestResponseClient[F, REQ, RESP](functionName)(Concurrent[F], Marshaller[REQ], Unmarshaller[RESP], awsContext))
+  def client[F[_] : ConcurrentEffect : LiftIO](implicit awsContext: AwsContext = AwsContext()) =
+    delay(LambdaRequestResponseClient[F, REQ, RESP](functionName)(ConcurrentEffect[F], LiftIO[F], Marshaller[REQ], Unmarshaller[RESP], awsContext))
 
   lazy val requestMarshaller = Marshaller[REQ]
 

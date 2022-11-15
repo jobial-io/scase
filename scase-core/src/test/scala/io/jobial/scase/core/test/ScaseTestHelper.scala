@@ -12,8 +12,9 @@
  */
 package io.jobial.scase.core.test
 
-import cats.effect.Concurrent
 import cats.effect.IO
+import cats.effect.unsafe.IORuntime
+import io.jobial.scase.core.impl.TemporalEffect
 import org.scalactic.source
 import org.scalatest.Assertion
 import org.scalatest.Succeeded
@@ -24,19 +25,17 @@ import scala.reflect.ClassTag
 
 trait ScaseTestHelper {
   this: AsyncFlatSpec =>
-  
-  val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool)
-  
-  implicit val contextShift = IO.contextShift(ec)
 
-  implicit val timer = IO.timer(ec)
-  
-  implicit val concurrent = Concurrent[IO]
+  val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool)
 
   val onGithub = sys.env.get("RUNNER_OS").isDefined
 
   val onMacOS = sys.props.get("os.name").map(_ === "Mac OS X").getOrElse(false)
-  
+
+  implicit def temporal = TemporalEffect[IO]
+
+  implicit def runtime = IORuntime.global
+
   implicit def runIOResult(r: IO[Assertion]) = r.unsafeToFuture
 
   implicit def fromEitherResult(r: Either[Throwable, Assertion]) = runIOResult(IO.fromEither(r))

@@ -1,9 +1,9 @@
 package io.jobial.scase.pulsar
 
-import cats.effect.Concurrent
 import cats.implicits._
 import io.jobial.scase.core.MessageProducer
 import io.jobial.scase.core.MessageSendResult
+import io.jobial.scase.core.impl.AsyncEffect
 import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
@@ -15,7 +15,7 @@ import scala.compat.java8.FutureConverters.toScala
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 
-class PulsarProducer[F[_] : Concurrent, M](
+class PulsarProducer[F[_] : AsyncEffect, M](
   topic: String,
   batchingMaxPublishDelay: Option[FiniteDuration]
 )(implicit context: PulsarContext)
@@ -62,7 +62,7 @@ class PulsarProducer[F[_] : Concurrent, M](
 
 object PulsarProducer extends CatsUtils {
 
-  def apply[F[_] : Concurrent, M](
+  def apply[F[_] : AsyncEffect, M](
     topic: String,
     batchingMaxPublishDelay: Option[FiniteDuration] = Some(1.millis)
   )(implicit context: PulsarContext) =

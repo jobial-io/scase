@@ -1,7 +1,6 @@
 package io.jobial.scase.core
 
 import io.jobial.scase.marshalling.Unmarshaller
-
 import scala.concurrent.duration._
 
 trait MessageReceiveResult[F[_], M] {

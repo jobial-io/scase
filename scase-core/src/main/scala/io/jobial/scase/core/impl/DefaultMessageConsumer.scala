@@ -1,8 +1,7 @@
 package io.jobial.scase.core.impl
 
-import cats.effect.Concurrent
-import cats.effect.concurrent.Deferred
-import cats.effect.concurrent.Ref
+import cats.effect.Deferred
+import cats.effect.Ref
 import cats.implicits._
 import io.jobial.scase.core.MessageConsumer
 import io.jobial.scase.core.MessageReceiveResult
@@ -16,7 +15,7 @@ import scala.concurrent.duration.FiniteDuration
 /**
  * Adds cancellation, subscription state. 
  */
-abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsumer[F, M] with CatsUtils with Logging {
+abstract class DefaultMessageConsumer[F[_] : ConcurrentEffect, M] extends MessageConsumer[F, M] with CatsUtils with Logging {
 
   val receiveTimeoutInSubscribe = 1.second
 
@@ -64,7 +63,8 @@ abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsu
 
         override def cancel =
           cancelled.update(_ => true) >>
-            cancellationHappened.complete()
+            cancellationHappened.complete() >>
+            unit
 
         override def isCancelled =
           cancelled.get

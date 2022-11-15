@@ -12,7 +12,10 @@
  */
 package io.jobial.scase.marshalling.sprayjson
 
-import io.circe.{Decoder, Encoder, HCursor, parser}
+import io.circe.Decoder
+import io.circe.Encoder
+import io.circe.HCursor
+import io.circe.parser
 import spray.json._
 
 /**

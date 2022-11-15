@@ -12,7 +12,7 @@
  */
 package io.jobial.scase.pulsar.javadsl;
 
-import io.jobial.scase.core.*;
+import io.jobial.scase.core.RequestTimeout;
 import io.jobial.scase.core.javadsl.MessageHandler;
 import io.jobial.scase.core.javadsl.RequestHandler;
 import io.jobial.scase.core.javadsl.SendRequestContext;

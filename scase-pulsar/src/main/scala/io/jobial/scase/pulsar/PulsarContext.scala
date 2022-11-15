@@ -3,7 +3,6 @@ package io.jobial.scase.pulsar
 import cats.effect.IO
 import cats.implicits.catsSyntaxFlatMapOps
 import org.apache.pulsar.client.api.PulsarClient
-import scala.concurrent.ExecutionContext.global
 
 case class PulsarContext(
   host: String = "localhost",
@@ -23,8 +22,8 @@ case class PulsarContext(
   lazy val client =
     if (useDaemonThreadsInClient) {
       // Hack to initialize the Pulsar client on a daemon thread so that it creates daemon threads itself...
-      implicit val contextShift = IO.contextShift(global)
-      (IO(createClient).start >>= (_.join)).unsafeRunSync()
+      import cats.effect.unsafe.implicits.global
+      (IO(createClient).start >>= (_.joinWithNever)).unsafeRunSync()
     } else createClient
 
   val persistentScheme = "persistent:"

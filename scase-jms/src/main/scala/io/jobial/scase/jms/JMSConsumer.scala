@@ -1,12 +1,12 @@
 package io.jobial.scase.jms
 
-import cats.effect.Concurrent
-import cats.effect.concurrent.Ref
+import cats.effect.Ref
 import cats.implicits._
 import io.jobial.scase.core.DefaultMessageReceiveResult
 import io.jobial.scase.core.MessageReceiveResult
 import io.jobial.scase.core.ReceiveTimeout
 import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.core.impl.ConcurrentEffect
 import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
@@ -14,7 +14,7 @@ import javax.jms._
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.FiniteDuration
 
-class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]])(implicit session: Session)
+class JMSConsumer[F[_] : ConcurrentEffect, M](destination: Destination, val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]])(implicit session: Session)
   extends DefaultMessageConsumer[F, M] with CatsUtils with Logging {
 
   val consumer = session.createConsumer(destination)
@@ -41,7 +41,7 @@ class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscripti
 
   def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]) =
     for {
-      jmsMessage <- delay(Option(consumer.receive(timeout.map(_.toMillis).getOrElse(Long.MaxValue)))).handleErrorWith {
+      jmsMessage <- blocking(Option(consumer.receive(timeout.map(_.toMillis).getOrElse(Long.MaxValue)))).handleErrorWith {
         case t: JMSException =>
           raiseError(ReceiveTimeout(timeout, t))
         case t =>
@@ -77,7 +77,7 @@ class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscripti
 
 object JMSConsumer {
 
-  def apply[F[_] : Concurrent, M](destination: Destination)(implicit session: Session) =
+  def apply[F[_] : ConcurrentEffect, M](destination: Destination)(implicit session: Session) =
     for {
       subscriptions <- Ref.of[F, List[MessageReceiveResult[F, M] => F[_]]](List())
     } yield new JMSConsumer[F, M](destination, subscriptions)

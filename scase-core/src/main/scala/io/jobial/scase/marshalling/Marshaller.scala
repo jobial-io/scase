@@ -1,12 +1,12 @@
 package io.jobial.scase.marshalling
 
-import cats.effect.Concurrent
+import io.jobial.scase.core.impl.ConcurrentEffect
 import java.io.OutputStream
 
 trait Marshaller[M] {
   def marshal(o: M): Array[Byte]
 
-  def marshal[F[_] : Concurrent](o: M, out: OutputStream): F[Unit]
+  def marshal[F[_] : ConcurrentEffect](o: M, out: OutputStream): F[Unit]
 
   def marshalToText(o: M): String
 }

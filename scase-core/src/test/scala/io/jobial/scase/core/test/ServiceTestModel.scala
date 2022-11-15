@@ -58,7 +58,7 @@ trait ServiceTestModel {
   implicit val eqTestResponse2: Eq[TestResponse2] = Eq.fromUniversalEquals
 
   implicit val eqTestRequest1: Eq[TestRequest1] = Eq.fromUniversalEquals
-  
+
   implicit val eqThrowable: Eq[Throwable] = Eq.by(_.toString)
 
   implicit def req1Resp1Mapping = new RequestResponseMapping[Req1, Resp1] {}

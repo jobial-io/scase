@@ -1,12 +1,9 @@
 package io.jobial.scase.pulsar
 
-import cats.effect.Concurrent
-import cats.effect.Timer
-import cats.effect.concurrent.Ref
 import cats.implicits._
 import io.jobial.scase.core.DefaultMessageReceiveResult
-import io.jobial.scase.core.MessageReceiveResult
 import io.jobial.scase.core.ReceiveTimeout
+import io.jobial.scase.core.impl.AsyncEffect
 import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.core.impl.RegexUtils
@@ -24,7 +21,7 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 import scala.util.matching.Regex
 
-class PulsarConsumer[F[_] : Concurrent : Timer, M](
+class PulsarConsumer[F[_] : AsyncEffect, M](
   val topic: Either[String, Regex],
   val patternAutoDiscoveryPeriod: Option[FiniteDuration],
   val subscriptionInitialPosition: Option[SubscriptionInitialPosition],
@@ -115,7 +112,7 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
 
 object PulsarConsumer extends CatsUtils with Logging {
 
-  def apply[F[_] : Concurrent : Timer, M](
+  def apply[F[_] : AsyncEffect, M](
     topic: Either[String, Regex],
     patternAutoDiscoveryPeriod: Option[FiniteDuration] = Some(1.second),
     subscriptionInitialPosition: Option[SubscriptionInitialPosition] = None,

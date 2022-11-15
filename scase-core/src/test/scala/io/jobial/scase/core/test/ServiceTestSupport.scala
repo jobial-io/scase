@@ -14,13 +14,11 @@ package io.jobial.scase.core.test
 
 import cats.Eq
 import cats.effect.IO
-import cats.effect.IO
 import cats.effect.IO.delay
-import cats.effect.IO.ioEffect.whenA
 import cats.effect.IO.raiseError
-import cats.effect.concurrent.MVar
-import cats.effect.concurrent.Ref
-import cats.implicits.catsSyntaxFlatMapOps
+import cats.effect.IO.whenA
+import cats.effect.Ref
+import cats.effect.std.Queue
 import cats.tests.StrictCatsEquality
 import io.jobial.scase.core.MessageContext
 import io.jobial.scase.core.MessageHandler
@@ -108,7 +106,7 @@ trait ServiceTestSupport extends AsyncFlatSpec
       _ <- h.stop
     } yield r1
 
-  def testSenderReceiver[M : Eq](
+  def testSenderReceiver[M: Eq](
     senderClient: SenderClient[IO, M],
     receiverClient: ReceiverClient[IO, M],
     message: M
@@ -131,7 +129,7 @@ trait ServiceTestSupport extends AsyncFlatSpec
     startReceivingBeforeSend: Boolean
   ): IO[Assertion] =
     for {
-      _ <- whenA(startReceivingBeforeSend)(receiverClient.receive(1.millis).handleErrorWith(t => IO()))
+      _ <- whenA(startReceivingBeforeSend)(receiverClient.receive(1.millis).handleErrorWith(t => IO.unit) >> IO.unit)
       _ <- senderClient.send(request1)
       r1 <- receiverClient.receiveWithContext
       m1 <- r1.message
@@ -248,7 +246,7 @@ trait ServiceTestSupport extends AsyncFlatSpec
 
     recoverToSucceededIf[ReceiveTimeout] {
       for {
-        _ <- whenA(startReceivingBeforeSend)(receiverClient.receive(1.millis).handleErrorWith(t => IO()))
+        _ <- whenA(startReceivingBeforeSend)(receiverClient.receive(1.millis).handleErrorWith(t => IO.unit) >> IO.unit)
         _ <- senderClient ! request1
         _ <- receiverClient.receive(1.second).map(_ => fail("expected exception"))
       } yield succeed
@@ -258,7 +256,7 @@ trait ServiceTestSupport extends AsyncFlatSpec
   def testSuccessfulMessageHandlerReceive(
     service: Service[IO],
     senderClient: SenderClient[IO, TestRequest[_ <: TestResponse]],
-    receivedMessage: MVar[IO, TestRequest[_ <: TestResponse]],
+    receivedMessage: Queue[IO, TestRequest[_ <: TestResponse]],
     stopService: Boolean = true
   ) =
     for {
@@ -266,7 +264,7 @@ trait ServiceTestSupport extends AsyncFlatSpec
       _ <- senderClient ! request1
       r <- receivedMessage.take
       _ <- senderClient.stop
-      _ <- whenA(stopService)(h.stop)
+      _ <- whenA(stopService)(h.stop >> IO.unit)
     } yield assert(r.asInstanceOf[TestRequest1] === request1)
 
   def testMessageSourceReceive(
@@ -275,7 +273,7 @@ trait ServiceTestSupport extends AsyncFlatSpec
     startReceivingBeforeSend: Boolean = false
   ) =
     for {
-      _ <- whenA(startReceivingBeforeSend)(receiverClient.receive(1.millis).handleErrorWith(t => IO()))
+      _ <- whenA(startReceivingBeforeSend)(receiverClient.receive(1.millis).handleErrorWith(t => IO.unit) >> IO.unit)
       _ <- senderClient ! request1
       r <- receiverClient.receive
       _ <- senderClient.stop
@@ -322,11 +320,11 @@ trait TestRequestHandler extends RequestHandler[IO, TestRequest[_ <: TestRespons
   }
 }
 
-case class TestMessageHandler(receivedMessage: MVar[IO, TestRequest[_ <: TestResponse]]) extends MessageHandler[IO, TestRequest[_ <: TestResponse]] with ServiceTestModel {
+case class TestMessageHandler(receivedMessage: Queue[IO, TestRequest[_ <: TestResponse]]) extends MessageHandler[IO, TestRequest[_ <: TestResponse]] with ServiceTestModel {
   override def handleMessage(implicit context: MessageContext[IO]) = {
     case r: TestRequest1 =>
-      receivedMessage.put(r)
+      receivedMessage.offer(r)
     case r: TestRequest2 =>
-      receivedMessage.put(r)
+      receivedMessage.offer(r)
   }
 }

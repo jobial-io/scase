@@ -1,15 +1,7 @@
 package io.jobial.scase.jms
 
 import cats.effect.Concurrent
-import cats.effect.Timer
 import cats.implicits._
-import io.jobial.scase.core.impl.CatsUtils
-import io.jobial.scase.core.impl.ConsumerMessageHandlerService
-import io.jobial.scase.core.impl.ConsumerProducerRequestResponseClient
-import io.jobial.scase.core.impl.ConsumerProducerRequestResponseService
-import io.jobial.scase.core.impl.ConsumerReceiverClient
-import io.jobial.scase.core.impl.ProducerSenderClient
-import io.jobial.scase.core.impl.ResponseProducerIdNotFound
 import io.jobial.scase.core.MessageHandler
 import io.jobial.scase.core.MessageProducer
 import io.jobial.scase.core.ReceiverClient
@@ -17,6 +9,15 @@ import io.jobial.scase.core.RequestHandler
 import io.jobial.scase.core.RequestResponseClient
 import io.jobial.scase.core.SenderClient
 import io.jobial.scase.core.ServiceConfiguration
+import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.core.impl.ConcurrentEffect
+import io.jobial.scase.core.impl.ConsumerMessageHandlerService
+import io.jobial.scase.core.impl.ConsumerProducerRequestResponseClient
+import io.jobial.scase.core.impl.ConsumerProducerRequestResponseService
+import io.jobial.scase.core.impl.ConsumerReceiverClient
+import io.jobial.scase.core.impl.ProducerSenderClient
+import io.jobial.scase.core.impl.ResponseProducerIdNotFound
+import io.jobial.scase.core.impl.TemporalEffect
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
@@ -35,7 +36,7 @@ class JMSRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RES
   responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
 ) extends ServiceConfiguration with CatsUtils with Logging {
 
-  def service[F[_] : Concurrent](requestHandler: RequestHandler[F, REQ, RESP])(
+  def service[F[_] : TemporalEffect](requestHandler: RequestHandler[F, REQ, RESP])(
     implicit session: Session
   ) =
     for {
@@ -60,7 +61,7 @@ class JMSRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, RES
       )
     } yield service
 
-  def client[F[_] : Concurrent : Timer](
+  def client[F[_] : TemporalEffect](
     implicit session: Session
   ): F[RequestResponseClient[F, REQ, RESP]] =
     for {
@@ -89,7 +90,7 @@ class JMSStreamServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marsha
   responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
 ) extends ServiceConfiguration {
 
-  def service[F[_] : Concurrent](requestHandler: RequestHandler[F, REQ, RESP])(
+  def service[F[_] : TemporalEffect](requestHandler: RequestHandler[F, REQ, RESP])(
     implicit session: Session
   ) =
     for {
@@ -107,7 +108,7 @@ class JMSStreamServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Marsha
       )
     } yield service
 
-  def client[F[_] : Concurrent : Timer](
+  def client[F[_] : ConcurrentEffect](
     implicit session: Session
   ): F[SenderClient[F, REQ]] =
     for {
@@ -124,7 +125,7 @@ class JMSMessageHandlerServiceConfiguration[M: Marshaller : Unmarshaller](
   requestDestination: Destination
 ) {
 
-  def service[F[_] : Concurrent](messageHandler: MessageHandler[F, M])(
+  def service[F[_] : TemporalEffect](messageHandler: MessageHandler[F, M])(
     implicit session: Session
   ) =
     for {
@@ -135,7 +136,7 @@ class JMSMessageHandlerServiceConfiguration[M: Marshaller : Unmarshaller](
       )
     } yield service
 
-  def client[F[_] : Concurrent : Timer](
+  def client[F[_] : ConcurrentEffect](
     implicit session: Session
   ): F[SenderClient[F, M]] =
     for {
@@ -149,7 +150,7 @@ class JMSMessageHandlerServiceConfiguration[M: Marshaller : Unmarshaller](
 class JMSMessageSourceServiceConfiguration[M: Unmarshaller](
   sourceDestination: Destination
 ) {
-  def client[F[_] : Concurrent : Timer](
+  def client[F[_] : ConcurrentEffect](
     implicit session: Session
   ): F[ReceiverClient[F, M]] =
     for {
@@ -162,7 +163,7 @@ class JMSMessageDestinationServiceConfiguration[M: Marshaller](
   requestDestination: Destination
 ) {
 
-  def client[F[_] : Concurrent : Timer](
+  def client[F[_] : ConcurrentEffect](
     implicit session: Session
   ): F[SenderClient[F, M]] =
     for {
@@ -207,7 +208,7 @@ object JMSServiceConfiguration {
       requestDestination,
       responseDestination
     )
-    
+
   private def stripScheme(uri: String) =
     uri.substring(uri.lastIndexOf('/') + 1)
 

@@ -1,15 +1,16 @@
 package io.jobial.scase.jms
 
-import cats.Monad
-import cats.effect.{Concurrent, ContextShift, IO}
 import cats.implicits._
+import io.jobial.scase.core.MessageProducer
+import io.jobial.scase.core.MessageSendResult
 import io.jobial.scase.core.impl.CatsUtils
-import io.jobial.scase.core.{MessageProducer, MessageSendResult}
+import io.jobial.scase.core.impl.ConcurrentEffect
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
-import javax.jms.{BytesMessage, Destination, JMSContext, Session}
+import javax.jms.Destination
+import javax.jms.Session
 
-class JMSProducer[F[_] : Concurrent, M](destination: Destination)(implicit session: Session)
+class JMSProducer[F[_] : ConcurrentEffect, M](destination: Destination)(implicit session: Session)
   extends MessageProducer[F, M] with CatsUtils with Logging {
 
   val producer = session.createProducer(destination)
@@ -34,12 +35,12 @@ class JMSProducer[F[_] : Concurrent, M](destination: Destination)(implicit sessi
     }
 
   def stop = delay(producer.close())
-  
+
   override def toString = super.toString + s" destination: $destination"
 }
 
 object JMSProducer extends CatsUtils {
 
-  def apply[F[_] : Concurrent, M](destination: Destination)(implicit session: Session) =
+  def apply[F[_] : ConcurrentEffect, M](destination: Destination)(implicit session: Session) =
     delay(new JMSProducer[F, M](destination))
 }

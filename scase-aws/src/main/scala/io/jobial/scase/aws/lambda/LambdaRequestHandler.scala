@@ -13,7 +13,7 @@
 package io.jobial.scase.aws.lambda
 
 import cats.effect.Concurrent
-import cats.effect.concurrent.Deferred
+import cats.effect.Deferred
 import cats.implicits._
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler
@@ -26,6 +26,7 @@ import io.jobial.scase.core.RequestContext
 import io.jobial.scase.core.RequestHandler
 import io.jobial.scase.core.RequestResponseMapping
 import io.jobial.scase.core.SendResponseResult
+import io.jobial.scase.core.impl.ConcurrentEffect
 import io.jobial.scase.logging.Logging
 import org.apache.commons.io.IOUtils
 import org.joda.time.DateTime
@@ -43,7 +44,7 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP]
 
   def serviceConfiguration: LambdaServiceConfiguration[REQ, RESP]
 
-  implicit def concurrent: Concurrent[F]
+  implicit def concurrent: ConcurrentEffect[F]
 
   def disableRetry = true
 
@@ -80,11 +81,11 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP]
           // TODO: use redeem when Cats is upgraded, 2.0.0 simply doesn't support mapping errors to an F[B]...
           _ <- processorResult
             .flatMap { result =>
-              responseDeferred.complete(result.response)
+              responseDeferred.complete(result.response) >> unit
             }
             .handleError { t =>
               error(s"request processing failed: $request", t) >>
-                responseDeferred.complete(Left(t))
+                responseDeferred.complete(Left(t)) >> unit
             }
           // send response when ready
           r <- responseDeferred.get

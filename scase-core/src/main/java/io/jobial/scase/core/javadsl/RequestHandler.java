@@ -2,7 +2,6 @@ package io.jobial.scase.core.javadsl;
 
 import cats.effect.IO;
 import io.jobial.scase.core.RequestResponseMapping;
-import io.jobial.scase.core.impl.DefaultSendResponseResult;
 import scala.Function1;
 import scala.util.Right;
 

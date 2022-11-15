@@ -14,7 +14,6 @@ package io.jobial.scase.marshalling.sprayjson
 
 import io.jobial.scase.marshalling.BinaryFormatMarshaller
 import io.jobial.scase.marshalling.BinaryFormatUnmarshaller
-import io.jobial.scase.marshalling.serialization.SerializationMarshalling
 import org.apache.commons.io.IOUtils
 import spray.json._
 import java.io.InputStream
@@ -22,7 +21,6 @@ import java.io.OutputStream
 import java.io.PrintStream
 import java.nio.charset.StandardCharsets.UTF_8
 import scala.util.Try
-import io.jobial.scase.util._
 
 trait SprayJsonMarshallingInstances {
 

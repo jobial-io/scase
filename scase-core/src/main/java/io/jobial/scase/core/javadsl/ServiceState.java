@@ -13,7 +13,7 @@ public class ServiceState {
     ServiceState(io.jobial.scase.core.ServiceState state) {
         this.state = state;
     }
-    
+
     public CompletableFuture stop() {
         return ioToCompletableFuture(state.stop());
     }

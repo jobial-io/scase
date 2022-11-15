@@ -1,7 +1,7 @@
 package io.jobial.scase.tibrv
 
 import cats.effect.IO
-import cats.effect.concurrent.MVar
+import cats.effect.std.Queue
 import io.circe.generic.auto._
 import io.jobial.scase.core._
 import io.jobial.scase.core.test.Req
@@ -19,7 +19,6 @@ import io.jobial.scase.tibrv.TibrvServiceConfiguration.requestResponse
 import io.jobial.scase.tibrv.TibrvServiceConfiguration.source
 import io.jobial.scase.tibrv.TibrvServiceConfiguration.stream
 import io.jobial.scase.util.Hash.uuid
-
 import scala.language.postfixOps
 
 class TibrvServiceTest
@@ -120,28 +119,28 @@ class TibrvServiceTest
       Seq(s"hello-test-handler-${uuid(6)}"))
 
     for {
-      receivedMessage <- MVar.empty[IO, TestRequest[_ <: TestResponse]]
+      receivedMessage <- Queue.bounded[IO, TestRequest[_ <: TestResponse]](1)
       service <- serviceConfig.service(TestMessageHandler(receivedMessage))
       senderClient <- serviceConfig.client[IO]
       r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)
     } yield r
   }
 
-//  "message handler service with subject pattern" should "receive successfully" in {
-//    val requestSubjectPrefix = s"persistent://public/default/hello-test-handler-${uuid(6)}"
-//    val serviceConfig = handler[TestRequest[_ <: TestResponse]](
-//      s"$requestSubjectPrefix-.*".r
-//    )
-//
-//    for {
-//      receivedMessage <- MVar.empty[IO, TestRequest[_ <: TestResponse]]
-//      senderClient <- destination[TestRequest[_ <: TestResponse]](s"$requestSubjectPrefix-a").client[IO]
-//      service <- serviceConfig.service(TestMessageHandler(receivedMessage))
-//      r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)
-//      senderClient <- destination[TestRequest[_ <: TestResponse]](s"$requestSubjectPrefix-b").client[IO]
-//      r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)
-//    } yield r
-//  }
+  //  "message handler service with subject pattern" should "receive successfully" in {
+  //    val requestSubjectPrefix = s"persistent://public/default/hello-test-handler-${uuid(6)}"
+  //    val serviceConfig = handler[TestRequest[_ <: TestResponse]](
+  //      s"$requestSubjectPrefix-.*".r
+  //    )
+  //
+  //    for {
+  //      receivedMessage <- MVar.empty[IO, TestRequest[_ <: TestResponse]]
+  //      senderClient <- destination[TestRequest[_ <: TestResponse]](s"$requestSubjectPrefix-a").client[IO]
+  //      service <- serviceConfig.service(TestMessageHandler(receivedMessage))
+  //      r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)
+  //      senderClient <- destination[TestRequest[_ <: TestResponse]](s"$requestSubjectPrefix-b").client[IO]
+  //      r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)
+  //    } yield r
+  //  }
 
   "message destination" should "receive successfully" in {
     assume(!onMacOS)
@@ -155,7 +154,7 @@ class TibrvServiceTest
       r <- testMessageSourceReceive(senderClient, receiverClient)
     } yield r
   }
-  
+
   "request-response service" should "succeed in load test" in {
     assume(!onMacOS)
     val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(s"hello-test-${uuid(6)}"))

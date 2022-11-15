@@ -11,7 +11,7 @@ import scala.util.Either;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import static io.jobial.scase.core.javadsl.JavaUtils.*;
+import static io.jobial.scase.core.javadsl.JavaUtils.ioAsyncEffect;
 
 public class PulsarStreamServiceConfiguration<REQ, RESP> {
 
@@ -22,7 +22,7 @@ public class PulsarStreamServiceConfiguration<REQ, RESP> {
     }
 
     public CompletableFuture<Service> service(RequestHandler<IO, REQ, RESP> requestHandler, PulsarContext pulsarContext) throws ExecutionException, InterruptedException {
-        return JavaUtils.service(config.service(requestHandler, concurrent, timer, pulsarContext.getContext()));
+        return JavaUtils.service(config.service(requestHandler, ioAsyncEffect, pulsarContext.getContext()));
     }
 
     public CompletableFuture<Service> service(RequestHandler<IO, REQ, RESP> requestHandler) throws ExecutionException, InterruptedException {
@@ -30,7 +30,7 @@ public class PulsarStreamServiceConfiguration<REQ, RESP> {
     }
 
     public CompletableFuture<SenderClient<REQ>> senderClient(PulsarContext pulsarContext) throws ExecutionException, InterruptedException {
-        return JavaUtils.senderClient(config.senderClient(concurrent, timer, pulsarContext.getContext()));
+        return JavaUtils.senderClient(config.senderClient(ioAsyncEffect, pulsarContext.getContext()));
     }
 
     public CompletableFuture<SenderClient<REQ>> senderClient() throws ExecutionException, InterruptedException {
@@ -38,7 +38,7 @@ public class PulsarStreamServiceConfiguration<REQ, RESP> {
     }
 
     public CompletableFuture<ReceiverClient<Either<Throwable, RESP>>> receiverClient(PulsarContext pulsarContext) throws ExecutionException, InterruptedException {
-        return JavaUtils.<Either<Throwable, RESP>>receiverClient(config.receiverClient(concurrent, timer, pulsarContext.getContext()));
+        return JavaUtils.<Either<Throwable, RESP>>receiverClient(config.receiverClient(ioAsyncEffect, pulsarContext.getContext()));
     }
 
     public CompletableFuture<ReceiverClient<Either<Throwable, RESP>>> receiverClient() throws ExecutionException, InterruptedException {

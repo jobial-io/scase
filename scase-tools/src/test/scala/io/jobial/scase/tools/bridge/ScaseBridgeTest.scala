@@ -19,7 +19,6 @@ import io.jobial.scase.tibrv.TibrvContext
 import io.jobial.scase.tibrv.TibrvServiceConfiguration
 import io.jobial.scase.tools.bridge.ScaseBridge._
 import io.jobial.scase.util.Hash.uuid
-
 import scala.concurrent.duration.DurationInt
 
 class ScaseBridgeTest extends ServiceTestSupport {
@@ -88,21 +87,21 @@ class ScaseBridgeTest extends ServiceTestSupport {
     )
   }
 
-//  "jms to pulsar" should "work" in {
-//    val topic = s"hello-test-${uuid(6)}"
-//    import io.jobial.scase.marshalling.serialization._
-//    implicit val session = activemqContext.session
-//
-//    testBridge(
-//      PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).service(_),
-//      JMSServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic, session.createQueue(topic)).client,
-//      PulsarServiceConfiguration.source[TestRequest1](topic).client,
-//      JMSServiceConfiguration.destination[TestRequest1](session.createQueue(topic)).client,
-//      s"jms://${topic}",
-//      "pulsar://",
-//      BridgeContext[Any](pulsarContext = Some(pulsarContext), activemqContext = Some(activemqContext))
-//    )
-//  }
+  //  "jms to pulsar" should "work" in {
+  //    val topic = s"hello-test-${uuid(6)}"
+  //    import io.jobial.scase.marshalling.serialization._
+  //    implicit val session = activemqContext.session
+  //
+  //    testBridge(
+  //      PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).service(_),
+  //      JMSServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic, session.createQueue(topic)).client,
+  //      PulsarServiceConfiguration.source[TestRequest1](topic).client,
+  //      JMSServiceConfiguration.destination[TestRequest1](session.createQueue(topic)).client,
+  //      s"jms://${topic}",
+  //      "pulsar://",
+  //      BridgeContext[Any](pulsarContext = Some(pulsarContext), activemqContext = Some(activemqContext))
+  //    )
+  //  }
 
   def testBridge[M](
     destinationService: RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] => IO[Service[IO]],

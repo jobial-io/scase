@@ -1,14 +1,16 @@
 package io.jobial.scase.aws.sqs
 
-import cats.{Monad, Traverse}
-import cats.effect.concurrent.{Deferred, Ref, Semaphore}
-import cats.effect.{Concurrent, IO, Sync}
+import cats.effect.Concurrent
+import cats.effect.LiftIO
+import cats.effect.Ref
+import cats.effect.std.Semaphore
 import cats.implicits._
-import com.amazonaws.services.sqs.model.{Message, ReceiveMessageResult}
+import com.amazonaws.services.sqs.model.Message
 import io.jobial.scase.aws.client.AwsContext
 import io.jobial.scase.aws.client.IdentityMap.identityTrieMap
 import io.jobial.scase.core._
 import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.core.impl.ConcurrentEffect
 import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
@@ -19,7 +21,7 @@ import scala.math.min
 /**
  * Consumer implementation for AWS SQS.
  */
-class SqsConsumer[F[_] : Concurrent, M](
+class SqsConsumer[F[_] : ConcurrentEffect : LiftIO, M](
   queueUrl: String,
   outstandingMessagesRef: Ref[F, collection.Map[M, String]],
   receivedMessagesRef: Ref[F, List[Message]],
@@ -118,7 +120,7 @@ class SqsConsumer[F[_] : Concurrent, M](
 
 object SqsConsumer {
 
-  def apply[F[_] : Concurrent, M](
+  def apply[F[_] : ConcurrentEffect : LiftIO, M](
     queueUrl: String,
     messageRetentionPeriod: Option[Duration] = Some(1.hour),
     visibilityTimeout: Option[Duration] = Some(10.minutes),

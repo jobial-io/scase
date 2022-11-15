@@ -14,7 +14,6 @@ package io.jobial.scase.aws.sqs
 
 import cats.effect.IO
 import io.circe.generic.auto._
-import io.jobial.scase.core._
 import io.jobial.scase.core.test.Req
 import io.jobial.scase.core.test.Resp
 import io.jobial.scase.core.test.ServiceTestSupport
@@ -22,14 +21,11 @@ import io.jobial.scase.core.test.TestRequest
 import io.jobial.scase.core.test.TestResponse
 import io.jobial.scase.marshalling.circe._
 import io.jobial.scase.util.Hash.uuid
-import java.util.concurrent.Executors
-import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.DurationInt
 
 
 class SqsServiceTest
   extends ServiceTestSupport {
-  
+
   "request-response service" should "reply successfully" in {
     val serviceConfig = SqsServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"test-hello-${uuid(5)}")
 

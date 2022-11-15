@@ -13,15 +13,11 @@
 package io.jobial.scase.aws.sqs
 
 import cats.effect.IO
-import cats.effect.concurrent.MVar
+import cats.effect.std.Queue
 import io.jobial.scase.aws.client.AwsContext
-import io.jobial.scase.core._
-import cats.implicits._
 import io.jobial.scase.core.test.ScaseTestHelper
-import io.jobial.scase.core.test.TestRequest
 import io.jobial.scase.core.test.TestRequest1
 import io.jobial.scase.core.test.TestRequest2
-import io.jobial.scase.core.test.TestResponse
 import io.jobial.scase.marshalling.serialization._
 import io.jobial.scase.util.Hash.uuid
 import org.scalatest.flatspec.AsyncFlatSpec
@@ -85,13 +81,13 @@ class SqsConsumerProducerTest extends AsyncFlatSpec with ScaseTestHelper {
 
   "receiving a large message" should "succeed" in {
     for {
-      messages <- MVar[IO].empty[Array[Byte]]
+      messages <- Queue.bounded[IO, Array[Byte]](1)
       testConsumer <- testConsumer
       subscription <- testConsumer.subscribe { result =>
         for {
           _ <- result.commit
           message <- result.message
-          _ <- messages.put(message)
+          _ <- messages.offer(message)
         } yield ()
       }
       m <- IO.race(subscription.join,

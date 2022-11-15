@@ -9,7 +9,7 @@
     </appender>
 
     <root level="${LOG:-DEBUG}">
-        <appender-ref ref="STDOUT" />
+        <appender-ref ref="STDOUT"/>
     </root>
     <logger name="org.apache" level="WARN"/>
     <logger name="com.amazonaws" level="INFO"/>

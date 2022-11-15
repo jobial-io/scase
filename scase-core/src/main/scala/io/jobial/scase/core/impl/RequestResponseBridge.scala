@@ -1,17 +1,15 @@
 package io.jobial.scase.core.impl
 
-import cats.effect.Concurrent
+import cats.effect.Ref
 import cats.effect.Sync
-import cats.effect.concurrent.Ref
 import cats.implicits._
 import io.jobial.scase.core._
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
-
 import scala.concurrent.duration.FiniteDuration
 
-class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERESP: Marshaller, DESTREQ: Unmarshaller, DESTRESP: Marshaller](
+class RequestResponseBridge[F[_] : ConcurrentEffect, SOURCEREQ: Unmarshaller, SOURCERESP: Marshaller, DESTREQ: Unmarshaller, DESTRESP: Marshaller](
   source: RequestHandler[F, SOURCEREQ, SOURCERESP] => F[Service[F]],
   destination: MessageReceiveResult[F, DESTREQ] => F[Option[RequestResponseResult[F, DESTREQ, DESTRESP]]],
   filterRequest: MessageReceiveResult[F, SOURCEREQ] => F[Option[MessageReceiveResult[F, DESTREQ]]],
@@ -82,7 +80,7 @@ abstract class RequestResponseBridgeServiceState[F[_] : Sync](
 
 object RequestResponseBridge extends CatsUtils with Logging {
 
-  def apply[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERESP: Marshaller, DESTREQ: Unmarshaller, DESTRESP: Marshaller](
+  def apply[F[_] : ConcurrentEffect, SOURCEREQ: Unmarshaller, SOURCERESP: Marshaller, DESTREQ: Unmarshaller, DESTRESP: Marshaller](
     source: RequestHandler[F, SOURCEREQ, SOURCERESP] => F[Service[F]],
     destination: MessageReceiveResult[F, DESTREQ] => F[Option[RequestResponseResult[F, DESTREQ, DESTRESP]]],
     filterRequest: MessageReceiveResult[F, SOURCEREQ] => F[Option[MessageReceiveResult[F, DESTREQ]]],
@@ -100,7 +98,7 @@ object RequestResponseBridge extends CatsUtils with Logging {
       stopped
     )
 
-  def apply[F[_] : Concurrent, REQ: Unmarshaller, RESP: Marshaller](
+  def apply[F[_] : ConcurrentEffect, REQ: Unmarshaller, RESP: Marshaller](
     source: RequestHandler[F, REQ, RESP] => F[Service[F]],
     destination: MessageReceiveResult[F, REQ] => F[Option[RequestResponseResult[F, REQ, RESP]]],
     filterRequest: MessageReceiveResult[F, REQ] => F[Option[MessageReceiveResult[F, REQ]]]
@@ -114,14 +112,14 @@ object RequestResponseBridge extends CatsUtils with Logging {
       { (_, result) => pure(Some(result.response)) }
     )
 
-  def fixedDestination[F[_] : Concurrent, REQ, RESP](destination: RequestResponseClient[F, REQ, RESP])(implicit requestResponseMapping: RequestResponseMapping[REQ, RESP]) = { r: MessageReceiveResult[F, REQ] =>
+  def fixedDestination[F[_] : ConcurrentEffect, REQ, RESP](destination: RequestResponseClient[F, REQ, RESP])(implicit requestResponseMapping: RequestResponseMapping[REQ, RESP]) = { r: MessageReceiveResult[F, REQ] =>
     for {
       message <- r.message
       sendResult <- destination.sendRequestWithResponseMapping(message, requestResponseMapping)(SendRequestContext(r.requestTimeout, r.attributes - ResponseProducerIdKey - ResponseTopicKey - CorrelationIdKey))
     } yield Option(sendResult)
   }
 
-  def destinationBasedOnSourceRequest[F[_] : Concurrent, REQ, RESP](destination: MessageReceiveResult[F, REQ] => F[Option[RequestResponseClient[F, REQ, RESP]]], timeout: FiniteDuration)(implicit requestResponseMapping: RequestResponseMapping[REQ, RESP]) = { r: MessageReceiveResult[F, REQ] =>
+  def destinationBasedOnSourceRequest[F[_] : ConcurrentEffect, REQ, RESP](destination: MessageReceiveResult[F, REQ] => F[Option[RequestResponseClient[F, REQ, RESP]]], timeout: FiniteDuration)(implicit requestResponseMapping: RequestResponseMapping[REQ, RESP]) = { r: MessageReceiveResult[F, REQ] =>
     for {
       message <- r.message
       requestTimeout = r.requestTimeout.getOrElse(timeout)
@@ -130,11 +128,11 @@ object RequestResponseBridge extends CatsUtils with Logging {
     } yield sendResult
   }
 
-  def allowAllFilter[F[_] : Concurrent, M] = { r: MessageReceiveResult[F, M] =>
+  def allowAllFilter[F[_] : ConcurrentEffect, M] = { r: MessageReceiveResult[F, M] =>
     pure(Option(r))
   }
 
-  def requestResponseOnlyFilter[F[_] : Concurrent, SOURCEREQ]: MessageReceiveResult[F, SOURCEREQ] => F[Option[MessageReceiveResult[F, SOURCEREQ]]] = { r: MessageReceiveResult[F, SOURCEREQ] =>
+  def requestResponseOnlyFilter[F[_] : ConcurrentEffect, SOURCEREQ]: MessageReceiveResult[F, SOURCEREQ] => F[Option[MessageReceiveResult[F, SOURCEREQ]]] = { r: MessageReceiveResult[F, SOURCEREQ] =>
     if (r.responseProducerId.isDefined)
       pure(Option(r))
     else

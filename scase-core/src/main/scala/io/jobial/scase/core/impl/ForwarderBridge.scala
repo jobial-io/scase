@@ -1,18 +1,16 @@
 package io.jobial.scase.core.impl
 
 import cats.effect.Concurrent
-import cats.effect.Timer
-import cats.effect.concurrent.Ref
+import cats.effect.Ref
 import cats.implicits._
 import io.jobial.scase.core.ReceiverClient
 import io.jobial.scase.core._
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
-
 import scala.concurrent.duration.DurationInt
 
-class ForwarderBridge[F[_] : Concurrent : Timer, REQ: Unmarshaller, RESP: Marshaller](
+class ForwarderBridge[F[_] : TemporalEffect, REQ: Unmarshaller, RESP: Marshaller](
   source: ReceiverClient[F, REQ],
   destination: MessageReceiveResult[F, RESP] => F[Option[MessageSendResult[F, RESP]]],
   filter: MessageReceiveResult[F, REQ] => F[Option[MessageReceiveResult[F, RESP]]],
@@ -56,7 +54,7 @@ class ForwarderBridge[F[_] : Concurrent : Timer, REQ: Unmarshaller, RESP: Marsha
 
 object ForwarderBridge extends CatsUtils with Logging {
 
-  def apply[F[_] : Concurrent : Timer, M: Unmarshaller : Marshaller](
+  def apply[F[_] : TemporalEffect, M: Unmarshaller : Marshaller](
     source: ReceiverClient[F, M],
     destination: MessageReceiveResult[F, M] => F[Option[MessageSendResult[F, M]]],
     filter: MessageReceiveResult[F, M] => F[Option[MessageReceiveResult[F, M]]]
@@ -81,11 +79,11 @@ object ForwarderBridge extends CatsUtils with Logging {
     } yield sendResult.headOption
   }
 
-  def allowAllFilter[F[_] : Concurrent, M] = { r: MessageReceiveResult[F, M] =>
+  def allowAllFilter[F[_] : ConcurrentEffect, M] = { r: MessageReceiveResult[F, M] =>
     pure(Option(r))
   }
 
-  def oneWayOnlyFilter[F[_] : Concurrent, M]: MessageReceiveResult[F, M] => F[Option[MessageReceiveResult[F, M]]] = { r: MessageReceiveResult[F, M] =>
+  def oneWayOnlyFilter[F[_] : ConcurrentEffect, M]: MessageReceiveResult[F, M] => F[Option[MessageReceiveResult[F, M]]] = { r: MessageReceiveResult[F, M] =>
     if (r.responseProducerId.isDefined)
       pure(None)
     else

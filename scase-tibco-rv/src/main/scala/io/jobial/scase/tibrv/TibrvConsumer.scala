@@ -2,9 +2,9 @@ package io.jobial.scase.tibrv
 
 import cats.effect.Concurrent
 import cats.effect.IO
-import cats.effect.Timer
-import cats.effect.concurrent.MVar
-import cats.effect.implicits.catsEffectSyntaxConcurrent
+import cats.effect.LiftIO
+import cats.effect.std.Queue
+import cats.effect.unsafe.implicits.global
 import cats.implicits._
 import com.tibco.tibrv.Tibrv
 import com.tibco.tibrv.TibrvDispatcher
@@ -18,15 +18,15 @@ import io.jobial.scase.core.ReceiveTimeout
 import io.jobial.scase.core.ResponseProducerIdKey
 import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
+import io.jobial.scase.core.impl.TemporalEffect
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
-
 import java.net.InetAddress
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration.FiniteDuration
 
-class TibrvConsumer[F[_] : Concurrent : Timer, M](
-  receiveResult: MVar[IO, (TibrvListener, TibrvMsg)],
+class TibrvConsumer[F[_] : TemporalEffect : LiftIO, M](
+  receiveResult: Queue[IO, (TibrvListener, TibrvMsg)],
   subjects: Seq[String],
   subjectFilter: String => Boolean
 )(implicit context: TibrvContext) extends DefaultMessageConsumer[F, M] with TibrvMsgCallback with Logging {
@@ -64,7 +64,7 @@ class TibrvConsumer[F[_] : Concurrent : Timer, M](
 
   def onMsg(listener: TibrvListener, message: TibrvMsg) = {
     if (subjectFilter(message.getSendSubject))
-      receiveResult.put(listener -> message)
+      receiveResult.offer(listener -> message)
     else
       unit[IO]
   }.unsafeRunSync()
@@ -72,14 +72,14 @@ class TibrvConsumer[F[_] : Concurrent : Timer, M](
   def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]) =
     for {
       _ <- pure(rvListeners)
-      (listener, tibrvMessage) <- timeout.map(t => liftIO(receiveResult.read).timeout(t)).getOrElse(liftIO(receiveResult.read)).handleErrorWith {
+      (listener, tibrvMessage) <- timeout.map(t => liftIO(receiveResult.take.timeout(t))).getOrElse(liftIO(receiveResult.take)).handleErrorWith {
         case t: TimeoutException =>
           trace(s"Receive timed out after $timeout in $this") >>
             raiseError(ReceiveTimeout(timeout, t))
         case t =>
           raiseError(t)
       }
-      _ <- liftIO(receiveResult.take)
+      //_ <- liftIO(receiveResult.take)
       _ <- trace(s"received message ${tibrvMessage.toString.take(200)} on $listener")
       message = Unmarshaller[M].unmarshal(tibrvMessage.getAsBytes)
       result <- message match {
@@ -106,7 +106,7 @@ class TibrvConsumer[F[_] : Concurrent : Timer, M](
 
 object TibrvConsumer extends CatsUtils with Logging {
 
-  def apply[F[_] : Concurrent : Timer, M](
+  def apply[F[_] : TemporalEffect : LiftIO, M](
     subjects: Seq[String] = Seq("_LOCAL.>"),
     subjectFilter: String => Boolean = { _ => true }
   )(
@@ -114,6 +114,6 @@ object TibrvConsumer extends CatsUtils with Logging {
     ioConcurrent: Concurrent[IO]
   ) =
     for {
-      receiveResult <- liftIO(MVar.empty[IO, (TibrvListener, TibrvMsg)])(Concurrent[F])
+      receiveResult <- liftIO(Queue.bounded[IO, (TibrvListener, TibrvMsg)](1))
     } yield new TibrvConsumer[F, M](receiveResult, subjects, subjectFilter)
 }

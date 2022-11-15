@@ -74,7 +74,7 @@ package object core {
   }
 
   implicit class MessageExtension[F[_], M](message: M) {
-    
+
     def underlyingMessage[T](implicit context: MessageContext[F]) =
       context.receiveResult(message).underlyingMessage[T]
 
@@ -84,7 +84,7 @@ package object core {
     def attributes(implicit context: MessageContext[F]) =
       context.receiveResult(message).attributes
   }
-  
+
   val CorrelationIdKey = "CorrelationId"
 
   val ResponseProducerIdKey = "ResponseProducerId"

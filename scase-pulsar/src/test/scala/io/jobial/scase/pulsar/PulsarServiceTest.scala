@@ -1,7 +1,7 @@
 package io.jobial.scase.pulsar
 
 import cats.effect.IO
-import cats.effect.concurrent.MVar
+import cats.effect.std.Queue
 import io.circe.generic.auto._
 import io.jobial.scase.core._
 import io.jobial.scase.core.test.Req
@@ -112,7 +112,7 @@ class PulsarServiceTest
       s"hello-test-handler-${uuid(6)}")
 
     for {
-      receivedMessage <- MVar.empty[IO, TestRequest[_ <: TestResponse]]
+      receivedMessage <- Queue.bounded[IO, TestRequest[_ <: TestResponse]](1)
       service <- serviceConfig.service(TestMessageHandler(receivedMessage))
       senderClient <- serviceConfig.client[IO]
       r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)
@@ -127,7 +127,7 @@ class PulsarServiceTest
     )
 
     for {
-      receivedMessage <- MVar.empty[IO, TestRequest[_ <: TestResponse]]
+      receivedMessage <- Queue.bounded[IO, TestRequest[_ <: TestResponse]](1)
       senderClient <- destination[TestRequest[_ <: TestResponse]](s"$requestTopicPrefix-a").client[IO]
       service <- serviceConfig.service(TestMessageHandler(receivedMessage))
       r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage, false)
@@ -147,7 +147,7 @@ class PulsarServiceTest
       r <- testMessageSourceReceive(senderClient, receiverClient)
     } yield r
   }
-  
+
   "request-response service" should "succeed in load test" in {
     val serviceConfig = requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"hello-test-${uuid(6)}")
     for {

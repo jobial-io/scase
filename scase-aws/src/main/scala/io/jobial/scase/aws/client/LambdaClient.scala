@@ -12,12 +12,13 @@
  */
 package io.jobial.scase.aws.client
 
-import cats.effect.Concurrent
-import cats.effect.Timer
+import cats.effect.unsafe.IORuntime
+import cats.implicits._
 import com.amazonaws.services.lambda.AWSLambdaAsync
 import com.amazonaws.services.lambda.AWSLambdaAsyncClientBuilder
 import com.amazonaws.services.lambda.model.InvokeRequest
-import cats.implicits._
+import io.jobial.scase.core.impl.ConcurrentEffect
+import io.jobial.scase.core.impl.TemporalEffect
 
 trait LambdaClient[F[_]] extends AwsClient[F] {
   lazy val lambda = buildAwsAsyncClient[AWSLambdaAsyncClientBuilder, AWSLambdaAsync](AWSLambdaAsyncClientBuilder.standard)
@@ -52,12 +53,14 @@ trait LambdaClient[F[_]] extends AwsClient[F] {
 
 object LambdaClient {
 
-  def apply[F[_] : Concurrent : Timer](implicit context: AwsContext) =
+  def apply[F[_] : TemporalEffect](implicit context: AwsContext) =
     new LambdaClient[F] {
       def awsContext = context
 
-      val concurrent = Concurrent[F]
+      val concurrent = ConcurrentEffect[F]
 
-      val timer = Timer[F]
+      val temporal = TemporalEffect[F]
+
+      val runtime = IORuntime.global
     }
 }

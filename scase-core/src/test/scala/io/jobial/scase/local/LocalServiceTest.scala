@@ -13,7 +13,7 @@
 package io.jobial.scase.local
 
 import cats.effect.IO
-import cats.effect.concurrent.MVar
+import cats.effect.std.Queue
 import io.jobial.scase.core._
 import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.test.Req1
@@ -78,7 +78,7 @@ class LocalServiceTest
       s"hello")
 
     for {
-      receivedMessage <- MVar.empty[IO, TestRequest[_ <: TestResponse]]
+      receivedMessage <- Queue.bounded[IO, TestRequest[_ <: TestResponse]](1)
       service <- serviceConfig.service(TestMessageHandler(receivedMessage))
       senderClient <- serviceConfig.client(service)
       r <- testSuccessfulMessageHandlerReceive(service, senderClient, receivedMessage)

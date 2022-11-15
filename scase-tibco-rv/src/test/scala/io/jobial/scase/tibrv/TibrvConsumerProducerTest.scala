@@ -12,13 +12,13 @@
  */
 package io.jobial.scase.tibrv
 
+import cats.effect.Deferred
 import cats.effect.IO
-import cats.effect.concurrent.Deferred
+import io.circe.generic.auto._
 import io.jobial.scase.core.test.ServiceTestSupport
 import io.jobial.scase.core.test.TestRequest1
-import io.jobial.scase.util.Hash.uuid
 import io.jobial.scase.marshalling.tibrv.circe._
-import io.circe.generic.auto._
+import io.jobial.scase.util.Hash.uuid
 
 class TibrvConsumerProducerTest extends ServiceTestSupport {
   implicit val pulsarContext = TibrvContext()

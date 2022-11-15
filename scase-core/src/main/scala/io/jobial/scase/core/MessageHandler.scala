@@ -12,7 +12,7 @@ trait MessageHandler[F[_], M] {
 }
 
 object MessageHandler {
-  
+
   def apply[F[_], M](handler: MessageContext[F] => Function[M, F[Unit]]) =
     new MessageHandler[F, M] {
       def handleMessage(implicit context: MessageContext[F]): Handler = handler(context)

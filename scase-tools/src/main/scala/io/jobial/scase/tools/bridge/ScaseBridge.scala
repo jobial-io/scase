@@ -31,7 +31,6 @@ import io.jobial.scase.tibrv.TibrvServiceConfiguration
 import io.jobial.scase.util.Cache
 import io.jobial.sclap.CommandLineApp
 import org.apache.pulsar.client.api.Message
-
 import javax.jms.Session
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration

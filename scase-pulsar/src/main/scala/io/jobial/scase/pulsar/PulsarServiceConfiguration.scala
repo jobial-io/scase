@@ -1,8 +1,5 @@
 package io.jobial.scase.pulsar
 
-import cats.effect.Concurrent
-import cats.effect.IO.raiseError
-import cats.effect.Timer
 import cats.implicits._
 import io.jobial.scase.core.MessageHandler
 import io.jobial.scase.core.MessageProducer
@@ -11,6 +8,7 @@ import io.jobial.scase.core.RequestHandler
 import io.jobial.scase.core.RequestResponseClient
 import io.jobial.scase.core.SenderClient
 import io.jobial.scase.core.ServiceConfiguration
+import io.jobial.scase.core.impl.AsyncEffect
 import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.ConsumerMessageHandlerService
 import io.jobial.scase.core.impl.ConsumerProducerRequestResponseClient
@@ -41,7 +39,7 @@ class PulsarMessageHandlerServiceConfiguration[M: Marshaller : Unmarshaller](
   val subscriptionName: String
 ) extends ServiceConfiguration with CatsUtils with Logging {
 
-  def service[F[_] : Concurrent : Timer](messageHandler: MessageHandler[F, M])(
+  def service[F[_] : AsyncEffect](messageHandler: MessageHandler[F, M])(
     implicit context: PulsarContext
   ) =
     for {
@@ -58,7 +56,7 @@ class PulsarMessageHandlerServiceConfiguration[M: Marshaller : Unmarshaller](
       )
     } yield service
 
-  def client[F[_] : Concurrent : Timer](
+  def client[F[_] : AsyncEffect](
     implicit context: PulsarContext
   ) = requestTopic match {
     case Left(requestTopic) =>
@@ -82,7 +80,7 @@ class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, 
   responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
 ) extends ServiceConfiguration with CatsUtils with Logging {
 
-  def service[F[_] : Concurrent : Timer](requestHandler: RequestHandler[F, REQ, RESP])(
+  def service[F[_] : AsyncEffect](requestHandler: RequestHandler[F, REQ, RESP])(
     implicit context: PulsarContext
   ) =
     for {
@@ -105,7 +103,7 @@ class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, 
       )
     } yield service
 
-  def client[F[_] : Concurrent : Timer](
+  def client[F[_] : AsyncEffect](
     implicit context: PulsarContext
   ): F[RequestResponseClient[F, REQ, RESP]] =
     for {
@@ -134,7 +132,7 @@ class PulsarStreamServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Mar
   responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
 ) extends ServiceConfiguration {
 
-  def service[F[_] : Concurrent : Timer](requestHandler: RequestHandler[F, REQ, RESP])(
+  def service[F[_] : AsyncEffect](requestHandler: RequestHandler[F, REQ, RESP])(
     implicit context: PulsarContext
   ) = requestResponse[REQ, RESP](
     requestTopic,
@@ -145,11 +143,11 @@ class PulsarStreamServiceConfiguration[REQ: Marshaller : Unmarshaller, RESP: Mar
     subscriptionInitialPublishTime
   ).service(requestHandler)
 
-  def senderClient[F[_] : Concurrent : Timer](
+  def senderClient[F[_] : AsyncEffect](
     implicit context: PulsarContext
   ) = destination[REQ](requestTopic, batchingMaxPublishDelay).client[F]
 
-  def receiverClient[F[_] : Concurrent : Timer](
+  def receiverClient[F[_] : AsyncEffect](
     implicit context: PulsarContext
   ) = source[Either[Throwable, RESP]](
     responseTopic,
@@ -172,7 +170,7 @@ class PulsarStreamServiceWithErrorTopicConfiguration[REQ: Marshaller : Unmarshal
   errorUnmarshaller: Unmarshaller[Throwable]
 ) extends ServiceConfiguration {
 
-  def service[F[_] : Concurrent : Timer](requestHandler: RequestHandler[F, REQ, RESP])(
+  def service[F[_] : AsyncEffect](requestHandler: RequestHandler[F, REQ, RESP])(
     implicit context: PulsarContext
   ) =
     for {
@@ -194,15 +192,15 @@ class PulsarStreamServiceWithErrorTopicConfiguration[REQ: Marshaller : Unmarshal
       )
     } yield service
 
-  def senderClient[F[_] : Concurrent : Timer](
+  def senderClient[F[_] : AsyncEffect](
     implicit context: PulsarContext
   ) = destination[REQ](requestTopic).client[F]
 
-  def responseReceiverClient[F[_] : Concurrent : Timer](
+  def responseReceiverClient[F[_] : AsyncEffect](
     implicit context: PulsarContext
   ) = source[RESP](responseTopic).client[F]
 
-  def errorReceiverClient[F[_] : Concurrent : Timer](
+  def errorReceiverClient[F[_] : AsyncEffect](
     implicit context: PulsarContext
   ) = source[Throwable](errorTopic).client[F]
 }
@@ -213,7 +211,7 @@ class PulsarMessageSourceServiceConfiguration[M: Unmarshaller](
   val subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Earliest),
   val subscriptionInitialPublishTime: Option[Instant] = None
 ) {
-  def client[F[_] : Concurrent : Timer](
+  def client[F[_] : AsyncEffect](
     implicit context: PulsarContext
   ): F[ReceiverClient[F, M]] =
     for {
@@ -232,7 +230,7 @@ class PulsarMessageDestinationServiceConfiguration[M: Marshaller](
   val batchingMaxPublishDelay: Option[FiniteDuration]
 ) {
 
-  def client[F[_] : Concurrent : Timer](
+  def client[F[_] : AsyncEffect](
     implicit context: PulsarContext
   ): F[SenderClient[F, M]] =
     for {

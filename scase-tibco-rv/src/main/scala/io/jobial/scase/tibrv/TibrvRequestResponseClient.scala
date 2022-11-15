@@ -12,7 +12,6 @@
  */
 package io.jobial.scase.tibrv
 
-import cats.effect.Concurrent
 import cats.implicits._
 import com.tibco.tibrv.TibrvMsg
 import io.jobial.scase.core.DefaultMessageReceiveResult
@@ -22,15 +21,15 @@ import io.jobial.scase.core.RequestResponseResult
 import io.jobial.scase.core.RequestTimeout
 import io.jobial.scase.core.SendRequestContext
 import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.core.impl.ConcurrentEffect
 import io.jobial.scase.core.impl.DefaultMessageSendResult
 import io.jobial.scase.core.impl.DefaultRequestResponseResult
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
-
 import scala.concurrent.duration._
 
-class TibrvRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP](
+class TibrvRequestResponseClient[F[_] : ConcurrentEffect, REQ: Marshaller, RESP](
   val subject: String
 )(
   implicit val context: TibrvContext,
@@ -89,7 +88,7 @@ class TibrvRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP](
 
 object TibrvRequestResponseClient extends CatsUtils with Logging {
 
-  def apply[F[_] : Concurrent, REQ: Marshaller, RESP: Unmarshaller](
+  def apply[F[_] : ConcurrentEffect, REQ: Marshaller, RESP: Unmarshaller](
     subject: String
   )(
     implicit context: TibrvContext,

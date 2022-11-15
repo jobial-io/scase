@@ -10,7 +10,6 @@ import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import scala.util.Try
-import io.jobial.scase.util._
 
 trait TibrvMsgRawMarshallingInstances {
 

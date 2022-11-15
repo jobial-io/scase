@@ -6,8 +6,7 @@ import io.jobial.scase.core.javadsl.SenderClient;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import static io.jobial.scase.core.javadsl.JavaUtils.concurrent;
-import static io.jobial.scase.core.javadsl.JavaUtils.timer;
+import static io.jobial.scase.core.javadsl.JavaUtils.ioAsyncEffect;
 
 public class PulsarMessageDestinationServiceConfiguration<M> {
 
@@ -18,10 +17,10 @@ public class PulsarMessageDestinationServiceConfiguration<M> {
     }
 
     public CompletableFuture<SenderClient<M>> client(PulsarContext pulsarContext) throws ExecutionException, InterruptedException {
-        return JavaUtils.senderClient(config.client(concurrent, timer, pulsarContext.getContext()));
+        return JavaUtils.senderClient(config.client(ioAsyncEffect, pulsarContext.getContext()));
     }
 
-    public CompletableFuture<SenderClient<M>>  client() throws ExecutionException, InterruptedException {
+    public CompletableFuture<SenderClient<M>> client() throws ExecutionException, InterruptedException {
         return client(new PulsarContext());
     }
 }

@@ -14,15 +14,15 @@ public class SendRequestContext {
 
     public SendRequestContext() {
     }
-    
+
     public SendRequestContext(Duration timeout) {
         setTimeout(timeout);
     }
-    
+
     public void setTimeout(Duration timeout) {
         context = context.copy(Some.apply(javaDurationToScala(timeout)), context.attributes());
     }
-    
+
     public void setAttributes(Map<String, String> attributes) {
         context = context.copy(context.requestTimeout(), javaMapToScala(attributes));
     }

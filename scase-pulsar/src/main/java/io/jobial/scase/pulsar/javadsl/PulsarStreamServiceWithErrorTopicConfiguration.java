@@ -9,7 +9,7 @@ import io.jobial.scase.core.javadsl.Service;
 
 import java.util.concurrent.ExecutionException;
 
-import static io.jobial.scase.core.javadsl.JavaUtils.*;
+import static io.jobial.scase.core.javadsl.JavaUtils.ioAsyncEffect;
 
 public class PulsarStreamServiceWithErrorTopicConfiguration<REQ, RESP> {
 
@@ -20,7 +20,7 @@ public class PulsarStreamServiceWithErrorTopicConfiguration<REQ, RESP> {
     }
 
     public Service service(RequestHandler<IO, REQ, RESP> requestHandler, PulsarContext pulsarContext) throws ExecutionException, InterruptedException {
-        return JavaUtils.service(config.service(requestHandler, concurrent, timer, pulsarContext.getContext())).get();
+        return JavaUtils.service(config.service(requestHandler, ioAsyncEffect, pulsarContext.getContext())).get();
     }
 
     public Service service(RequestHandler<IO, REQ, RESP> requestHandler) throws ExecutionException, InterruptedException {
@@ -28,7 +28,7 @@ public class PulsarStreamServiceWithErrorTopicConfiguration<REQ, RESP> {
     }
 
     public SenderClient<REQ> senderClient(PulsarContext pulsarContext) throws ExecutionException, InterruptedException {
-        return JavaUtils.<REQ>senderClient(config.senderClient(concurrent, timer, pulsarContext.getContext())).get();
+        return JavaUtils.<REQ>senderClient(config.senderClient(ioAsyncEffect, pulsarContext.getContext())).get();
     }
 
     public SenderClient<REQ> senderClient() throws ExecutionException, InterruptedException {
@@ -36,7 +36,7 @@ public class PulsarStreamServiceWithErrorTopicConfiguration<REQ, RESP> {
     }
 
     public ReceiverClient<RESP> responseReceiverClient(PulsarContext pulsarContext) throws ExecutionException, InterruptedException {
-        return JavaUtils.<RESP>receiverClient(config.responseReceiverClient(concurrent, timer, pulsarContext.getContext())).get();
+        return JavaUtils.<RESP>receiverClient(config.responseReceiverClient(ioAsyncEffect, pulsarContext.getContext())).get();
     }
 
     public ReceiverClient<RESP> responseReceiverClient() throws ExecutionException, InterruptedException {
@@ -44,7 +44,7 @@ public class PulsarStreamServiceWithErrorTopicConfiguration<REQ, RESP> {
     }
 
     public ReceiverClient<Throwable> errorReceiverClient(PulsarContext pulsarContext) throws ExecutionException, InterruptedException {
-        return JavaUtils.<Throwable>receiverClient(config.errorReceiverClient(concurrent, timer, pulsarContext.getContext())).get();
+        return JavaUtils.<Throwable>receiverClient(config.errorReceiverClient(ioAsyncEffect, pulsarContext.getContext())).get();
     }
 
     public ReceiverClient<Throwable> errorReceiverClient() throws ExecutionException, InterruptedException {
