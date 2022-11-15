@@ -72,14 +72,13 @@ class TibrvConsumer[F[_] : TemporalEffect : LiftIO, M](
   def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]) =
     for {
       _ <- pure(rvListeners)
-      (listener, tibrvMessage) <- timeout.map(t => liftIO(receiveResult.take.timeout(t))).getOrElse(liftIO(receiveResult.take)).handleErrorWith {
+      (listener, tibrvMessage) <- liftIO(take(receiveResult, timeout)).handleErrorWith {
         case t: TimeoutException =>
           trace(s"Receive timed out after $timeout in $this") >>
             raiseError(ReceiveTimeout(timeout, t))
         case t =>
           raiseError(t)
       }
-      //_ <- liftIO(receiveResult.take)
       _ <- trace(s"received message ${tibrvMessage.toString.take(200)} on $listener")
       message = Unmarshaller[M].unmarshal(tibrvMessage.getAsBytes)
       result <- message match {
