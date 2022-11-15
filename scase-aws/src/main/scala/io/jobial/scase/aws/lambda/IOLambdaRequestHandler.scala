@@ -21,7 +21,7 @@ abstract class IOLambdaRequestHandler[REQ, RESP]
 
   implicit lazy val runtime = IORuntime.global
 
-  implicit lazy val concurrent = ConcurrentEffect[IO]
+  override lazy val concurrent = ConcurrentEffect[IO]
 
   def runResult(result: IO[_]) =
     result.unsafeRunSync
