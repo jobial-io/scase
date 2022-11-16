@@ -1,10 +1,10 @@
 package io.jobial.scase.tibrv
 
 import cats.effect.Concurrent
+import cats.effect.ContextShift
 import cats.effect.IO
 import cats.effect.Timer
 import cats.effect.concurrent.MVar
-import cats.effect.implicits.catsEffectSyntaxConcurrent
 import cats.implicits._
 import com.tibco.tibrv.Tibrv
 import com.tibco.tibrv.TibrvDispatcher
@@ -20,8 +20,8 @@ import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
-
 import java.net.InetAddress
+import scala.concurrent.ExecutionContext
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration.FiniteDuration
 
@@ -69,17 +69,20 @@ class TibrvConsumer[F[_] : Concurrent : Timer, M](
       unit[IO]
   }.unsafeRunSync()
 
+  // TODO: try to get rid of these
+  implicit val ioContextShift: ContextShift[IO] = IO.contextShift(ExecutionContext.Implicits.global)
+  implicit val ioTimer: Timer[IO] = IO.timer(ExecutionContext.Implicits.global)
+
   def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]) =
     for {
       _ <- pure(rvListeners)
-      (listener, tibrvMessage) <- timeout.map(t => liftIO(receiveResult.read).timeout(t)).getOrElse(liftIO(receiveResult.read)).handleErrorWith {
+      (listener, tibrvMessage) <- liftIO(take(receiveResult, timeout)).handleErrorWith {
         case t: TimeoutException =>
           trace(s"Receive timed out after $timeout in $this") >>
             raiseError(ReceiveTimeout(timeout, t))
         case t =>
           raiseError(t)
       }
-      _ <- liftIO(receiveResult.take)
       _ <- trace(s"received message ${tibrvMessage.toString.take(200)} on $listener")
       message = Unmarshaller[M].unmarshal(tibrvMessage.getAsBytes)
       result <- message match {
