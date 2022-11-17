@@ -137,7 +137,7 @@ trait SqsClient[F[_]] extends S3Client[F] {
 
   // TODO: using async client
   def receiveMessage(queueUrl: String, maxNumberOfMessages: Int = 10, maxReceiveMessageWaitTime: Int = defaultMaxReceiveMessageWaitTime) =
-    delay {
+    blocking {
       sqsExtended.getOrElse(sqs).receiveMessage(new ReceiveMessageRequest()
         .withQueueUrl(queueUrl)
         .withAttributeNames("All")
