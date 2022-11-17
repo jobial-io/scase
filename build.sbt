@@ -63,7 +63,7 @@ lazy val ScalaJava8CompatVersion = "1.0.2"
 lazy val LogbackVersion = "1.2.3"
 lazy val ShapelessVersion = "2.3.3"
 lazy val JodaTimeVersion = "2.11.1"
-lazy val CondenseVersion = "0.5.4"
+lazy val CondenseVersion = "2.0.0"
 lazy val ProguardVersion = "7.2.2"
 lazy val ActivemqVersion = "5.16.3"
 lazy val JmsVersion = "2.0.1"
@@ -72,7 +72,7 @@ lazy val root: Project = project
   .in(file("."))
   .settings(commonSettings)
   .aggregate(
-    `scase-core`, `scase-aws`, /*`scase-aws-test`,*/ `scase-circe`, `scase-spray-json`,
+    `scase-core`, `scase-aws`, `scase-aws-test`, `scase-circe`, `scase-spray-json`,
     `scase-pulsar`, `scase-jms`, `scase-activemq`, `scase-tibco-rv`, `scase-tools`,
     `scase-http`
   )
@@ -123,33 +123,32 @@ lazy val `scase-aws` = project
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "test->test")
 
-// TODO: add this back when condense 2 has been released
-//lazy val `scase-aws-test` = project
-//  .settings(commonSettings)
-//  .settings(
-//    libraryDependencies ++= Seq(
-//      "io.jobial" %% "condense" % CondenseVersion
-//    ),
-//    cloudformationStackClass := "io.jobial.scase.aws.lambda.TestServiceStack$",
-//    Proguard / proguardOptions := Seq(
-//      "-injars " + (Test / packageBin).value,
-//      "-injars " + (`scase-core` / Test / packageBin).value,
-//      "-dontobfuscate", "-dontoptimize", "-dontnote", "-ignorewarnings",
-//      "-keep class io.jobial.scase.aws.lambda.** {*;}",
-//      "-keep class com.amazonaws.services.lambda.** {*;}",
-//      "-keep class scala.Symbol {*;}"
-//    ) ++ (Proguard / proguardOptions).value,
-//    Proguard / proguardInputFilter := { file =>
-//      file.name match {
-//        case _ => Some("!META-INF/**,!about.html,!org/apache/commons/logging/**")
-//      }
-//    },
-//    Proguard / proguard / javaOptions := Seq("-Xmx2G"),
-//    Proguard / proguardVersion := ProguardVersion
-//  )
-//  .dependsOn(`scase-core` % "compile->compile;test->test")
-//  .dependsOn(`scase-aws` % "compile->compile")
-//  .dependsOn(`scase-circe`)
+lazy val `scase-aws-test` = project
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.jobial" %% "condense" % CondenseVersion
+    ),
+    cloudformationStackClass := "io.jobial.scase.aws.lambda.TestServiceStack$",
+    Proguard / proguardOptions := Seq(
+      "-injars " + (Test / packageBin).value,
+      "-injars " + (`scase-core` / Test / packageBin).value,
+      "-dontobfuscate", "-dontoptimize", "-dontnote", "-ignorewarnings",
+      "-keep class io.jobial.scase.aws.lambda.** {*;}",
+      "-keep class com.amazonaws.services.lambda.** {*;}",
+      "-keep class scala.Symbol {*;}"
+    ) ++ (Proguard / proguardOptions).value,
+    Proguard / proguardInputFilter := { file =>
+      file.name match {
+        case _ => Some("!META-INF/**,!about.html,!org/apache/commons/logging/**")
+      }
+    },
+    Proguard / proguard / javaOptions := Seq("-Xmx2G"),
+    Proguard / proguardVersion := ProguardVersion
+  )
+  .dependsOn(`scase-core` % "compile->compile;test->test")
+  .dependsOn(`scase-aws` % "compile->compile")
+  .dependsOn(`scase-circe`)
 
 lazy val `scase-spray-json` = project
   .settings(commonSettings)
