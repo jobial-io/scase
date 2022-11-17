@@ -39,7 +39,7 @@ class SqsConsumer[F[_] : ConcurrentEffect : LiftIO, M](
 
   override def initialize =
     liftIO(initializeQueue(queueUrl, messageRetentionPeriod, visibilityTimeout, cleanup))
-
+  
   def receiveMessagesFromQueue(timeout: Option[FiniteDuration]) =
     (for {
       _ <- receivedMessagesSemaphore.acquire
