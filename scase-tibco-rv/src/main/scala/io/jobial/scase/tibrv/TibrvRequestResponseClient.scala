@@ -49,7 +49,7 @@ class TibrvRequestResponseClient[F[_] : ConcurrentEffect, REQ: Marshaller, RESP]
       tibrvMsg = new TibrvMsg(Marshaller[REQ].marshal(request))
       _ = tibrvMsg.setSendSubject(subject)
       timeout = sendRequestContext.requestTimeout.getOrElse(300.seconds)
-      tibrvResponse <- delay(Option(transport.sendRequest(tibrvMsg, timeout.toSeconds))).onError { case t =>
+      tibrvResponse <- blocking(Option(transport.sendRequest(tibrvMsg, timeout.toSeconds))).onError { case t =>
         error(s"failed to send message on $this context: $context", t)
       }
       tibrvResponse <- tibrvResponse match {
