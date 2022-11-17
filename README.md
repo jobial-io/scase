@@ -4,7 +4,9 @@
 [![Scala version support](https://index.scala-lang.org/jobial-io/scase/scase/latest-by-scala-version.svg?targetType=Js)](https://index.scala-lang.org/jobial-io/scase)
 [![Codecov](https://codecov.io/gh/jobial-io/scase/branch/master/graph/badge.svg?token=WP67SLCC4P)](https://codecov.io/gh/jobial-io/scase)
 
-**Run Scala or Java code as a portable serverless function or microservice with zero boilerplate and complete type safety**
+**Run Scala or Java code as a portable serverless function or microservice**
+
+**Zero boilerplate and complete type safety**
 
 **Integrate different Message-Oriented Middlewares and protocols easily**
 
