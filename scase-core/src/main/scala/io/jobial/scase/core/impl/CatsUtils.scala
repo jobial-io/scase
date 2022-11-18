@@ -55,13 +55,25 @@ trait CatsUtils {
 
   def start[F[_] : ConcurrentEffect, A](f: F[A]) = Concurrent[F].start(f)
 
-  def fromFuture[F[_] : Async, A](f: => Future[A]): F[A] =
-    Async[F].async { cb =>
-      f.onComplete(r => cb(r match {
-        case Success(a) => Right(a)
-        case Failure(e) => Left(e)
-      }))(ExecutionContext.Implicits.global)
-      pure[F, Option[F[Unit]]](None)
+  def fromFuture[F[_] : Async, A](f: => Future[A])(implicit ec: ExecutionContext): F[A] =
+    delay(f).flatMap { f =>
+      f.value match {
+        case Some(result) =>
+          result match {
+            case Success(a) => pure(a)
+            case Failure(e) => raiseError(e)
+          }
+        case _ =>
+          Async[F].async { cb =>
+            f.onComplete { r =>
+              cb(r match {
+                case Success(a) => Right(a)
+                case Failure(e) => Left(e)
+              })
+            }(ec)
+            pure[F, Option[F[Unit]]](None)
+          }
+      }
     }
 
   def fromEither[F[_] : ConcurrentEffect, A](e: Either[Throwable, A]): F[A] =
