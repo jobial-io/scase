@@ -74,12 +74,12 @@ lazy val root: Project = project
   .aggregate(
     `scase-core`, `scase-aws`, `scase-aws-test`, `scase-circe`, `scase-spray-json`,
     `scase-pulsar`, `scase-jms`, `scase-activemq`, `scase-tibco-rv`, `scase-tools`,
-    `scase-http`
+    `scase-http4s`
   )
   .dependsOn(
     `scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`,
     `scase-pulsar`, `scase-jms`, `scase-activemq`, `scase-tibco-rv`, `scase-tools`,
-    `scase-http`
+    `scase-http4s`
   )
 
 lazy val `scase-core` = project
@@ -232,10 +232,10 @@ lazy val `scase-tools` = project
   .dependsOn(`scase-tibco-rv`)
   .dependsOn(`scase-activemq`)
 
-lazy val `scase-http` = project
+lazy val `scase-http4s` = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-dsl" % "1.0.0-M30" exclude("org.typelevel", "cats-effect")
+      "org.http4s" %% "http4s-dsl" % "1.0.0-M37" exclude("org.typelevel", "cats-effect")
     )
   )
