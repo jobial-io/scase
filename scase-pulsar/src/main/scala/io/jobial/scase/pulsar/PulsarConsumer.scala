@@ -2,10 +2,8 @@ package io.jobial.scase.pulsar
 
 import cats.effect.Concurrent
 import cats.effect.Timer
-import cats.effect.concurrent.Ref
 import cats.implicits._
 import io.jobial.scase.core.DefaultMessageReceiveResult
-import io.jobial.scase.core.MessageReceiveResult
 import io.jobial.scase.core.ReceiveTimeout
 import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
@@ -19,6 +17,7 @@ import java.util.UUID.randomUUID
 import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
 import scala.compat.java8.FutureConverters.toScala
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
