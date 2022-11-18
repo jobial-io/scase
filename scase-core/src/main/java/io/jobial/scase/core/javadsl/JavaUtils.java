@@ -2,6 +2,7 @@ package io.jobial.scase.core.javadsl;
 
 import cats.effect.IO;
 import cats.effect.unsafe.IORuntime;
+import cats.effect.unsafe.IORuntime$;
 import io.jobial.scase.core.impl.AsyncEffect;
 import io.jobial.scase.core.impl.ConcurrentEffect;
 import io.jobial.scase.core.impl.TemporalEffect;
@@ -108,7 +109,7 @@ public class JavaUtils {
 
     public static ExecutionContext executionContext = ExecutionContext$.MODULE$.global();
 
-    public static IORuntime runtime = cats.effect.unsafe.implicits.global();
+    public static IORuntime runtime = IORuntime$.MODULE$.global();
 
     public static ConcurrentEffect<IO> ioConcurrentEffect = (ConcurrentEffect<IO>) package$.MODULE$.ioConcurrentEffect();
 
