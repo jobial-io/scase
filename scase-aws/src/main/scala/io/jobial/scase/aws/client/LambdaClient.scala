@@ -27,7 +27,8 @@ trait LambdaClient[F[_]] extends AwsClient[F] {
     for {
       result <- fromJavaFuture(lambda.invokeAsync(new InvokeRequest()
         .withFunctionName(functionName)
-        .withPayload(payload)))
+        .withPayload(payload)
+      ))
       //    result <-
       //      // TODO: review if this is correct...
       //      if (Option(result.getFunctionError).isDefined)
