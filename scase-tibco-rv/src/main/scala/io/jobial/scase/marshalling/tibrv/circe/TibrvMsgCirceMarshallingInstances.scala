@@ -16,7 +16,6 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.util.Date
 
-
 /**
  * A marshalling implementation for case classes and TibrvMsg piggybacking on Circe for the case class
  * conversion. It spares the complexity of dealing with case class creation. The flip side is the inherently 

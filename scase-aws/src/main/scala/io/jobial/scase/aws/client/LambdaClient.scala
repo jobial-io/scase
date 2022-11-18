@@ -37,8 +37,6 @@ trait LambdaClient[F[_]] extends AwsClient[F] {
       //        successful(result)
     } yield result
 
-
-
   //  private def unmarshalException(result: InvokeResult) = {
   //    val responseString = new String(result.getPayload.array, "utf-8")
   //    trace(responseString)
