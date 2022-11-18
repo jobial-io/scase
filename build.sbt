@@ -23,7 +23,6 @@ ThisBuild / Test / packageSrc / publishArtifact := true
 ThisBuild / Test / packageDoc / publishArtifact := true
 ThisBuild / resolvers += "Mulesoft" at "https://repository.mulesoft.org/nexus/content/repositories/public/"
 
-import sbt.Defaults.sbtPluginExtra
 import sbt.Keys.{description, libraryDependencies, publishConfiguration}
 import sbt.addCompilerPlugin
 import xerial.sbt.Sonatype._
@@ -67,6 +66,7 @@ lazy val CondenseVersion = "2.0.1"
 lazy val ProguardVersion = "7.3.0"
 lazy val ActivemqVersion = "5.16.3"
 lazy val JmsVersion = "2.0.1"
+lazy val Http4sVersion = "1.0.0-M37"
 
 lazy val root: Project = project
   .in(file("."))
@@ -223,7 +223,7 @@ lazy val `scase-tools` = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "io.jobial" %% "sclap" % SclapVersion exclude("org.typelevel", "cats-effect"),
+      "io.jobial" %% "sclap" % SclapVersion,
       "ch.qos.logback" % "logback-classic" % LogbackVersion
     )
   )
@@ -236,6 +236,8 @@ lazy val `scase-http4s` = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-dsl" % "1.0.0-M37" exclude("org.typelevel", "cats-effect")
+      "org.http4s" %% "http4s-dsl" % Http4sVersion,
+      "org.http4s" %% "http4s-ember-server" % Http4sVersion,
+      "org.http4s" %% "http4s-ember-client" % Http4sVersion
     )
   )
