@@ -18,4 +18,8 @@ public class ReceiverClient<M> {
     public CompletableFuture<M> receive() throws RequestTimeout {
         return ioToCompletableFuture(client.receive());
     }
+
+    public CompletableFuture<?> stop() {
+        return ioToCompletableFuture(client.stop());
+    }
 }
