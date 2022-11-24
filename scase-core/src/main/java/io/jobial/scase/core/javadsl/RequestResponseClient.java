@@ -33,4 +33,8 @@ public class RequestResponseClient<REQ, RESP> {
     public CompletableFuture<RESP> sendRequestWithFullResult(REQ request) throws RequestTimeout {
         return sendRequest(request, new SendRequestContext());
     }
+
+    public CompletableFuture<?> stop() {
+        return ioToCompletableFuture(client.stop());
+    }
 }
