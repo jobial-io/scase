@@ -22,4 +22,8 @@ public class SenderClient<REQ> {
     public CompletableFuture<?> send(REQ request) throws RequestTimeout {
         return send(request, new SendMessageContext());
     }
+
+    public CompletableFuture<?> stop() {
+        return ioToCompletableFuture(client.stop());
+    }
 }
