@@ -187,7 +187,10 @@ Forward requests and one-way messages from one transport to another.
           client <- d match {
             case Some(d) =>
               for {
-                client <- context.requestResponseClientCache.getOrCreate(d, f(d), { (_, client) => client.stop })
+                client <- context.requestResponseClientCache.getOrCreate(d, f(d), { (destination, client) =>
+                  info[IO](s"Stopping request-response client for destination $destination") >>
+                    client.stop
+                })
               } yield Some(client)
             case None =>
               IO(None)
@@ -244,7 +247,10 @@ Forward requests and one-way messages from one transport to another.
           client <- d match {
             case Some(d) =>
               for {
-                client <- context.senderClientCache.getOrCreate(d, f(d), { (_, client) => client.stop })
+                client <- context.senderClientCache.getOrCreate(d, f(d), { (destination, client) =>
+                  info[IO](s"Stopping client for destination $destination") >>
+                    client.stop
+                })
               } yield Some(client)
             case None =>
               IO(None)
