@@ -72,7 +72,7 @@ lazy val root: Project = project
   .aggregate(`scase-core`, `scase-aws`, `scase-aws-test`, `scase-circe`, `scase-spray-json`,
     `scase-pulsar`, `scase-jms`, `scase-activemq`, `scase-tibco-rv`, `scase-tools`)
   .dependsOn(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`,
-    `scase-pulsar`, `scase-jms`, `scase-activemq`, `scase-tibco-rv`, `scase-tools`)
+    `scase-pulsar`, `scase-jms`, `scase-activemq`, `scase-tibco-rv`)
 
 lazy val `scase-core` = project
   .settings(commonSettings)
