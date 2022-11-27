@@ -1,8 +1,49 @@
 package io.jobial.scase.core
 
 import io.jobial.scase.marshalling.Unmarshaller
-
 import scala.concurrent.duration._
+
+/**
+ * The usual semantics of a consumer is that each message is delivered to exactly one receive or subscription. Therefore,
+ * multiple subscriptions on a consumer receive messages randomly.
+ * If messages need to be delivered multiple times, each receiver should have a separate consumer.
+ *
+ * @tparam F
+ * @tparam M
+ */
+trait MessageConsumer[F[_], M] {
+
+  /**
+   * Receive a message from the consumer. Receives compete for messages, each message is returned by exactly one receive.
+   *
+   * @param timeout
+   * @param u
+   * @return
+   */
+  def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]): F[MessageReceiveResult[F, M]]
+
+  /**
+   * Receive messages continuously and call the provided callback function for each message. If there are multiple
+   * subscriptions, they will compete for messages and each message will be delivered to exactly one callback function.
+   *
+   * @param callback
+   * @param u
+   * @tparam T
+   * @return
+   */
+  def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M]): F[MessageSubscription[F, M]]
+
+  def stop: F[Unit]
+}
+
+trait MessageSubscription[F[_], M] {
+
+  def join: F[Unit]
+
+  def cancel: F[Unit] // cancel the subscription
+
+  def isCancelled: F[Boolean]
+}
 
 trait MessageReceiveResult[F[_], M] {
 
@@ -42,48 +83,6 @@ case class DefaultMessageReceiveResult[F[_], M](
   override def underlyingContext[T]: F[T] = underlyingContextProvided.asInstanceOf[F[T]]
 }
 
-trait MessageSubscription[F[_], M] {
-
-  def join: F[Unit]
-
-  def cancel: F[Unit] // cancel the subscription
-
-  def isCancelled: F[Boolean]
-}
-
-/**
- * The usual semantics of a consumer is that each message is delivered to exactly one receive or subscription. Therefore,
- * multiple subscriptions on a consumer receive messages randomly.
- * If messages need to be delivered multiple times, each receiver should have a separate consumer.
- *
- * @tparam F
- * @tparam M
- */
-trait MessageConsumer[F[_], M] {
-
-  /**
-   * Receive a message from the consumer. Receives compete for messages, each message is returned by exactly one receive.
-   *
-   * @param timeout
-   * @param u
-   * @return
-   */
-  def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]): F[MessageReceiveResult[F, M]]
-
-  /**
-   * Receive messages continuously and call the provided callback function for each message. If there are multiple
-   * subscriptions, they will compete for messages and each message will be delivered to exactly one callback function.
-   *
-   * @param callback
-   * @param u
-   * @tparam T
-   * @return
-   */
-  def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M]): F[MessageSubscription[F, M]]
-
-  def stop: F[Unit]
-}
-
 case class ReceiveTimeout(
   timeout: Option[Duration],
   cause: Throwable
@@ -94,6 +93,3 @@ object ReceiveTimeout {
   def apply(timeout: Option[Duration]): ReceiveTimeout = ReceiveTimeout(timeout, null)
 }
 
-case class CouldNotFindMessageToCommit[M](
-  message: M
-) extends IllegalStateException

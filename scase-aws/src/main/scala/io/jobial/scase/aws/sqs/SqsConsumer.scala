@@ -1,10 +1,10 @@
 package io.jobial.scase.aws.sqs
 
-import cats.{Monad, Traverse}
-import cats.effect.concurrent.{Deferred, Ref, Semaphore}
-import cats.effect.{Concurrent, IO, Sync}
+import cats.effect.Concurrent
+import cats.effect.concurrent.Ref
+import cats.effect.concurrent.Semaphore
 import cats.implicits._
-import com.amazonaws.services.sqs.model.{Message, ReceiveMessageResult}
+import com.amazonaws.services.sqs.model.Message
 import io.jobial.scase.aws.client.AwsContext
 import io.jobial.scase.aws.client.IdentityMap.identityTrieMap
 import io.jobial.scase.core._
@@ -92,7 +92,7 @@ class SqsConsumer[F[_] : Concurrent, M](
                         trace(s"deleted message ${unmarshalledMessage.toString.take(500)}") >>
                           delay(deleteMessage(queueUrl, receiptHandle))
                       case _ =>
-                        raiseError(CouldNotFindMessageToCommit(unmarshalledMessage))
+                        raiseError(MessageToCommitNotFound(unmarshalledMessage))
                     }
                     _ <- outstandingMessagesRef.update(_ - unmarshalledMessage)
                   } yield (),
@@ -115,6 +115,10 @@ class SqsConsumer[F[_] : Concurrent, M](
 
   def stop = unit
 }
+
+case class MessageToCommitNotFound[M](
+  message: M
+) extends IllegalStateException
 
 object SqsConsumer {
 
