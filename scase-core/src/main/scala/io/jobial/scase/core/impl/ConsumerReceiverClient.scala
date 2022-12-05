@@ -27,10 +27,16 @@ class ConsumerReceiverClient[F[_] : Concurrent, M: Unmarshaller](
     } yield message
 
   def receiveWithContext =
-    messageConsumer.receive(None)
+    receiveWithContext(None)
 
   def receiveWithContext(timeout: FiniteDuration) =
-    messageConsumer.receive(Some(timeout))
+    receiveWithContext(Some(timeout))
+
+  def receiveWithContext(timeout: Option[FiniteDuration]) =
+    for {
+      result <- messageConsumer.receive(timeout)
+      _ <- whenA(autoCommit)(result.commit)
+    } yield result
 
   def stop = messageConsumer.stop
 }
