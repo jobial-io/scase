@@ -6,7 +6,7 @@
 
 **Run Scala or Java code as a portable serverless function or microservice with zero boilerplate and complete type safety**
 
-**Integrate different Message-Oriented Middlewares and protocols easily**
+**Integrate Message-Oriented Middlewares and protocols easily**
 
 **Uniform and portable messaging API for your applications**
 
