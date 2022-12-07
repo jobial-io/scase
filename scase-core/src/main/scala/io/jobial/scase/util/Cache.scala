@@ -9,7 +9,7 @@ import java.lang.System.currentTimeMillis
 import scala.concurrent.duration.Duration
 
 class Cache[F[_] : Concurrent, A, B](store: Ref[F, Map[A, CacheEntry[F, A, B]]], timeout: Duration,
-  accessCount: Ref[F, Long], cleanupFrequency: Int) extends CatsUtils {
+  accessCount: Ref[F, Long], cleanupFrequency: Int, maximumSize: Option[Int]) extends CatsUtils {
 
   def getOrCreate(key: A, value: F[B], onExpiry: (A, B) => F[Unit] = { (_: A, _: B) => unit[F] }): F[B] =
     for {
@@ -29,6 +29,14 @@ class Cache[F[_] : Concurrent, A, B](store: Ref[F, Map[A, CacheEntry[F, A, B]]],
 
   def cleanup =
     for {
+//      _ <- maximumSize match {
+//        case Some(maximumSize) =>
+//          for {
+//            size <- store.get.map(_.size)
+//          } yield ()
+//        case None =>
+//          unit
+//      }
       expired <- store.modify { s =>
         s.partition { case (key, entry) =>
           currentTimeMillis - entry.timestamp < timeout.toMillis
@@ -62,6 +70,6 @@ object Cache {
     for {
       store <- Ref.of[F, Map[A, CacheEntry[F, A, B]]](Map())
       accessCount <- Ref.of[F, Long](0)
-    } yield new Cache[F, A, B](store, timeout, accessCount, cleanupFrequency)
+    } yield new Cache[F, A, B](store, timeout, accessCount, cleanupFrequency, None)
   }
 }
