@@ -2,7 +2,9 @@ package io.jobial.scase.tools.bridge
 
 import cats.effect.IO
 import cats.effect.IO.delay
+import cats.effect.IO.ioEffect.whenA
 import cats.effect.IO.raiseError
+import cats.effect.concurrent.Deferred
 import com.tibco.tibrv.TibrvMsg
 import io.jobial.scase.activemq.ActiveMQContext
 import io.jobial.scase.core.MessageReceiveResult
@@ -15,9 +17,11 @@ import io.jobial.scase.core.Service
 import io.jobial.scase.core.impl.ForwarderBridge
 import io.jobial.scase.core.impl.ForwarderBridge.destinationBasedOnSource
 import io.jobial.scase.core.impl.ForwarderBridge.oneWayOnlyFilter
+import io.jobial.scase.core.impl.ForwarderBridgeServiceState
 import io.jobial.scase.core.impl.RequestResponseBridge
 import io.jobial.scase.core.impl.RequestResponseBridge.destinationBasedOnSourceRequest
 import io.jobial.scase.core.impl.RequestResponseBridge.requestResponseOnlyFilter
+import io.jobial.scase.core.impl.RequestResponseBridgeServiceState
 import io.jobial.scase.jms.JMSServiceConfiguration
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshalling
@@ -79,7 +83,9 @@ Forward requests and one-way messages from one transport to another.
     pulsarContext: Option[PulsarContext],
     activemqContext: Option[ActiveMQContext],
     requestResponseClientCache: Cache[IO, String, RequestResponseClient[IO, M, M]],
-    senderClientCache: Cache[IO, String, SenderClient[IO, M]]
+    senderClientCache: Cache[IO, String, SenderClient[IO, M]],
+    forwarderBridgeServiceState: Deferred[IO, ForwarderBridgeServiceState[IO]],
+    requestResponseBridgeServiceState: Deferred[IO, RequestResponseBridgeServiceState[IO]]
   ) {
 
     val marshalling = Marshalling[M]
@@ -123,7 +129,10 @@ Forward requests and one-way messages from one transport to another.
       for {
         requestResponseClientCache <- Cache[IO, String, RequestResponseClient[IO, M, M]](5.minutes)
         senderClientCache <- Cache[IO, String, SenderClient[IO, M]](5.minutes)
-      } yield BridgeContext[M](tibrvContext, pulsarContext, activemqContext, requestResponseClientCache, senderClientCache)
+        forwarderBridgeState <- Deferred[IO, ForwarderBridgeServiceState[IO]]
+        requestResponseBridgeState <- Deferred[IO, RequestResponseBridgeServiceState[IO]]
+      } yield BridgeContext[M](tibrvContext, pulsarContext, activemqContext, requestResponseClientCache,
+        senderClientCache, forwarderBridgeState, requestResponseBridgeState)
   }
 
   implicit def requestResponseMapping[M] = new RequestResponseMapping[M, M] {}
@@ -135,14 +144,16 @@ Forward requests and one-way messages from one transport to another.
       for {
         sourceClient <- clientForSource(source)
         destinationClient <- clientForDestination(destination)
-        forwarderBridge <- startForwarderBridge(sourceClient, destinationClient)
-      } yield forwarderBridge
+        state <- startForwarderBridge(sourceClient, destinationClient)
+        _ <- context.forwarderBridgeServiceState.complete(state)
+      } yield state
     else
       for {
         requestResponseSource <- serviceForSource(source)
         requestResponseClient <- requestResponseClientForDestination(destination)
-        requestResponseBridge <- startRequestResponseBridge(requestResponseSource, requestResponseClient, timeout)
-      } yield requestResponseBridge
+        state <- startRequestResponseBridge(requestResponseSource, requestResponseClient, timeout)
+        _ <- context.requestResponseBridgeServiceState.complete(state)
+      } yield state
   }
 
   def stripUriScheme(uri: String) = uri.substring(uri.indexOf("://") + 3)
@@ -183,6 +194,16 @@ Forward requests and one-way messages from one transport to another.
       r: MessageReceiveResult[IO, M] =>
         for {
           d <- getDestinationName(r)
+          state <- context.requestResponseBridgeServiceState.get
+          bridge = state.service
+          requestCount <- bridge.requestCount
+          responseCount <- bridge.responseCount
+          errorCount <- bridge.errorCount
+          filteredRequestCount <- bridge.filteredRequestCount
+          filteredResponseCount <- bridge.filteredResponseCount
+          _ <- whenA(requestCount % 1000 === 0)(
+            info[IO](s"Processed ${requestCount} requests and ${responseCount} responses (${errorCount} errors, ${filteredRequestCount} requests filtered, ${filteredResponseCount} responses filtered)")
+          )
           _ <- trace[IO](s"Forwarding request to $d")
           client <- d match {
             case Some(d) =>
@@ -244,6 +265,14 @@ Forward requests and one-way messages from one transport to another.
       r: MessageReceiveResult[IO, M] =>
         for {
           d <- getDestinationName(r)
+          state <- context.forwarderBridgeServiceState.get
+          bridge = state.service
+          messageCount <- bridge.messageCount
+          errorCount <- bridge.errorCount
+          filteredMessageCount <- bridge.filteredMessageCount
+          _ <- whenA(messageCount % 1000 === 0)(
+            info[IO](s"Processed ${messageCount} messages (${errorCount} errors, ${filteredMessageCount} filtered)")
+          )
           client <- d match {
             case Some(d) =>
               for {
@@ -284,7 +313,7 @@ Forward requests and one-way messages from one transport to another.
     for {
       bridge <- RequestResponseBridge(source, destinationBasedOnSourceRequest(destination, timeout), requestResponseOnlyFilter[IO, M])
       serviceState <- bridge.start
-    } yield serviceState
+    } yield serviceState.asInstanceOf[RequestResponseBridgeServiceState[IO]]
 
   def startForwarderBridge[M: Marshalling](
     sourceClient: ReceiverClient[IO, M],
@@ -293,5 +322,5 @@ Forward requests and one-way messages from one transport to another.
     for {
       bridge <- ForwarderBridge(sourceClient, destinationBasedOnSource(destinationClient), oneWayOnlyFilter[IO, M])
       serviceState <- bridge.start
-    } yield serviceState
+    } yield serviceState.asInstanceOf[ForwarderBridgeServiceState[IO]]
 }
