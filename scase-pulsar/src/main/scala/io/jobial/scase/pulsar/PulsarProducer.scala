@@ -65,7 +65,7 @@ object PulsarProducer extends CatsUtils {
 
   def apply[F[_] : Concurrent, M](
     topic: String,
-    batchingMaxPublishDelay: Option[FiniteDuration] = Some(1.millis)
+    batchingMaxPublishDelay: Option[FiniteDuration] = Some(10.millis)
   )(implicit context: PulsarContext) =
     delay(new PulsarProducer[F, M](
       topic,
