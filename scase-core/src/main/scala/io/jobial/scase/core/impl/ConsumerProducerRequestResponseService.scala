@@ -1,9 +1,7 @@
 package io.jobial.scase.core.impl
 
-import cats.Applicative.catsApplicativeForArrow
 import cats.effect.Concurrent
 import cats.effect.concurrent.Deferred
-import cats.effect.concurrent.Ref
 import cats.implicits._
 import io.jobial.scase.core.MessageConsumer
 import io.jobial.scase.core.MessageProducer
@@ -89,9 +87,9 @@ object ConsumerProducerRequestResponseService extends CatsUtils with Logging {
         pure(None)
 
     for {
-      responseProducersCacheRef <- createProducerCache
+      responseProducersCache <- createProducerCache
     } yield new ConsumerProducerRequestResponseService(
-      responseProducersCacheRef,
+      responseProducersCache,
       requestConsumer,
       responseProducer,
       requestHandler,
