@@ -9,7 +9,7 @@ import java.time.Instant;
 import java.util.Optional;
 
 import static io.jobial.scase.core.javadsl.JavaUtils.*;
-import static org.apache.pulsar.client.api.SubscriptionInitialPosition.Earliest;
+import static org.apache.pulsar.client.api.SubscriptionInitialPosition.Latest;
 
 
 public class PulsarServiceConfiguration {
@@ -94,7 +94,7 @@ public class PulsarServiceConfiguration {
                 responseTopic,
                 Optional.of(Duration.ofMillis(1)),
                 Optional.of(Duration.ofSeconds(1)),
-                Optional.of(Earliest),
+                Optional.of(Latest),
                 Optional.empty(),
                 requestMarshalling,
                 responseMarshalling
@@ -142,7 +142,7 @@ public class PulsarServiceConfiguration {
                 errorTopic,
                 Optional.of(Duration.ofMillis(1)),
                 Optional.of(Duration.ofSeconds(1)),
-                Optional.of(Earliest),
+                Optional.of(Latest),
                 Optional.empty(),
                 requestMarshalling,
                 responseMarshalling
