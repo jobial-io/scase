@@ -26,7 +26,7 @@ import io.jobial.scase.pulsar.PulsarServiceConfiguration.destination
 import io.jobial.scase.pulsar.PulsarServiceConfiguration.requestResponse
 import io.jobial.scase.pulsar.PulsarServiceConfiguration.source
 import org.apache.pulsar.client.api.SubscriptionInitialPosition
-import org.apache.pulsar.client.api.SubscriptionInitialPosition.Earliest
+import org.apache.pulsar.client.api.SubscriptionInitialPosition.Latest
 import java.time.Instant
 import java.util.UUID.randomUUID
 import scala.concurrent.duration._
@@ -210,7 +210,7 @@ class PulsarStreamServiceWithErrorTopicConfiguration[REQ: Marshaller : Unmarshal
 class PulsarMessageSourceServiceConfiguration[M: Unmarshaller](
   val sourceTopic: Either[String, Regex],
   val patternAutoDiscoveryPeriod: Option[FiniteDuration] = Some(1.second),
-  val subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Earliest),
+  val subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Latest),
   val subscriptionInitialPublishTime: Option[Instant] = None
 ) {
   def client[F[_] : Concurrent : Timer](
@@ -250,7 +250,7 @@ object PulsarServiceConfiguration {
     responseTopicOverride: Option[String] = None,
     batchingMaxPublishDelay: Option[FiniteDuration] = Some(1.millis),
     patternAutoDiscoveryPeriod: Option[FiniteDuration] = Some(1.second),
-    subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Earliest),
+    subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Latest),
     subscriptionInitialPublishTime: Option[Instant] = None
   )(
     //implicit monitoringPublisher: MonitoringPublisher = noPublisher
@@ -285,7 +285,7 @@ object PulsarServiceConfiguration {
       None,
       Some(1.millis),
       Some(1.second),
-      Some(Earliest),
+      Some(Latest),
       None
     )
 
@@ -324,7 +324,7 @@ object PulsarServiceConfiguration {
       responseTopic,
       Some(1.millis),
       Some(1.second),
-      Some(Earliest),
+      Some(Latest),
       None
     )
 
@@ -334,7 +334,7 @@ object PulsarServiceConfiguration {
     errorTopic: String,
     batchingMaxPublishDelay: Option[FiniteDuration] = Some(1.millis),
     patternAutoDiscoveryPeriod: Option[FiniteDuration] = Some(1.second),
-    subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Earliest),
+    subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Latest),
     subscriptionInitialPublishTime: Option[Instant] = None
   )(
     //implicit monitoringPublisher: MonitoringPublisher = noPublisher
@@ -352,7 +352,7 @@ object PulsarServiceConfiguration {
   def handler[M: Marshaller : Unmarshaller](
     requestTopic: String,
     patternAutoDiscoveryPeriod: Option[FiniteDuration] = Some(1.second),
-    subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Earliest),
+    subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Latest),
     subscriptionInitialPublishTime: Option[Instant] = None,
     subscriptionName: String = s"subscription-${randomUUID}"
   ) =
@@ -416,7 +416,7 @@ object PulsarServiceConfiguration {
       requestTopic.toString,
       Right(requestTopic),
       Some(1.second),
-      Some(Earliest),
+      Some(Latest),
       None,
       s"subscription-${randomUUID}"
     )
@@ -424,7 +424,7 @@ object PulsarServiceConfiguration {
   def source[M: Unmarshaller](
     sourceTopic: String,
     patternAutoDiscoveryPeriod: Option[FiniteDuration] = Some(1.second),
-    subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Earliest),
+    subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Latest),
     subscriptionInitialPublishTime: Option[Instant] = None
   ) = new PulsarMessageSourceServiceConfiguration(
     Left(sourceTopic),
@@ -438,7 +438,7 @@ object PulsarServiceConfiguration {
   ) = new PulsarMessageSourceServiceConfiguration(
     sourceTopic,
     Some(1.second),
-    Some(Earliest),
+    Some(Latest),
     None
   )
 
