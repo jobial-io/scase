@@ -30,6 +30,7 @@ class ForwarderBridge[F[_] : Concurrent : Timer, REQ: Unmarshaller, RESP: Marsha
   def forward: F[Unit] =
     (for {
       receiveResult <- source.receiveWithContext(1.second)
+      _ <- start(continueForwarding)
       _ <- messageCounter.update(_ + 1)
       filteredReceiveResult <- filter(receiveResult)
       sendResult <- filteredReceiveResult match {
@@ -39,8 +40,7 @@ class ForwarderBridge[F[_] : Concurrent : Timer, REQ: Unmarshaller, RESP: Marsha
           filteredMessageCounter.update(_ + 1) >>
             pure(None)
       }
-      r <- continueForwarding
-    } yield r) handleErrorWith {
+    } yield ()) handleErrorWith {
       case t: ReceiveTimeout =>
         continueForwarding
       case t: Throwable =>
