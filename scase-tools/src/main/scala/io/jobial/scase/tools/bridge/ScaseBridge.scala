@@ -5,6 +5,7 @@ import cats.effect.IO.delay
 import cats.effect.IO.ioEffect.whenA
 import cats.effect.IO.raiseError
 import cats.effect.concurrent.Deferred
+import cats.effect.concurrent.Ref
 import com.tibco.tibrv.TibrvMsg
 import io.jobial.scase.activemq.ActiveMQContext
 import io.jobial.scase.core.MessageReceiveResult
@@ -35,6 +36,8 @@ import io.jobial.scase.tibrv.TibrvServiceConfiguration
 import io.jobial.scase.util.Cache
 import io.jobial.sclap.CommandLineApp
 import org.apache.pulsar.client.api.Message
+
+import java.lang.System.currentTimeMillis
 import javax.jms.Session
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
@@ -85,7 +88,8 @@ Forward requests and one-way messages from one transport to another.
     requestResponseClientCache: Cache[IO, String, RequestResponseClient[IO, M, M]],
     senderClientCache: Cache[IO, String, SenderClient[IO, M]],
     forwarderBridgeServiceState: Deferred[IO, ForwarderBridgeServiceState[IO]],
-    requestResponseBridgeServiceState: Deferred[IO, RequestResponseBridgeServiceState[IO]]
+    requestResponseBridgeServiceState: Deferred[IO, RequestResponseBridgeServiceState[IO]],
+    statLastTime: Ref[IO, Long]
   ) {
 
     val marshalling = Marshalling[M]
@@ -131,8 +135,9 @@ Forward requests and one-way messages from one transport to another.
         senderClientCache <- Cache[IO, String, SenderClient[IO, M]](5.minutes)
         forwarderBridgeState <- Deferred[IO, ForwarderBridgeServiceState[IO]]
         requestResponseBridgeState <- Deferred[IO, RequestResponseBridgeServiceState[IO]]
+        statLastTime <- Ref.of[IO, Long](currentTimeMillis)
       } yield BridgeContext[M](tibrvContext, pulsarContext, activemqContext, requestResponseClientCache,
-        senderClientCache, forwarderBridgeState, requestResponseBridgeState)
+        senderClientCache, forwarderBridgeState, requestResponseBridgeState, statLastTime)
   }
 
   implicit def requestResponseMapping[M] = new RequestResponseMapping[M, M] {}
@@ -202,7 +207,11 @@ Forward requests and one-way messages from one transport to another.
           filteredRequestCount <- bridge.filteredRequestCount
           filteredResponseCount <- bridge.filteredResponseCount
           _ <- whenA(requestCount % 1000 === 0)(
-            info[IO](s"Processed ${requestCount} requests and ${responseCount} responses (${errorCount} errors, ${filteredRequestCount} requests filtered, ${filteredResponseCount} responses filtered)")
+            for {
+              statLastTime <- context.statLastTime.modify(t => (currentTimeMillis, t))
+              rate = 1000d / (currentTimeMillis - statLastTime) * 1000d
+              _ <- info[IO](f"Processed ${requestCount} requests and ${responseCount} responses (${errorCount} errors, ${filteredRequestCount} requests filtered, ${filteredResponseCount} responses filtered) ${rate}%.2f/s")
+            } yield ()
           )
           _ <- trace[IO](s"Forwarding request to $d")
           client <- d match {
@@ -271,7 +280,11 @@ Forward requests and one-way messages from one transport to another.
           errorCount <- bridge.errorCount
           filteredMessageCount <- bridge.filteredMessageCount
           _ <- whenA(messageCount % 1000 === 0)(
-            info[IO](s"Processed ${messageCount} messages (${errorCount} errors, ${filteredMessageCount} filtered)")
+            for {
+              statLastTime <- context.statLastTime.modify(t => (currentTimeMillis, t))
+              rate = 1000d / (currentTimeMillis - statLastTime) * 1000d
+              _ <- info[IO](f"Processed ${messageCount} messages (${errorCount} errors, ${filteredMessageCount} filtered) ${rate}%.2f/s")
+            } yield ()
           )
           client <- d match {
             case Some(d) =>
