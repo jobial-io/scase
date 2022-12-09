@@ -36,8 +36,8 @@ abstract class DefaultMessageConsumer[F[_] : ConcurrentEffect, M] extends Messag
           receiving.complete().attempt
         }
       }
-      _ <- callback(result)
-      _ <- continueIfNotCancelled
+      _ <- start(continueIfNotCancelled)
+      r <- callback(result)
     } yield ()) handleErrorWith {
       case t: ReceiveTimeout =>
         continueIfNotCancelled

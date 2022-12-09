@@ -1,7 +1,6 @@
 package io.jobial.scase.core.impl
 
 import cats.effect.Deferred
-import cats.effect.Ref
 import cats.implicits._
 import io.jobial.scase.core.MessageConsumer
 import io.jobial.scase.core.MessageProducer
@@ -12,10 +11,12 @@ import io.jobial.scase.core.SendResponseResult
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
+import io.jobial.scase.util.Cache
+import scala.concurrent.duration.DurationInt
 
 
 class ConsumerProducerRequestResponseService[F[_] : TemporalEffect, REQ, RESP: Marshaller](
-  val responseProducersCacheRef: Option[Ref[F, Map[Option[String], MessageProducer[F, Either[Throwable, RESP]]]]],
+  val responseProducerCache: Option[Cache[F, Option[String], MessageProducer[F, Either[Throwable, RESP]]]],
   val requestConsumer: MessageConsumer[F, REQ],
   val responseProducer: Option[String] => F[MessageProducer[F, Either[Throwable, RESP]]],
   val requestHandler: RequestHandler[F, REQ, RESP],
@@ -30,22 +31,10 @@ class ConsumerProducerRequestResponseService[F[_] : TemporalEffect, REQ, RESP: M
   override def sendResult(request: MessageReceiveResult[F, REQ], responseDeferred: Deferred[F, SendResponseResult[RESP]]): F[MessageSendResult[F, _]] =
     for {
       response <- responseDeferred.get
-      producer <- responseProducersCacheRef match {
-        case Some(producersCacheRef) =>
+      producer <- responseProducerCache match {
+        case Some(producerCache) =>
           // Producers are cached...
-          for {
-            producerCache <- producersCacheRef.get
-            producer <- producerCache.get(request.responseProducerId) match {
-              case Some(producer) =>
-                pure(producer)
-              case None =>
-                responseProducer(request.responseProducerId)
-            }
-            _ <- producersCacheRef.update {
-              producersCache =>
-                producersCache + (request.responseProducerId -> producer)
-            }
-          } yield producer
+            producerCache.getOrCreate(request.responseProducerId, responseProducer(request.responseProducerId), (_, producer) => producer.stop)
         case None =>
           // Just call the provided function for a new producer...
           responseProducer(request.responseProducerId)
@@ -73,8 +62,6 @@ class ConsumerProducerRequestResponseService[F[_] : TemporalEffect, REQ, RESP: M
           } yield sendResult
       }
     } yield resultAfterSend
-
-
 }
 
 object ConsumerProducerRequestResponseService extends CatsUtils with Logging {
@@ -94,14 +81,14 @@ object ConsumerProducerRequestResponseService extends CatsUtils with Logging {
   ): F[ConsumerProducerRequestResponseService[F, REQ, RESP]] = {
     def createProducerCache =
       if (reuseProducers)
-        Ref.of[F, Map[Option[String], MessageProducer[F, Either[Throwable, RESP]]]](Map()).map(Some(_))
+        Cache[F, Option[String], MessageProducer[F, Either[Throwable, RESP]]](15.minutes).map(Some(_))
       else
         pure(None)
 
     for {
-      responseProducersCacheRef <- createProducerCache
+      responseProducersCache <- createProducerCache
     } yield new ConsumerProducerRequestResponseService(
-      responseProducersCacheRef,
+      responseProducersCache,
       requestConsumer,
       responseProducer,
       requestHandler,

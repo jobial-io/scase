@@ -18,8 +18,10 @@ import io.jobial.scase.core.RequestTimeout;
 import io.jobial.scase.core.javadsl.MessageHandler;
 import io.jobial.scase.core.javadsl.RequestHandler;
 import io.jobial.scase.marshalling.tibrv.raw.TibrvMsgRawMarshalling;
+import org.apache.pulsar.client.api.SubscriptionInitialPosition;
 import org.junit.Test;
 
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
 import static io.jobial.scase.core.javadsl.JavaUtils.uuid;
@@ -94,7 +96,11 @@ public class PulsarWithTibrvMsgTest {
             client.send(request).get();
 
             // Receiving the response sent out by the server:
-            source(topic, tibrvMarshalling).client().get().receive().whenComplete((response, error) ->
+            source(topic,
+                    Optional.empty(),
+                    Optional.of(SubscriptionInitialPosition.Earliest),
+                    Optional.empty(),
+                    tibrvMarshalling).client().get().receive().whenComplete((response, error) ->
                     System.out.println(response)
             ).get();
         }

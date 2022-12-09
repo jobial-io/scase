@@ -14,7 +14,12 @@ class RequestResponseBridge[F[_] : ConcurrentEffect, SOURCEREQ: Unmarshaller, SO
   destination: MessageReceiveResult[F, DESTREQ] => F[Option[RequestResponseResult[F, DESTREQ, DESTRESP]]],
   filterRequest: MessageReceiveResult[F, SOURCEREQ] => F[Option[MessageReceiveResult[F, DESTREQ]]],
   filterResponse: (MessageReceiveResult[F, SOURCEREQ], RequestResponseResult[F, DESTREQ, DESTRESP]) => F[Option[MessageReceiveResult[F, SOURCERESP]]],
-  stopped: Ref[F, Boolean]
+  stopped: Ref[F, Boolean],
+  requestCounter: Ref[F, Long],
+  responseCounter: Ref[F, Long],
+  errorCounter: Ref[F, Long],
+  filteredRequestCounter: Ref[F, Long],
+  filteredResponseCounter: Ref[F, Long]
 )(
   implicit requestResponseMapping: RequestResponseMapping[SOURCEREQ, SOURCERESP]
 ) extends DefaultService[F] with CatsUtils with Logging {
@@ -23,9 +28,10 @@ class RequestResponseBridge[F[_] : ConcurrentEffect, SOURCEREQ: Unmarshaller, SO
     for {
       service <- source(new RequestHandler[F, SOURCEREQ, SOURCERESP] {
         override def handleRequest(implicit context: RequestContext[F]) = {
-          case request: SOURCEREQ =>
+          case request: SOURCEREQ@unchecked =>
             val sourceResult = context.receiveResult(request)
-            for {
+            (for {
+              _ <- requestCounter.update(_ + 1)
               filteredRequest <- filterRequest(sourceResult)
               sendResult <- filteredRequest match {
                 case Some(filteredRequest) =>
@@ -48,19 +54,24 @@ class RequestResponseBridge[F[_] : ConcurrentEffect, SOURCEREQ: Unmarshaller, SO
                           filteredResponse.attributes ++ sourceResult.attributes.get(CorrelationIdKey).map(correlationId => CorrelationIdKey -> correlationId)
                         )
                         for {
+                          _ <- responseCounter.update(_ + 1)
                           response <- filteredResponse.message
                           r <- request ! response
                         } yield r
                       case None =>
-                        trace(s"no destination for request: ${sourceResult}") >>
+                        filteredResponseCounter.update(_ + 1) >>
+                          trace(s"no destination for request: ${sourceResult}") >>
                           raiseError[F, SendResponseResult[SOURCERESP]](new IllegalStateException)
                     }
                   } yield sendResult
                 case None =>
-                  trace(s"not forwarding request: ${sourceResult}") >>
+                  filteredRequestCounter.update(_ + 1) >>
+                    trace(s"not forwarding request: ${sourceResult}") >>
                     raiseError[F, SendResponseResult[SOURCERESP]](new IllegalStateException)
               }
-            } yield sendResult
+            } yield sendResult) onError { case t =>
+              errorCounter.update(_ + 1)
+            }
         }
       })
       handler <- service.start
@@ -69,12 +80,21 @@ class RequestResponseBridge[F[_] : ConcurrentEffect, SOURCEREQ: Unmarshaller, SO
 
       def join: F[ServiceState[F]] =
         handler.join >> pure(this)
-
     }
+
+  def requestCount = requestCounter.get
+
+  def responseCount = responseCounter.get
+
+  def errorCount = errorCounter.get
+
+  def filteredRequestCount = filteredRequestCounter.get
+
+  def filteredResponseCount = filteredResponseCounter.get
 }
 
 abstract class RequestResponseBridgeServiceState[F[_] : Sync](
-  val service: Service[F],
+  val service: RequestResponseBridge[F, _, _, _, _],
   val requestResponseService: Service[F]
 ) extends ServiceState[F]
 
@@ -90,12 +110,22 @@ object RequestResponseBridge extends CatsUtils with Logging {
   ): F[RequestResponseBridge[F, SOURCEREQ, SOURCERESP, DESTREQ, DESTRESP]] =
     for {
       stopped <- Ref.of[F, Boolean](false)
+      requestCounter <- Ref.of[F, Long](0)
+      responseCounter <- Ref.of[F, Long](0)
+      errorCounter <- Ref.of[F, Long](0)
+      filteredRequestCounter <- Ref.of[F, Long](0)
+      filteredResponseCounter <- Ref.of[F, Long](0)
     } yield new RequestResponseBridge[F, SOURCEREQ, SOURCERESP, DESTREQ, DESTRESP](
       source,
       destination,
       filterRequest,
       filterResponse,
-      stopped
+      stopped,
+      requestCounter,
+      responseCounter,
+      errorCounter,
+      filteredRequestCounter,
+      filteredResponseCounter
     )
 
   def apply[F[_] : ConcurrentEffect, REQ: Unmarshaller, RESP: Marshaller](

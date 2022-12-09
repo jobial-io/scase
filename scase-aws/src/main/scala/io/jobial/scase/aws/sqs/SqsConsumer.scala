@@ -94,7 +94,7 @@ class SqsConsumer[F[_] : ConcurrentEffect : LiftIO, M](
                         trace(s"deleted message ${unmarshalledMessage.toString.take(500)}") >>
                           delay(deleteMessage(queueUrl, receiptHandle))
                       case _ =>
-                        raiseError(CouldNotFindMessageToCommit(unmarshalledMessage))
+                        raiseError(MessageToCommitNotFound(unmarshalledMessage))
                     }
                     _ <- outstandingMessagesRef.update(_ - unmarshalledMessage)
                   } yield (),
@@ -117,6 +117,10 @@ class SqsConsumer[F[_] : ConcurrentEffect : LiftIO, M](
 
   def stop = unit
 }
+
+case class MessageToCommitNotFound[M](
+  message: M
+) extends IllegalStateException
 
 object SqsConsumer {
 
