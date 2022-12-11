@@ -135,7 +135,7 @@ You need to add
 
 ```scala
 libraryDependencies ++= Seq(
-  "io.jobial" %% "scase" % "0.9.0"
+  "io.jobial" %% "scase" % "2.1.0""
 )
 ```
 
@@ -146,11 +146,11 @@ to `build.sbt` or
 <dependency>
     <groupId>io.jobial</groupId>
     <artifactId>scase_${scala.version}</artifactId>
-    <version>0.9.0</version>
+    <version>2.1.0</version>
 </dependency>
 ```
 
-to `pom.xml` if you use Maven, where scala.version is either 2.11, 2.12, 2.13 and 3.0 coming soon.
+to `pom.xml` if you use Maven, where scala.version is either 2.12 or 2.13. The 2.13 artifacts are Scala 3.x compatible. For Scala 2.11, please use the 1.x versions.
 
 
 ## Effect types
