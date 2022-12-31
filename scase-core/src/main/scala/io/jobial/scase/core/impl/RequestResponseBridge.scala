@@ -18,6 +18,7 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
   stopped: Ref[F, Boolean],
   requestCounter: Ref[F, Long],
   responseCounter: Ref[F, Long],
+  requestTimeoutCounter: Ref[F, Long],
   errorCounter: Ref[F, Long],
   filteredRequestCounter: Ref[F, Long],
   filteredResponseCounter: Ref[F, Long]
@@ -70,8 +71,12 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
                     trace(s"not forwarding request: ${sourceResult}") >>
                     raiseError[F, SendResponseResult[SOURCERESP]](new IllegalStateException)
               }
-            } yield sendResult) onError { case t =>
-              errorCounter.update(_ + 1)
+            } yield sendResult) onError {
+              case t: RequestTimeout =>
+                error(s"Request timed out: ${request.toString.take(500)}") >>
+                  requestTimeoutCounter.update(_ + 1)
+              case t =>
+                errorCounter.update(_ + 1)
             }
         }
       })
@@ -86,6 +91,8 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
   def requestCount = requestCounter.get
 
   def responseCount = responseCounter.get
+  
+  def requestTimeoutCount = requestTimeoutCounter.get
 
   def errorCount = errorCounter.get
 
@@ -113,6 +120,7 @@ object RequestResponseBridge extends CatsUtils with Logging {
       stopped <- Ref.of[F, Boolean](false)
       requestCounter <- Ref.of[F, Long](0)
       responseCounter <- Ref.of[F, Long](0)
+      requestTimeoutCounter <- Ref.of[F, Long](0)
       errorCounter <- Ref.of[F, Long](0)
       filteredRequestCounter <- Ref.of[F, Long](0)
       filteredResponseCounter <- Ref.of[F, Long](0)
@@ -124,6 +132,7 @@ object RequestResponseBridge extends CatsUtils with Logging {
       stopped,
       requestCounter,
       responseCounter,
+      requestTimeoutCounter,
       errorCounter,
       filteredRequestCounter,
       filteredResponseCounter
