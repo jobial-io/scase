@@ -15,7 +15,7 @@ name := "scase"
 ThisBuild / organization := "io.jobial"
 ThisBuild / scalaVersion := "2.13.8"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.15", "2.13.8")
-ThisBuild / version := "1.1.2"
+ThisBuild / version := "1.2.0"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
 ThisBuild / javacOptions ++= Seq("-source", "11", "-target", "11")
 ThisBuild / Test / packageBin / publishArtifact := true
@@ -23,7 +23,6 @@ ThisBuild / Test / packageSrc / publishArtifact := true
 ThisBuild / Test / packageDoc / publishArtifact := true
 ThisBuild / resolvers += "Mulesoft" at "https://repository.mulesoft.org/nexus/content/repositories/public/"
 
-import sbt.Defaults.sbtPluginExtra
 import sbt.Keys.{description, libraryDependencies, publishConfiguration}
 import sbt.addCompilerPlugin
 import xerial.sbt.Sonatype._
@@ -53,7 +52,7 @@ lazy val AwsLambdaJavaCoreVersion = "1.2.1"
 lazy val CommonsIoVersion = "2.8.0"
 lazy val CommonsLangVersion = "3.12.0"
 lazy val CloudformationTemplateGeneratorVersion = "3.10.4"
-lazy val SclapVersion = "1.4.1"
+lazy val SclapVersion = "1.3.6"
 lazy val CirceVersion = "0.12.0-M3"
 lazy val SprayJsonVersion = "1.3.6"
 lazy val PulsarVersion = "2.9.0"
@@ -214,7 +213,8 @@ lazy val `scase-tools` = project
   .settings(
     libraryDependencies ++= Seq(
       "io.jobial" %% "sclap" % SclapVersion,
-      "ch.qos.logback" % "logback-classic" % LogbackVersion
+      "ch.qos.logback" % "logback-classic" % LogbackVersion,
+      "io.lemonlabs" %% "scala-uri" % "4.0.3"
     )
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")

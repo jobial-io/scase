@@ -7,7 +7,6 @@ import cats.effect.IO.raiseError
 import cats.effect.concurrent.Deferred
 import cats.effect.concurrent.Ref
 import com.tibco.tibrv.TibrvMsg
-import io.jobial.scase.activemq.ActiveMQContext
 import io.jobial.scase.core.MessageReceiveResult
 import io.jobial.scase.core.ReceiverClient
 import io.jobial.scase.core.RequestHandler
@@ -33,26 +32,26 @@ import io.jobial.scase.pulsar.PulsarContext
 import io.jobial.scase.pulsar.PulsarServiceConfiguration
 import io.jobial.scase.tibrv.TibrvContext
 import io.jobial.scase.tibrv.TibrvServiceConfiguration
+import io.jobial.scase.tools.bridge
 import io.jobial.scase.util.Cache
 import io.jobial.sclap.CommandLineApp
 import org.apache.pulsar.client.api.Message
-
 import java.lang.System.currentTimeMillis
 import javax.jms.Session
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 
-object ScaseBridge extends CommandLineApp with ContextParsers with Logging {
+object ScaseBridge extends CommandLineApp with ConnectionInfoParser with Logging {
 
   def run =
     command.description(""""
 Forward requests and one-way messages from one transport to another.
 """) {
       for {
-        source <- opt[String]("source", "s").required
-          .description("tibrv://<subject> or pulsar://<topic> or jms://<destination>")
-        destination <- opt[String]("destination", "d").required
-          .description("tibrv:// or pulsar:// or jms://, no subject or topic should be specified to select destination " +
+        source <- opt[ConnectionInfo]("source", "s").required
+          .description("tibrv://<subject> or pulsar://<topic> or activemq://<destination>")
+        destination <- opt[ConnectionInfo]("destination", "d").required
+          .description("tibrv:// or pulsar:// or activemq://, no subject or topic should be specified to select destination " +
             "based on the source topic or subject")
         protocol <- opt[String]("protocol", "p").default("TibrvMsg")
           .description("The marshalling protocol to use: currently TibrvMsg and Serialization are supported")
@@ -60,31 +59,29 @@ Forward requests and one-way messages from one transport to another.
           .description("Forward one-way only messages - the default is request-response only")
         timeout <- opt[FiniteDuration]("timeout", "t").default(300.seconds)
           .description("Request timeout in seconds, unless specified by the client and the transport supports it (TibRV does not)")
-        tibrvContext <- opt[TibrvContext]("tibrv-context")
-          .description("host:port:network:service")
-        pulsarContext <- opt[PulsarContext]("pulsar-context")
-          .description("host:port:tenant:namespace")
-        activemqContext <- opt[ActiveMQContext]("activemq-context")
-          .description("host:port:transacted:acknowledge_mode")
       } yield for {
-        bridgeContext <-
-          if (activemqContext.isDefined)
-            BridgeContext[Any](tibrvContext, pulsarContext, activemqContext)(new SerializationMarshalling[Any])
-          else
-            BridgeContext[TibrvMsg](tibrvContext, pulsarContext, activemqContext)(new TibrvMsgRawMarshalling)
-        bridge <- bridgeContext.runBridge(source, destination, oneWay, timeout)
+        marshalling <- source match {
+          case source: ActiveMQConnectionInfo =>
+            delay(new SerializationMarshalling[Any])
+          case _ =>
+            destination match {
+              case destination: ActiveMQConnectionInfo =>
+                delay(new SerializationMarshalling[Any])
+              case _ =>
+                delay(new TibrvMsgRawMarshalling().asInstanceOf[Marshalling[Any]])
+            }
+        }
+        bridgeContext <- BridgeContext(source, destination, oneWay, timeout)(marshalling)
+        bridge <- bridgeContext.runBridge
         r <- bridge.join
       } yield r
     }
 
-  val pulsarScheme = "pulsar://"
-  val tibrvScheme = "tibrv://"
-  val jmsScheme = "jms://"
-
   case class BridgeContext[M: Marshalling](
-    tibrvContext: Option[TibrvContext],
-    pulsarContext: Option[PulsarContext],
-    activemqContext: Option[ActiveMQContext],
+    source: ConnectionInfo,
+    destination: ConnectionInfo,
+    oneWay: Boolean,
+    timeout: FiniteDuration,
     requestResponseClientCache: Cache[IO, String, RequestResponseClient[IO, M, M]],
     senderClientCache: Cache[IO, String, SenderClient[IO, M]],
     forwarderBridgeServiceState: Deferred[IO, ForwarderBridgeServiceState[IO]],
@@ -94,41 +91,60 @@ Forward requests and one-way messages from one transport to another.
 
     val marshalling = Marshalling[M]
 
-    def withPulsarContext[T](f: PulsarContext => IO[T]) =
-      pulsarContext match {
-        case Some(context) =>
-          f(context)
-        case None =>
+    def withPulsarContext[T](connectionInfo: ConnectionInfo)(f: PulsarContext => IO[T]) =
+      connectionInfo match {
+        case connectionInfo: PulsarConnectionInfo =>
+          f(connectionInfo.context)
+        case _ =>
           raiseError(new IllegalStateException("Pulsar context is required"))
       }
 
-    def withTibrvContext[T](f: TibrvContext => IO[T]) =
-      tibrvContext match {
-        case Some(context) =>
-          f(context)
-        case None =>
-          raiseError(new IllegalStateException("Tibrv context is required"))
+    def withSourcePulsarContext[T](f: PulsarContext => IO[T]) =
+      withPulsarContext(source)(f)
+
+    def withDestinationPulsarContext[T](f: PulsarContext => IO[T]) =
+      withPulsarContext(destination)(f)
+
+    def withTibrvContext[T](connectionInfo: ConnectionInfo)(f: TibrvContext => IO[T]) =
+      connectionInfo match {
+        case connectionInfo: TibrvConnectionInfo =>
+          f(connectionInfo.context)
+        case _ =>
+          raiseError(new IllegalStateException("TibRV context is required"))
       }
 
-    def withJMSSession[T](f: Session => IO[T]) =
-      activemqContext match {
-        case Some(context) =>
-          f(context.session)
-        case None =>
+    def withSourceTibrvContext[T](f: TibrvContext => IO[T]) =
+      withTibrvContext(source)(f)
+
+    def withDestinationTibrvContext[T](f: TibrvContext => IO[T]) =
+      withTibrvContext(destination)(f)
+
+    def withJMSSession[T](connectionInfo: ConnectionInfo)(f: Session => IO[T]) =
+      connectionInfo match {
+        case connectionInfo: ActiveMQConnectionInfo =>
+          f(connectionInfo.context.session)
+        case _ =>
           raiseError(new IllegalStateException("ActiveMQ context is required"))
       }
 
-    def runBridge(source: String, destination: String, oneWay: Boolean, timeout: FiniteDuration) =
-      startBridge[M](source, destination, oneWay, timeout)(this)
+    def withSourceJMSSession[T](f: Session => IO[T]) =
+      withJMSSession(source)(f)
+
+    def withDestinationJMSSession[T](f: Session => IO[T]) =
+      withJMSSession(destination)(f)
+
+    def runBridge =
+      startBridge[M](this)
 
   }
 
   object BridgeContext {
 
     def apply[M: Marshalling](
-      tibrvContext: Option[TibrvContext] = None,
-      pulsarContext: Option[PulsarContext] = None,
-      activemqContext: Option[ActiveMQContext] = None
+      source: ConnectionInfo,
+      destination: ConnectionInfo,
+      oneWay: Boolean,
+      timeout: FiniteDuration
     ): IO[BridgeContext[M]] =
       for {
         requestResponseClientCache <- Cache[IO, String, RequestResponseClient[IO, M, M]](5.minutes)
@@ -136,60 +152,78 @@ Forward requests and one-way messages from one transport to another.
         forwarderBridgeState <- Deferred[IO, ForwarderBridgeServiceState[IO]]
         requestResponseBridgeState <- Deferred[IO, RequestResponseBridgeServiceState[IO]]
         statLastTime <- Ref.of[IO, Long](currentTimeMillis)
-      } yield BridgeContext[M](tibrvContext, pulsarContext, activemqContext, requestResponseClientCache,
+      } yield BridgeContext[M](source, destination, oneWay, timeout, requestResponseClientCache,
         senderClientCache, forwarderBridgeState, requestResponseBridgeState, statLastTime)
   }
 
   implicit def requestResponseMapping[M] = new RequestResponseMapping[M, M] {}
 
-  def startBridge[M](source: String, destination: String, oneWay: Boolean, timeout: FiniteDuration)(implicit context: BridgeContext[M]) = {
+  def startBridge[M](implicit context: BridgeContext[M]) = {
     implicit val marshalling = context.marshalling
 
-    if (oneWay)
+    if (context.oneWay)
       for {
-        sourceClient <- clientForSource(source)
-        destinationClient <- clientForDestination(destination)
+        sourceClient <- clientForSource
+        destinationClient <- clientForDestination
         state <- startForwarderBridge(sourceClient, destinationClient)
         _ <- context.forwarderBridgeServiceState.complete(state)
       } yield state
     else
       for {
-        requestResponseSource <- serviceForSource(source)
-        requestResponseClient <- requestResponseClientForDestination(destination)
-        state <- startRequestResponseBridge(requestResponseSource, requestResponseClient, timeout)
+        requestResponseSource <- serviceForSource
+        requestResponseClient <- requestResponseClientForDestination
+        state <- startRequestResponseBridge(requestResponseSource, requestResponseClient, context.timeout)
         _ <- context.requestResponseBridgeServiceState.complete(state)
       } yield state
   }
 
   def stripUriScheme(uri: String) = uri.substring(uri.indexOf("://") + 3)
 
-  def serviceForSource[M: Marshalling](source: String)(implicit context: BridgeContext[M]) =
-    if (source.startsWith(pulsarScheme))
-      context.withPulsarContext { implicit context =>
-        delay(PulsarServiceConfiguration.requestResponse[M, M](Right(stripUriScheme(source).r)).service[IO](_))
-      }
-    else if (source.startsWith(tibrvScheme))
-      context.withTibrvContext { implicit context =>
-        delay(TibrvServiceConfiguration.requestResponse[M, M](Seq(stripUriScheme(source))).service[IO](_))
-      }
-    else if (source.startsWith(jmsScheme))
-      context.withJMSSession { implicit session =>
-        delay(JMSServiceConfiguration.requestResponse[M, M](source, session.createQueue(stripUriScheme(source))).service[IO](_))
-      }
-    else
-      raiseError(new IllegalStateException(s"${source} not supported"))
+  def serviceForSource[M: Marshalling](implicit context: BridgeContext[M]) =
+    context.source match {
+      case source: PulsarConnectionInfo =>
+        context.withSourcePulsarContext { implicit context =>
+          delay(PulsarServiceConfiguration.requestResponse[M, M](Right(source.topicPattern)).service[IO](_))
+        }
+      case source: TibrvConnectionInfo =>
+        context.withSourceTibrvContext { implicit context =>
+          delay(TibrvServiceConfiguration.requestResponse[M, M](source.subjects).service[IO](_))
+        }
+      case source: ActiveMQConnectionInfo =>
+        context.withSourceJMSSession { implicit session =>
+          delay(JMSServiceConfiguration.requestResponse[M, M](source.uri.toString, source.destination).service[IO](_))
+        }
+      case _ =>
+        raiseError(new IllegalStateException(s"${context.source} not supported"))
+    }
 
-  def getDestinationName[M](r: MessageReceiveResult[IO, M]) =
+  def substituteDestinationName(source: String, destination: String, sourceName: String): String =
+    sourceName.replaceAll(source, destination)
+
+  def substituteDestinationName[M](sourceName: String)(implicit context: BridgeContext[M]): String = {
+    val d = context.destination.canonicalUri.toString
+    val destinationUri =
+      if (d.endsWith("/"))
+        d + sourceName.substring(sourceName.lastIndexOf('/') + 1)
+      else d
+      
+    val r = substituteDestinationName(context.source.canonicalUri.toString, destinationUri, sourceName)
+    r.substring(r.lastIndexOf('/') + 1)
+  }
+
+  def getDestinationName[M](r: MessageReceiveResult[IO, M])(implicit context: BridgeContext[M]) =
     for {
       message <- r.underlyingMessage[Any]
     } yield message match {
       case m: Message[_] =>
         val topicName = m.getTopicName
-        Some(topicName.substring(topicName.lastIndexOf("/") + 1))
+        val sourceName = s"pulsar://${context.source.asInstanceOf[bridge.PulsarConnectionInfo].context.host}:${context.source.asInstanceOf[bridge.PulsarConnectionInfo].context.port}/" + topicName.replace("persistent://", "")
+        val r = substituteDestinationName(sourceName)
+        Some(r)
       case m: TibrvMsg =>
-        Some(m.getSendSubject)
+        Some(substituteDestinationName(m.getSendSubject))
       case m: javax.jms.Message =>
-        Some(stripUriScheme(m.getJMSDestination.toString))
+        Some(substituteDestinationName(stripUriScheme(m.getJMSDestination.toString)))
       case _ =>
         None
     }
@@ -203,6 +237,7 @@ Forward requests and one-way messages from one transport to another.
           bridge = state.service
           requestCount <- bridge.requestCount
           responseCount <- bridge.responseCount
+          requestTimeoutCount <- bridge.requestTimeoutCount
           errorCount <- bridge.errorCount
           filteredRequestCount <- bridge.filteredRequestCount
           filteredResponseCount <- bridge.filteredResponseCount
@@ -210,7 +245,7 @@ Forward requests and one-way messages from one transport to another.
             for {
               statLastTime <- context.statLastTime.modify(t => (currentTimeMillis, t))
               rate = 1000d / (currentTimeMillis - statLastTime) * 1000d
-              _ <- info[IO](f"Processed ${requestCount} requests and ${responseCount} responses (${errorCount} errors, ${filteredRequestCount} requests filtered, ${filteredResponseCount} responses filtered) ${rate}%.2f/s")
+              _ <- info[IO](f"Processed ${requestCount} requests and ${responseCount} responses (${requestTimeoutCount} timeouts, ${errorCount} errors, ${filteredRequestCount} requests filtered, ${filteredResponseCount} responses filtered) ${rate}%.2f/s")
             } yield ()
           )
           _ <- trace[IO](s"Forwarding request to $d")
@@ -228,46 +263,50 @@ Forward requests and one-way messages from one transport to another.
         } yield client
     }
 
-  def requestResponseClientForDestination[M: Marshalling](destination: String)(implicit context: BridgeContext[M]) =
-    if (destination.startsWith(tibrvScheme))
-      context.withTibrvContext { implicit tibrvContext =>
-        createRequestResponseClient(d =>
-          info[IO](s"Creating Tibrv request-response client for $d") >>
-            TibrvServiceConfiguration.requestResponse[M, M](Seq(d)).client[IO]
-        )
-      }
-    else if (destination.startsWith(pulsarScheme))
-      context.withPulsarContext { implicit pulsarContext =>
-        createRequestResponseClient(d =>
-          info[IO](s"Creating Pulsar request-response client for $d") >>
-            PulsarServiceConfiguration.requestResponse[M, M](d).client[IO]
-        )
-      }
-    else if (destination.startsWith(jmsScheme))
-      context.withJMSSession { implicit session =>
-        createRequestResponseClient(d =>
-          info[IO](s"Creating JMS request-response client for $d") >>
-            JMSServiceConfiguration.requestResponse[M, M](d, session.createQueue(d)).client[IO]
-        )
-      }
-    else
-      raiseError(new IllegalStateException(s"${destination} not supported"))
+  def requestResponseClientForDestination[M: Marshalling](implicit context: BridgeContext[M]) =
+    context.destination match {
+      case destination: PulsarConnectionInfo =>
+        context.withDestinationPulsarContext { implicit pulsarContext =>
+          createRequestResponseClient(d =>
+            info[IO](s"Creating Pulsar request-response client for $d") >>
+              PulsarServiceConfiguration.requestResponse[M, M](d).client[IO]
+          )
+        }
+      case destination: TibrvConnectionInfo =>
+        context.withDestinationTibrvContext { implicit tibrvContext =>
+          createRequestResponseClient(d =>
+            info[IO](s"Creating Tibrv request-response client for $d") >>
+              TibrvServiceConfiguration.requestResponse[M, M](Seq(d)).client[IO]
+          )
+        }
+      case destination: ActiveMQConnectionInfo =>
+        context.withDestinationJMSSession { implicit session =>
+          createRequestResponseClient(d =>
+            info[IO](s"Creating JMS request-response client for $d") >>
+              JMSServiceConfiguration.requestResponse[M, M](d, session.createQueue(d)).client[IO]
+          )
+        }
+      case _ =>
+        raiseError(new IllegalStateException(s"${context.destination} not supported"))
+    }
 
-  def clientForSource[M: Marshalling](source: String)(implicit context: BridgeContext[M]) =
-    if (source.startsWith(pulsarScheme))
-      context.withPulsarContext { implicit context =>
-        PulsarServiceConfiguration.source[M](Right(stripUriScheme(source).r)).client[IO]
-      }
-    else if (source.startsWith(tibrvScheme))
-      context.withTibrvContext { implicit context =>
-        TibrvServiceConfiguration.source[M](Seq(stripUriScheme(source))).client[IO]
-      }
-    else if (source.startsWith(jmsScheme))
-      context.withJMSSession { implicit session =>
-        JMSServiceConfiguration.source[M](session.createQueue(stripUriScheme(source))).client[IO]
-      }
-    else
-      raiseError(new IllegalStateException(s"${source} not supported"))
+  def clientForSource[M: Marshalling](implicit context: BridgeContext[M]) =
+    context.source match {
+      case source: PulsarConnectionInfo =>
+        context.withSourcePulsarContext { implicit context =>
+          PulsarServiceConfiguration.source[M](Right(source.topicPattern)).client[IO]
+        }
+      case source: TibrvConnectionInfo =>
+        context.withSourceTibrvContext { implicit context =>
+          TibrvServiceConfiguration.source[M](source.subjects).client[IO]
+        }
+      case source: ActiveMQConnectionInfo =>
+        context.withSourceJMSSession { implicit session =>
+          JMSServiceConfiguration.source[M](source.destination).client[IO]
+        }
+      case _ =>
+        raiseError(new IllegalStateException(s"${context.source} not supported"))
+    }
 
   def createSenderClient[M](f: String => IO[SenderClient[IO, M]])(implicit context: BridgeContext[M]) =
     delay {
@@ -300,21 +339,23 @@ Forward requests and one-way messages from one transport to another.
         } yield client
     }
 
-  def clientForDestination[M: Marshalling](destination: String)(implicit context: BridgeContext[M]) =
-    if (destination.startsWith(tibrvScheme))
-      context.withTibrvContext { implicit tibrvContext =>
-        createSenderClient(d => TibrvServiceConfiguration.destination[M](d).client[IO])
-      }
-    else if (destination.startsWith(pulsarScheme))
-      context.withPulsarContext { implicit pulsarContext =>
-        createSenderClient(d => PulsarServiceConfiguration.destination[M](d).client[IO])
-      }
-    else if (destination.startsWith(jmsScheme))
-      context.withJMSSession { implicit session =>
-        createSenderClient(d => JMSServiceConfiguration.destination[M](session.createQueue(d)).client[IO])
-      }
-    else
-      raiseError(new IllegalStateException(s"${destination} not supported"))
+  def clientForDestination[M: Marshalling](implicit context: BridgeContext[M]) =
+    context.destination match {
+      case destination: PulsarConnectionInfo =>
+        context.withDestinationTibrvContext { implicit tibrvContext =>
+          createSenderClient(d => TibrvServiceConfiguration.destination[M](d).client[IO])
+        }
+      case destination: TibrvConnectionInfo =>
+        context.withDestinationPulsarContext { implicit pulsarContext =>
+          createSenderClient(d => PulsarServiceConfiguration.destination[M](d).client[IO])
+        }
+      case destination: ActiveMQConnectionInfo =>
+        context.withDestinationJMSSession { implicit session =>
+          createSenderClient(d => JMSServiceConfiguration.destination[M](session.createQueue(d)).client[IO])
+        }
+      case _ =>
+        raiseError(new IllegalStateException(s"${context.destination} not supported"))
+    }
 
   def startRequestResponseBridge[M: Marshalling](
     source: RequestHandler[IO, M, M] => IO[Service[IO]],
