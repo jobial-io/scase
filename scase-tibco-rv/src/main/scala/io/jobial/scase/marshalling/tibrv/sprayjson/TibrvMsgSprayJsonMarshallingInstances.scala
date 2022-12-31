@@ -13,6 +13,7 @@ import spray.json.AdditionalFormats
 import spray.json.CollectionFormats
 import spray.json.JsArray
 import spray.json.JsBoolean
+import spray.json.JsNull
 import spray.json.JsNumber
 import spray.json.JsObject
 import spray.json.JsString
@@ -99,6 +100,8 @@ trait TibrvMsgSprayJsonMarshallingInstances extends ProductFormats with DefaultF
 
       def jsValueToTibrvMsgField(v: JsValue, m: TibrvMsg, field: String): Unit = v match {
         // JsNumber is intentionally left out here to fail fast if the wrong non-typed JS formats are used
+        case JsNull =>
+          m.add(field, null)
         case JsString(s) =>
           m.add(field, s)
         case JsBoolean(b) =>
