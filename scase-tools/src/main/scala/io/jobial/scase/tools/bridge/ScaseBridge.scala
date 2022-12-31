@@ -201,11 +201,7 @@ Forward requests and one-way messages from one transport to another.
     sourceName.replaceAll(source, destination)
 
   def substituteDestinationName[M](sourceName: String)(implicit context: BridgeContext[M]): String = {
-    val d = context.destination.canonicalUri.toString
-    val destinationUri =
-      if (d.endsWith("/"))
-        d + sourceName.substring(sourceName.lastIndexOf('/') + 1)
-      else d
+    val destinationUri = context.destination.uriForDestination(context.source).toString
       
     val r = substituteDestinationName(context.source.canonicalUri.toString, destinationUri, sourceName)
     r.substring(r.lastIndexOf('/') + 1)

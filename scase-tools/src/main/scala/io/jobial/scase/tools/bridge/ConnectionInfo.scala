@@ -10,7 +10,13 @@ trait ConnectionInfo {
   def uri: Uri
   
   def canonicalUri: Uri
-  
+
+  def uriForDestination(source: ConnectionInfo) =
+    if (destinationName.isEmpty)
+      canonicalUri.toUrl.removeEmptyPathParts.addPathPart(source.destinationName)
+    else
+      canonicalUri
+
   def pathLen: Int
 
   val path = uri.path.parts.map(p => if (p === "") None else Some(p)).padTo(pathLen, None)
@@ -20,6 +26,8 @@ trait ConnectionInfo {
   val host = uri.toUrl.hostOption.map(_.toString).filter(_ =!= "")
   
   val port = uri.toUrl.port
+  
+  def destinationName: String
 }
 
 class PulsarConnectionInfo(val uri: Uri) extends ConnectionInfo {
@@ -38,6 +46,8 @@ class PulsarConnectionInfo(val uri: Uri) extends ConnectionInfo {
   )
   
   def canonicalUri = Uri.parse(s"pulsar://${context.host}:${context.port}/${context.tenant}/${context.namespace}/${topic}")
+  
+  def destinationName = topic
 }
 
 object PulsarConnectionInfo {
@@ -63,6 +73,8 @@ class TibrvConnectionInfo(val uri: Uri) extends ConnectionInfo {
   )
 
   def canonicalUri = Uri.parse(s"tibrv://${context.host}:${context.port}/${context.network}/${context.service}/${subjects.mkString(";")}")
+  
+  def destinationName = pathLast
 }
 
 object TibrvConnectionInfo {

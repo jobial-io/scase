@@ -18,6 +18,8 @@ trait ConnectionInfoParser {
       override def canonicalUri: Uri = ???
 
       override def pathLen: Int = ???
+
+      override def destinationName: String = ???
     }
   }
 }
