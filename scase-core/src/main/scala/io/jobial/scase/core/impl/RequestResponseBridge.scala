@@ -69,7 +69,7 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
                 case None =>
                   filteredRequestCounter.update(_ + 1) >>
                     trace(s"not forwarding request: ${sourceResult}") >>
-                    raiseError[F, SendResponseResult[SOURCERESP]](new IllegalStateException)
+                    raiseError[F, SendResponseResult[SOURCERESP]](new IllegalStateException("Error forwarding request"))
               }
             } yield sendResult) onError {
               case t: RequestTimeout =>

@@ -337,11 +337,11 @@ Forward requests and one-way messages from one transport to another.
 
   def clientForDestination[M: Marshalling](implicit context: BridgeContext[M]) =
     context.destination match {
-      case destination: PulsarEndpointInfo =>
+      case destination: TibrvEndpointInfo =>
         context.withDestinationTibrvContext { implicit tibrvContext =>
           createSenderClient(d => TibrvServiceConfiguration.destination[M](d).client[IO])
         }
-      case destination: TibrvEndpointInfo =>
+      case destination: PulsarEndpointInfo =>
         context.withDestinationPulsarContext { implicit pulsarContext =>
           createSenderClient(d => PulsarServiceConfiguration.destination[M](d).client[IO])
         }
