@@ -10,11 +10,11 @@ import scala.language.postfixOps
 import cats.derived._
 import cats.derived.auto.eq._
 
-class ConnectionInfoTest extends ServiceTestSupport {
+class EndpointInfoTest extends ServiceTestSupport {
 
   "parsing pulsar uri" should "work" in {
     def test(uri: String, context: PulsarContext, topic: String) = {
-      PulsarConnectionInfo(Uri.parse(uri)) match {
+      PulsarEndpointInfo(Uri.parse(uri)) match {
         case Right(c) =>
           assert(c.context === context)
           assert(c.topic === topic)
@@ -35,7 +35,7 @@ class ConnectionInfoTest extends ServiceTestSupport {
 
   "parsing activemq uri" should "work" in {
     def test(uri: String, context: ActiveMQContext, destination: String) = {
-      ActiveMQConnectionInfo(Uri.parse(uri)) match {
+      ActiveMQEndpointInfo(Uri.parse(uri)) match {
         case Right(c) =>
           assert(c.context === context)
           assert(c.destinationName === destination)
@@ -51,7 +51,7 @@ class ConnectionInfoTest extends ServiceTestSupport {
 
   "parsing tibrv uri" should "work" in {
     def test(uri: String, context: TibrvContext, subject: String) = {
-      TibrvConnectionInfo(Uri.parse(uri)) match {
+      TibrvEndpointInfo(Uri.parse(uri)) match {
         case Right(c) =>
           assert(c.context === context)
         case Left(t) =>

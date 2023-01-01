@@ -35,22 +35,23 @@ import io.jobial.scase.tibrv.TibrvServiceConfiguration
 import io.jobial.scase.tools.bridge
 import io.jobial.scase.util.Cache
 import io.jobial.sclap.CommandLineApp
+import io.lemonlabs.uri.Uri
 import org.apache.pulsar.client.api.Message
 import java.lang.System.currentTimeMillis
 import javax.jms.Session
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 
-object ScaseBridge extends CommandLineApp with ConnectionInfoParser with Logging {
+object ScaseBridge extends CommandLineApp with EndpointInfoParser with Logging {
 
   def run =
     command.description(""""
 Forward requests and one-way messages from one transport to another.
 """) {
       for {
-        source <- opt[ConnectionInfo]("source", "s").required
+        source <- opt[EndpointInfo]("source", "s").required
           .description("tibrv://<subject> or pulsar://<topic> or activemq://<destination>")
-        destination <- opt[ConnectionInfo]("destination", "d").required
+        destination <- opt[EndpointInfo]("destination", "d").required
           .description("tibrv:// or pulsar:// or activemq://, no subject or topic should be specified to select destination " +
             "based on the source topic or subject")
         protocol <- opt[String]("protocol", "p").default("TibrvMsg")
@@ -61,11 +62,11 @@ Forward requests and one-way messages from one transport to another.
           .description("Request timeout in seconds, unless specified by the client and the transport supports it (TibRV does not)")
       } yield for {
         marshalling <- source match {
-          case source: ActiveMQConnectionInfo =>
+          case source: ActiveMQEndpointInfo =>
             delay(new SerializationMarshalling[Any])
           case _ =>
             destination match {
-              case destination: ActiveMQConnectionInfo =>
+              case destination: ActiveMQEndpointInfo =>
                 delay(new SerializationMarshalling[Any])
               case _ =>
                 delay(new TibrvMsgRawMarshalling().asInstanceOf[Marshalling[Any]])
@@ -78,8 +79,8 @@ Forward requests and one-way messages from one transport to another.
     }
 
   case class BridgeContext[M: Marshalling](
-    source: ConnectionInfo,
-    destination: ConnectionInfo,
+    source: EndpointInfo,
+    destination: EndpointInfo,
     oneWay: Boolean,
     timeout: FiniteDuration,
     requestResponseClientCache: Cache[IO, String, RequestResponseClient[IO, M, M]],
@@ -91,10 +92,10 @@ Forward requests and one-way messages from one transport to another.
 
     val marshalling = Marshalling[M]
 
-    def withPulsarContext[T](connectionInfo: ConnectionInfo)(f: PulsarContext => IO[T]) =
-      connectionInfo match {
-        case connectionInfo: PulsarConnectionInfo =>
-          f(connectionInfo.context)
+    def withPulsarContext[T](endpointInfo: EndpointInfo)(f: PulsarContext => IO[T]) =
+      endpointInfo match {
+        case endpointInfo: PulsarEndpointInfo =>
+          f(endpointInfo.context)
         case _ =>
           raiseError(new IllegalStateException("Pulsar context is required"))
       }
@@ -105,10 +106,10 @@ Forward requests and one-way messages from one transport to another.
     def withDestinationPulsarContext[T](f: PulsarContext => IO[T]) =
       withPulsarContext(destination)(f)
 
-    def withTibrvContext[T](connectionInfo: ConnectionInfo)(f: TibrvContext => IO[T]) =
-      connectionInfo match {
-        case connectionInfo: TibrvConnectionInfo =>
-          f(connectionInfo.context)
+    def withTibrvContext[T](endpointInfo: EndpointInfo)(f: TibrvContext => IO[T]) =
+      endpointInfo match {
+        case endpointInfo: TibrvEndpointInfo =>
+          f(endpointInfo.context)
         case _ =>
           raiseError(new IllegalStateException("TibRV context is required"))
       }
@@ -119,10 +120,10 @@ Forward requests and one-way messages from one transport to another.
     def withDestinationTibrvContext[T](f: TibrvContext => IO[T]) =
       withTibrvContext(destination)(f)
 
-    def withJMSSession[T](connectionInfo: ConnectionInfo)(f: Session => IO[T]) =
-      connectionInfo match {
-        case connectionInfo: ActiveMQConnectionInfo =>
-          f(connectionInfo.context.session)
+    def withJMSSession[T](endpointInfo: EndpointInfo)(f: Session => IO[T]) =
+      endpointInfo match {
+        case endpointInfo: ActiveMQEndpointInfo =>
+          f(endpointInfo.context.session)
         case _ =>
           raiseError(new IllegalStateException("ActiveMQ context is required"))
       }
@@ -141,8 +142,8 @@ Forward requests and one-way messages from one transport to another.
   object BridgeContext {
 
     def apply[M: Marshalling](
-      source: ConnectionInfo,
-      destination: ConnectionInfo,
+      source: EndpointInfo,
+      destination: EndpointInfo,
       oneWay: Boolean,
       timeout: FiniteDuration
     ): IO[BridgeContext[M]] =
@@ -181,15 +182,15 @@ Forward requests and one-way messages from one transport to another.
 
   def serviceForSource[M: Marshalling](implicit context: BridgeContext[M]) =
     context.source match {
-      case source: PulsarConnectionInfo =>
+      case source: PulsarEndpointInfo =>
         context.withSourcePulsarContext { implicit context =>
           delay(PulsarServiceConfiguration.requestResponse[M, M](Right(source.topicPattern)).service[IO](_))
         }
-      case source: TibrvConnectionInfo =>
+      case source: TibrvEndpointInfo =>
         context.withSourceTibrvContext { implicit context =>
           delay(TibrvServiceConfiguration.requestResponse[M, M](source.subjects).service[IO](_))
         }
-      case source: ActiveMQConnectionInfo =>
+      case source: ActiveMQEndpointInfo =>
         context.withSourceJMSSession { implicit session =>
           delay(JMSServiceConfiguration.requestResponse[M, M](source.uri.toString, source.destination).service[IO](_))
         }
@@ -197,14 +198,14 @@ Forward requests and one-way messages from one transport to another.
         raiseError(new IllegalStateException(s"${context.source} not supported"))
     }
 
-  def substituteDestinationName(source: String, destination: String, sourceName: String): String =
-    sourceName.replaceAll(source, destination)
+  def substituteDestinationName(source: EndpointInfo, destination: EndpointInfo, actualSource: EndpointInfo): EndpointInfo =
+    EndpointInfo.apply(Uri.parse(actualSource.uri.toString.replaceAll(source.canonicalUri.toString, destination.canonicalUri.toString))).toOption.get
 
-  def substituteDestinationName[M](sourceName: String)(implicit context: BridgeContext[M]): String = {
-    val destinationUri = context.destination.uriForDestination(context.source).toString
+  def substituteDestinationName[M](actualSource: EndpointInfo)(implicit context: BridgeContext[M]): String = {
+    val destinationForSource = context.destination.forSource(context.source)
       
-    val r = substituteDestinationName(context.source.canonicalUri.toString, destinationUri, sourceName)
-    r.substring(r.lastIndexOf('/') + 1)
+    val r = substituteDestinationName(context.source, destinationForSource, actualSource)
+    r.destinationName
   }
 
   def getDestinationName[M](r: MessageReceiveResult[IO, M])(implicit context: BridgeContext[M]) =
@@ -213,13 +214,12 @@ Forward requests and one-way messages from one transport to another.
     } yield message match {
       case m: Message[_] =>
         val topicName = m.getTopicName
-        val sourceName = s"pulsar://${context.source.asInstanceOf[bridge.PulsarConnectionInfo].context.host}:${context.source.asInstanceOf[bridge.PulsarConnectionInfo].context.port}/" + topicName.replace("persistent://", "")
-        val r = substituteDestinationName(sourceName)
+        val r = substituteDestinationName(context.source.withDestinationName(topicName.replace("persistent://", "")))
         Some(r)
       case m: TibrvMsg =>
-        Some(substituteDestinationName(m.getSendSubject))
+        Some(substituteDestinationName(context.source.withDestinationName(m.getSendSubject)))
       case m: javax.jms.Message =>
-        Some(substituteDestinationName(stripUriScheme(m.getJMSDestination.toString)))
+        Some(substituteDestinationName(context.source.withDestinationName(stripUriScheme(m.getJMSDestination.toString))))
       case _ =>
         None
     }
@@ -261,21 +261,21 @@ Forward requests and one-way messages from one transport to another.
 
   def requestResponseClientForDestination[M: Marshalling](implicit context: BridgeContext[M]) =
     context.destination match {
-      case destination: PulsarConnectionInfo =>
+      case destination: PulsarEndpointInfo =>
         context.withDestinationPulsarContext { implicit pulsarContext =>
           createRequestResponseClient(d =>
             info[IO](s"Creating Pulsar request-response client for $d") >>
               PulsarServiceConfiguration.requestResponse[M, M](d).client[IO]
           )
         }
-      case destination: TibrvConnectionInfo =>
+      case destination: TibrvEndpointInfo =>
         context.withDestinationTibrvContext { implicit tibrvContext =>
           createRequestResponseClient(d =>
             info[IO](s"Creating Tibrv request-response client for $d") >>
               TibrvServiceConfiguration.requestResponse[M, M](Seq(d)).client[IO]
           )
         }
-      case destination: ActiveMQConnectionInfo =>
+      case destination: ActiveMQEndpointInfo =>
         context.withDestinationJMSSession { implicit session =>
           createRequestResponseClient(d =>
             info[IO](s"Creating JMS request-response client for $d") >>
@@ -288,15 +288,15 @@ Forward requests and one-way messages from one transport to another.
 
   def clientForSource[M: Marshalling](implicit context: BridgeContext[M]) =
     context.source match {
-      case source: PulsarConnectionInfo =>
+      case source: PulsarEndpointInfo =>
         context.withSourcePulsarContext { implicit context =>
           PulsarServiceConfiguration.source[M](Right(source.topicPattern)).client[IO]
         }
-      case source: TibrvConnectionInfo =>
+      case source: TibrvEndpointInfo =>
         context.withSourceTibrvContext { implicit context =>
           TibrvServiceConfiguration.source[M](source.subjects).client[IO]
         }
-      case source: ActiveMQConnectionInfo =>
+      case source: ActiveMQEndpointInfo =>
         context.withSourceJMSSession { implicit session =>
           JMSServiceConfiguration.source[M](source.destination).client[IO]
         }
@@ -337,15 +337,15 @@ Forward requests and one-way messages from one transport to another.
 
   def clientForDestination[M: Marshalling](implicit context: BridgeContext[M]) =
     context.destination match {
-      case destination: PulsarConnectionInfo =>
+      case destination: PulsarEndpointInfo =>
         context.withDestinationTibrvContext { implicit tibrvContext =>
           createSenderClient(d => TibrvServiceConfiguration.destination[M](d).client[IO])
         }
-      case destination: TibrvConnectionInfo =>
+      case destination: TibrvEndpointInfo =>
         context.withDestinationPulsarContext { implicit pulsarContext =>
           createSenderClient(d => PulsarServiceConfiguration.destination[M](d).client[IO])
         }
-      case destination: ActiveMQConnectionInfo =>
+      case destination: ActiveMQEndpointInfo =>
         context.withDestinationJMSSession { implicit session =>
           createSenderClient(d => JMSServiceConfiguration.destination[M](session.createQueue(d)).client[IO])
         }

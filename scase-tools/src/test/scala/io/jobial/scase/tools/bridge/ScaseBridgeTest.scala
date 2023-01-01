@@ -29,7 +29,7 @@ class ScaseBridgeTest extends ServiceTestSupport {
 
   implicit val tibrvContextEq = Eq.fromUniversalEquals[TibrvContext]
 
-  implicit def parseConnectionInfo(v: String) = connectionInfoArgumentValueParser.parse(v).toOption.get
+  implicit def parseEndpointInfo(v: String) = endpointInfoArgumentValueParser.parse(v).toOption.get
 
 //  "destination name pattern" should "work" in {
 //    assert("pulsar://host:port/tenant/namespace/XXX.DEV.YYY.ZZZ" == substituteDestinationName("pulsar://host:port/tenant/namespace/([A-Z].*)\\.PROD\\.(.*)", "pulsar://host:port/tenant/namespace/$1.DEV.$2", "pulsar://host:port/tenant/namespace/XXX.PROD.YYY.ZZZ"))
@@ -45,7 +45,7 @@ class ScaseBridgeTest extends ServiceTestSupport {
     for {
       context <- BridgeContext(s"pulsar://///(${topic})", "pulsar://///$1-destination", false, 300.seconds)
       r <- {
-        implicit val pulsarContext = context.destination.asInstanceOf[PulsarConnectionInfo].context
+        implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpointInfo].context
         testRequestResponseBridge(
           PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"$topic-destination").service(_),
           PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).client,
