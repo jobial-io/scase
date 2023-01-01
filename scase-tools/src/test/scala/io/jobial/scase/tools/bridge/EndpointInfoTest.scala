@@ -1,14 +1,11 @@
 package io.jobial.scase.tools.bridge
 
-import cats.kernel.Eq
 import io.jobial.scase.activemq.ActiveMQContext
 import io.jobial.scase.core.test.ServiceTestSupport
 import io.jobial.scase.pulsar.PulsarContext
 import io.jobial.scase.tibrv.TibrvContext
 import io.lemonlabs.uri.Uri
 import scala.language.postfixOps
-import cats.derived._
-import cats.derived.auto.eq._
 
 class EndpointInfoTest extends ServiceTestSupport {
 
@@ -16,8 +13,8 @@ class EndpointInfoTest extends ServiceTestSupport {
     def test(uri: String, context: PulsarContext, topic: String) = {
       PulsarEndpointInfo(Uri.parse(uri)) match {
         case Right(c) =>
-          assert(c.context === context)
-          assert(c.topic === topic)
+          assert(c.context == context)
+          assert(c.topic == topic)
         case Left(t) =>
           fail(t)
       }
@@ -37,8 +34,8 @@ class EndpointInfoTest extends ServiceTestSupport {
     def test(uri: String, context: ActiveMQContext, destination: String) = {
       ActiveMQEndpointInfo(Uri.parse(uri)) match {
         case Right(c) =>
-          assert(c.context === context)
-          assert(c.destinationName === destination)
+          assert(c.context == context)
+          assert(c.destinationName == destination)
         case Left(t) =>
           fail(t)
       }
@@ -53,7 +50,7 @@ class EndpointInfoTest extends ServiceTestSupport {
     def test(uri: String, context: TibrvContext, subject: String) = {
       TibrvEndpointInfo(Uri.parse(uri)) match {
         case Right(c) =>
-          assert(c.context === context)
+          assert(c.context == context)
         case Left(t) =>
           fail(t)
       }

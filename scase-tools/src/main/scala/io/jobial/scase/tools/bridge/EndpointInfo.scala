@@ -6,10 +6,12 @@ import io.jobial.scase.pulsar.PulsarContext
 import io.jobial.scase.tibrv.TibrvContext
 import io.lemonlabs.uri.Uri
 import io.lemonlabs.uri.UrlPath
+import cats.implicits._
+import io.jobial.scase.util.EitherUtil
 
 object EndpointInfo {
 
-  def apply(uri: Uri) =
+  def apply(uri: Uri): Either[IllegalArgumentException, EndpointInfo] =
     if (uri.schemeOption === Some("pulsar"))
       Right(new PulsarEndpointInfo(uri))
     else if (uri.schemeOption === Some("tibrv"))

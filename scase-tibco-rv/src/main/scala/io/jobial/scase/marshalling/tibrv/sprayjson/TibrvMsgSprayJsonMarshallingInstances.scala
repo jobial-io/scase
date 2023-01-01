@@ -5,7 +5,7 @@ import com.tibco.tibrv.TibrvMsgField
 import io.jobial.scase.marshalling.BinaryFormatMarshaller
 import io.jobial.scase.marshalling.BinaryFormatUnmarshaller
 import io.jobial.scase.marshalling.sprayjson.DefaultFormats
-import io.jobial.scase.util.TryExtensionUtil
+import io.jobial.scase.util.EitherUtil
 import org.apache.commons.io.IOUtils.toByteArray
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
@@ -33,7 +33,7 @@ import scala.util.Try
  * lossy encoding of JSON.
  */
 trait TibrvMsgSprayJsonMarshallingInstances extends ProductFormats with DefaultFormats with AdditionalFormats
-  with CollectionFormats with TryExtensionUtil {
+  with CollectionFormats with EitherUtil {
 
   implicit val stringJsFormat = spray.json.DefaultJsonProtocol.StringJsonFormat
 
@@ -41,7 +41,7 @@ trait TibrvMsgSprayJsonMarshallingInstances extends ProductFormats with DefaultF
 
   implicit val boolJsFormat = spray.json.DefaultJsonProtocol.BooleanJsonFormat
 
-  implicit val intJsFormat = new JsonFormat[Int] {
+  implicit val intJsFormat: JsonFormat[Int] = new JsonFormat[Int] {
     override def write(obj: Int) = JsObject(
       "value" -> JsNumber(obj),
       "$type" -> JsString("int")
@@ -51,7 +51,7 @@ trait TibrvMsgSprayJsonMarshallingInstances extends ProductFormats with DefaultF
       json.asInstanceOf[JsNumber].value.toInt
   }
 
-  implicit val longJsFormat = new JsonFormat[Long] {
+  implicit val longJsFormat: JsonFormat[Long] = new JsonFormat[Long] {
     override def write(obj: Long) = JsObject(
       "value" -> JsNumber(obj),
       "$type" -> JsString("long")
@@ -61,7 +61,7 @@ trait TibrvMsgSprayJsonMarshallingInstances extends ProductFormats with DefaultF
       json.asInstanceOf[JsNumber].value.toLong
   }
 
-  implicit val doubleJsFormat = new JsonFormat[Double] {
+  implicit val doubleJsFormat: JsonFormat[Double] = new JsonFormat[Double] {
     override def write(obj: Double) = JsObject(
       "value" -> JsNumber(obj),
       "$type" -> JsString("double")
@@ -75,7 +75,7 @@ trait TibrvMsgSprayJsonMarshallingInstances extends ProductFormats with DefaultF
 
   val localDateClassName = classOf[LocalDate].getName
 
-  implicit val localDateJsFormat = new JsonFormat[LocalDate] {
+  implicit val localDateJsFormat: JsonFormat[LocalDate] = new JsonFormat[LocalDate] {
     override def write(obj: LocalDate) = JsObject(
       "value" -> JsNumber(obj.toDate.getTime),
       "$type" -> JsString(localDateClassName)
@@ -85,7 +85,7 @@ trait TibrvMsgSprayJsonMarshallingInstances extends ProductFormats with DefaultF
       new LocalDate(json.asInstanceOf[JsNumber].value.toLong)
   }
 
-  implicit val dateTimeJsFormat = new JsonFormat[DateTime] {
+  implicit val dateTimeJsFormat: JsonFormat[DateTime] = new JsonFormat[DateTime] {
     override def write(obj: DateTime) = JsObject(
       "value" -> JsNumber(obj.toDate.getTime),
       "$type" -> JsString(dateTimeClassName)
