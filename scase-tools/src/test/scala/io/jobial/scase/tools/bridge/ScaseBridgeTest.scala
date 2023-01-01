@@ -94,28 +94,26 @@ class ScaseBridgeTest extends ServiceTestSupport {
   //    )
   //  }
 
-//  "pulsar to jms" should "work" in {
-//    val topic = s"hello-test-${uuid(6)}"
-//    import io.jobial.scase.marshalling.serialization._
-//
-//    for {
-//      context <- BridgeContext[Any](s"pulsar://${topic}", "activemq://", false, 300.seconds)
-//      r <- {
-//        implicit val pulsarContext = context.source.asInstanceOf[PulsarConnectionInfo].context
-//        implicit val session = context.destination.asInstanceOf[ActiveMQConnectionInfo].context.session
-//        println(pulsarContext)
-//        println(context.destination.asInstanceOf[ActiveMQConnectionInfo].context)
-//        testBridge(
-//          JMSServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic, session.createQueue(topic)).service(_),
-//          PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).client,
-//          JMSServiceConfiguration.source[TestRequest1](session.createQueue(topic)).client,
-//          PulsarServiceConfiguration.destination[TestRequest1](topic).client,
-//          pure(context)
-//        )
-//      }
-//    } yield r
-//
-//  }
+  "pulsar to jms" should "work" in {
+    val topic = s"hello-test-${uuid(6)}"
+    import io.jobial.scase.marshalling.serialization._
+
+    for {
+      context <- BridgeContext[Any](s"pulsar://///${topic}", "activemq://", false, 300.seconds)
+      r <- {
+        implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpointInfo].context
+        implicit val session = context.destination.asInstanceOf[ActiveMQEndpointInfo].context.session
+        println(pulsarContext)
+        println(context.destination.asInstanceOf[ActiveMQEndpointInfo].context)
+        testRequestResponseBridge(
+          JMSServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic, session.createQueue(topic)).service(_),
+          PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).client,
+          pure(context)
+        )
+      }
+    } yield r
+
+  }
 
   //  "jms to pulsar" should "work" in {
   //    val topic = s"hello-test-${uuid(6)}"

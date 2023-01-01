@@ -10,14 +10,6 @@ trait EndpointInfoParser {
     def parse(value: String) =
         EndpointInfo(Uri.parse(value))
 
-    def empty = new EndpointInfo {
-      override def uri: Uri = ???
-
-      override def canonicalUri: Uri = ???
-
-      override def pathLen: Int = ???
-
-      override def destinationName: String = ???
-    }
+    def empty = EndpointInfo(Uri.parse("http://")).toOption.get
   }
 }
