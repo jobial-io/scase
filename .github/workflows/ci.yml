@@ -7,56 +7,162 @@ on:
     branches: [ master, 1.x ]
 
 jobs:
-  build:
+  build-2_11:
     runs-on: ubuntu-latest
-    environment: 
+    environment:
       name: CI
     services:
-       pulsar:
-         image: apachepulsar/pulsar-standalone:2.8.4
-         ports:
-         - 6650:6650
-       activemq:
-         image: rmohr/activemq:latest
-         ports:
-         - 61616:61616
-       rv:
-         image: ghcr.io/jobial-io/rv:latest
-         ports:
-           - 7500:7500
-         credentials:
-           username: ${{ github.repository_owner }}
-           password: ${{ secrets.GHCR_PASSWORD }}            
+      pulsar:
+        image: apachepulsar/pulsar-standalone:2.8.4
+        ports:
+          - 6650:6650
+      activemq:
+        image: rmohr/activemq:latest
+        ports:
+          - 61616:61616
+      rv:
+        image: ghcr.io/jobial-io/rv:latest
+        ports:
+          - 7500:7500
+        credentials:
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_PASSWORD }}
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up JDK 11
-      uses: actions/setup-java@v2
-      with:
-        java-version: '11'
-        distribution: 'temurin'
-    - name: Set up environment
-      run: | 
-        echo export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} >>job_env
-        echo export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} >>job_env
-        echo export AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }} >>job_env
-        mkdir -p /var/tmp/rv/lib
-        . job_env
-        aws s3 sync s3://jobial-ci/rv/ /var/tmp/rv/
-        echo export TIBCO_RV_ROOT=/var/tmp/rv >>job_env
-        echo export LD_LIBRARY_PATH=/var/tmp/rv/lib >>job_env
-    - name: Run tests
-      run: |
-        . job_env
-        sbt compile "project scase-aws-test" proguard condense
-        #jar tf /home/runner/work/scase/scase/scase-aws-test/target/scala-2.13/proguard/scase-aws-test_2.13-*.jar
-        sbt coverage +test coverageReport coverageAggregate 2>&1 | grep -av 'RV: TIB/Rendezvous Error Not Handled by Process:' | grep -av '{ADV_CLASS='
-        [ ${PIPESTATUS[0]} == 0 ] || exit 1
-    - name: Upload results
-      run: |
-        . job_env
-        aws s3 sync ./ s3://jobial-ci/github/scase/master/ --exclude "*" --include "**/target/**"
-        cat target/scala-2.*/scoverage-report/scoverage.xml | head -n 2 | grep statement-rate | sed 's/.*statement-rate="//' | sed 's/".*//'
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v2
-      with:
-        verbose: true        
+      - uses: actions/checkout@v2
+      - name: Set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+      - name: Set up environment
+        run: |
+          echo export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} >>job_env
+          echo export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} >>job_env
+          echo export AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }} >>job_env
+          mkdir -p /var/tmp/rv/lib
+          . job_env
+          aws s3 sync s3://jobial-ci/rv/ /var/tmp/rv/
+          echo export TIBCO_RV_ROOT=/var/tmp/rv >>job_env
+          echo export LD_LIBRARY_PATH=/var/tmp/rv/lib >>job_env
+      - name: Run tests
+        run: |
+          . job_env
+          sbt compile "project scase-aws-test" proguard condense
+          #jar tf /home/runner/work/scase/scase/scase-aws-test/target/scala-2.13/proguard/scase-aws-test_2.13-*.jar
+          sbt ++2.11 test 2>&1 | grep -av 'RV: TIB/Rendezvous Error Not Handled by Process:' | grep -av '{ADV_CLASS='
+          [ ${PIPESTATUS[0]} == 0 ] || exit 1
+      - name: Upload results
+        run: |
+          . job_env
+          aws s3 sync ./ s3://jobial-ci/github/scase/master/ --exclude "*" --include "**/target/**"
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          verbose: true
+  
+  build-2_12:
+    runs-on: ubuntu-latest
+    environment:
+      name: CI
+    services:
+      pulsar:
+        image: apachepulsar/pulsar-standalone:2.8.4
+        ports:
+          - 6650:6650
+      activemq:
+        image: rmohr/activemq:latest
+        ports:
+          - 61616:61616
+      rv:
+        image: ghcr.io/jobial-io/rv:latest
+        ports:
+          - 7500:7500
+        credentials:
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+      - name: Set up environment
+        run: |
+          echo export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} >>job_env
+          echo export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} >>job_env
+          echo export AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }} >>job_env
+          mkdir -p /var/tmp/rv/lib
+          . job_env
+          aws s3 sync s3://jobial-ci/rv/ /var/tmp/rv/
+          echo export TIBCO_RV_ROOT=/var/tmp/rv >>job_env
+          echo export LD_LIBRARY_PATH=/var/tmp/rv/lib >>job_env
+      - name: Run tests
+        run: |
+          . job_env
+          sbt compile "project scase-aws-test" proguard condense
+          #jar tf /home/runner/work/scase/scase/scase-aws-test/target/scala-2.13/proguard/scase-aws-test_2.13-*.jar
+          sbt ++2.12 test 2>&1 | grep -av 'RV: TIB/Rendezvous Error Not Handled by Process:' | grep -av '{ADV_CLASS='
+          [ ${PIPESTATUS[0]} == 0 ] || exit 1
+      - name: Upload results
+        run: |
+          . job_env
+          aws s3 sync ./ s3://jobial-ci/github/scase/master/ --exclude "*" --include "**/target/**"
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          verbose: true        
+
+  build-2_13:
+    runs-on: ubuntu-latest
+    environment:
+      name: CI
+    services:
+      pulsar:
+        image: apachepulsar/pulsar-standalone:2.8.4
+        ports:
+          - 6650:6650
+      activemq:
+        image: rmohr/activemq:latest
+        ports:
+          - 61616:61616
+      rv:
+        image: ghcr.io/jobial-io/rv:latest
+        ports:
+          - 7500:7500
+        credentials:
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+      - name: Set up environment
+        run: |
+          echo export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} >>job_env
+          echo export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} >>job_env
+          echo export AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }} >>job_env
+          mkdir -p /var/tmp/rv/lib
+          . job_env
+          aws s3 sync s3://jobial-ci/rv/ /var/tmp/rv/
+          echo export TIBCO_RV_ROOT=/var/tmp/rv >>job_env
+          echo export LD_LIBRARY_PATH=/var/tmp/rv/lib >>job_env
+      - name: Run tests
+        run: |
+          . job_env
+          sbt compile "project scase-aws-test" proguard condense
+          #jar tf /home/runner/work/scase/scase/scase-aws-test/target/scala-2.13/proguard/scase-aws-test_2.13-*.jar
+          sbt ++2.13 coverage test coverageReport coverageAggregate 2>&1 | grep -av 'RV: TIB/Rendezvous Error Not Handled by Process:' | grep -av '{ADV_CLASS='
+          [ ${PIPESTATUS[0]} == 0 ] || exit 1
+      - name: Upload results
+        run: |
+          . job_env
+          aws s3 sync ./ s3://jobial-ci/github/scase/master/ --exclude "*" --include "**/target/**"
+          cat target/scala-2.*/scoverage-report/scoverage.xml | head -n 2 | grep statement-rate | sed 's/.*statement-rate="//' | sed 's/".*//'
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          verbose: true        
