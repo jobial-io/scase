@@ -55,28 +55,26 @@ class ScaseBridgeTest extends ServiceTestSupport {
     } yield r
   }
 
-//  "pulsar to rv" should "work" in {
-//    assume(!onMacOS)
-//
-//    val topic = s"hello-test-${uuid(6)}"
-//    import io.jobial.scase.marshalling.tibrv.circe._
-//    import io.jobial.scase.marshalling.tibrv.raw.tibrvMsgRawMarshalling
-//
-//    for {
-//      context <- BridgeContext(s"pulsar://${topic}", "tibrv://", false, 300.seconds)
-//      r <- {
-//        implicit val tibrvContext = context.destination.asInstanceOf[TibrvConnectionInfo].context
-//        implicit val pulsarContext = context.destination.asInstanceOf[PulsarConnectionInfo].context
-//        testBridge(
-//          TibrvServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(topic)).service(_),
-//          PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).client,
-//          TibrvServiceConfiguration.source[TestRequest1](Seq(topic)).client,
-//          PulsarServiceConfiguration.destination[TestRequest1](topic).client,
-//          pure(context)
-//        )
-//      }
-//    } yield r
-//  }
+  "pulsar to rv" should "work" in {
+    assume(!onMacOS)
+
+    val topic = s"hello-test-${uuid(6)}"
+    import io.jobial.scase.marshalling.tibrv.circe._
+    import io.jobial.scase.marshalling.tibrv.raw.tibrvMsgRawMarshalling
+
+    for {
+      context <- BridgeContext(s"pulsar://///${topic}", "tibrv://", false, 300.seconds)
+      r <- {
+        implicit val tibrvContext = context.destination.asInstanceOf[TibrvEndpointInfo].context
+        implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpointInfo].context
+        testRequestResponseBridge(
+          TibrvServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(topic)).service(_),
+          PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).client,
+          pure(context)
+        )
+      }
+    } yield r
+  }
 
   //  "rv to pulsar" should "work" in {
   //    assume(!onMacOS)
