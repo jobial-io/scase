@@ -64,6 +64,7 @@ lazy val CondenseVersion = "0.5.4"
 lazy val ProguardVersion = "7.2.2"
 lazy val ActivemqVersion = "5.16.3"
 lazy val JmsVersion = "2.0.1"
+lazy val ScalaUriVersion = "1.4.10"
 
 lazy val root: Project = project
   .in(file("."))
@@ -214,7 +215,7 @@ lazy val `scase-tools` = project
     libraryDependencies ++= Seq(
       "io.jobial" %% "sclap" % SclapVersion,
       "ch.qos.logback" % "logback-classic" % LogbackVersion,
-      "io.lemonlabs" %% "scala-uri" % "4.0.3"
+      "io.lemonlabs" %% "scala-uri" % ScalaUriVersion
     )
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
