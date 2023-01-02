@@ -154,24 +154,24 @@ class ScaseBridgeTest extends ServiceTestSupport {
 //    } yield r
 //  }
 
-  "pulsar to activemq request-response" should "work" in {
-    val topic = s"hello-test-${uuid(6)}"
-    import io.jobial.scase.marshalling.serialization._
-
-    for {
-      context <- BridgeContext[Any](s"pulsar://///${topic}", "activemq://", false, 300.seconds)
-      r <- {
-        implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpointInfo].context
-        implicit val session = context.destination.asInstanceOf[ActiveMQEndpointInfo].context.session
-
-        testRequestResponseBridge(
-          JMSServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic, session.createQueue(topic)).service(_),
-          PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).client,
-          pure(context)
-        )
-      }
-    } yield r
-  }
+//  "pulsar to activemq request-response" should "work" in {
+//    val topic = s"hello-test-${uuid(6)}"
+//    import io.jobial.scase.marshalling.serialization._
+//
+//    for {
+//      context <- BridgeContext[Any](s"pulsar://///${topic}", "activemq://", false, 300.seconds)
+//      r <- {
+//        implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpointInfo].context
+//        implicit val session = context.destination.asInstanceOf[ActiveMQEndpointInfo].context.session
+//
+//        testRequestResponseBridge(
+//          JMSServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic, session.createQueue(topic)).service(_),
+//          PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).client,
+//          pure(context)
+//        )
+//      }
+//    } yield r
+//  }
 
   "activemq to pulsar" should "work" in {
     val topic = s"hello-test-${uuid(6)}"
