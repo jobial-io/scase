@@ -215,7 +215,8 @@ lazy val `scase-tools` = project
     libraryDependencies ++= Seq(
       "io.jobial" %% "sclap" % SclapVersion,
       "ch.qos.logback" % "logback-classic" % LogbackVersion,
-      "io.lemonlabs" %% "scala-uri" % ScalaUriVersion
+      "io.lemonlabs" %% "scala-uri" % ScalaUriVersion,
+      "org.apache.pulsar" % "pulsar-client-admin" % PulsarVersion
     )
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")

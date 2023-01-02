@@ -1,6 +1,8 @@
 package io.jobial.scase.tools.bridge
 
 import cats.effect.IO
+import cats.effect.IO
+import cats.effect.IO.delay
 import cats.effect.IO.pure
 import cats.kernel.Eq
 import io.circe.generic.auto._
@@ -20,6 +22,7 @@ import io.jobial.scase.tibrv.TibrvContext
 import io.jobial.scase.tibrv.TibrvServiceConfiguration
 import io.jobial.scase.tools.bridge.ScaseBridge._
 import io.jobial.scase.util.Hash.uuid
+import org.scalactic.attempt
 import scala.concurrent.duration.DurationInt
 
 class ScaseBridgeTest extends ServiceTestSupport {
@@ -51,6 +54,35 @@ class ScaseBridgeTest extends ServiceTestSupport {
           pure(context)
         )
       }
+    } yield r
+  }
+
+  "pulsar to pulsar one-way with different tenant and namespace" should "work" in {
+    import org.apache.pulsar.client.admin.PulsarAdmin
+    val url = "http://localhost:8080"
+    val admin = PulsarAdmin.builder.serviceHttpUrl(url)
+      .allowTlsInsecureConnection(true).build
+
+    val topic = s"hello-test-${uuid(6)}"
+    import io.jobial.scase.marshalling.tibrv.circe._
+    import io.jobial.scase.marshalling.tibrv.raw.tibrvMsgRawMarshalling
+
+    for {
+      _ <- delay(admin.tenants().createTenant("test", admin.tenants().getTenantInfo("public"))).attempt
+      _ <- delay(admin.namespaces.createNamespace("test/scase-bridge")).attempt
+        context <- BridgeContext(s"pulsar://///(${topic})", "pulsar:///test/scase-bridge/$1-destination", true, 300.seconds)
+      r <-
+        testOneWayBridge(
+          {
+            implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpointInfo].context
+            PulsarServiceConfiguration.source[TestRequest1](s"$topic-destination").client
+          },
+          {
+            implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpointInfo].context
+            PulsarServiceConfiguration.destination[TestRequest1](topic).client
+          },
+          pure(context)
+        )
     } yield r
   }
 
