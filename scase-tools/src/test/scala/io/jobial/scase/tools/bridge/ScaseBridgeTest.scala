@@ -105,6 +105,31 @@ class ScaseBridgeTest extends ServiceTestSupport {
     } yield r
   }
 
+  "pulsar to pulsar request-response with different tenant and namespace" should "work" in {
+    assume(!onGithub)
+
+    val topic = s"hello-test-${uuid(6)}"
+    import io.jobial.scase.marshalling.tibrv.circe._
+    import io.jobial.scase.marshalling.tibrv.raw.tibrvMsgRawMarshalling
+
+    for {
+      context <- BridgeContext(s"pulsar://///(${topic})", "pulsar:///test/scase-bridge/$1-destination", false, 300.seconds)
+      r <- {
+        testRequestResponseBridge(
+          {
+            implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpointInfo].context
+            PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"$topic-destination").service(_)
+          },
+          {
+            implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpointInfo].context
+            PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).client
+          },
+          pure(context)
+        )
+      }
+    } yield r
+  }
+
   "pulsar to rv one-way" should "work" in {
     assume(!onMacOS)
 
@@ -239,7 +264,6 @@ class ScaseBridgeTest extends ServiceTestSupport {
     bridgeContext: IO[BridgeContext[M]]
   ) =
     for {
-      _ <- IO.sleep(10.seconds)
       service <- destinationService(requestHandler)
       client <- sourceClient
       bridgeContext <- bridgeContext
