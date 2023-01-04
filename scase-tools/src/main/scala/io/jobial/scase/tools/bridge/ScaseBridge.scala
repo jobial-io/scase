@@ -203,7 +203,7 @@ Forward requests and one-way messages from one transport to another.
 
   def substituteDestinationName[M](actualSource: EndpointInfo)(implicit context: BridgeContext[M]): String = {
     val destinationForSource = context.destination.forSource(context.source)
-      
+
     val r = substituteDestinationName(context.source, destinationForSource, actualSource)
     r.destinationName
   }
@@ -240,8 +240,9 @@ Forward requests and one-way messages from one transport to another.
           _ <- whenA(requestCount % 1000 === 0)(
             for {
               statLastTime <- context.statLastTime.modify(t => (currentTimeMillis, t))
-              rate = 1000d / (currentTimeMillis - statLastTime) * 1000d
-              _ <- info[IO](f"Processed ${requestCount} requests and ${responseCount} responses (${requestTimeoutCount} timeouts, ${errorCount} errors, ${filteredRequestCount} requests filtered, ${filteredResponseCount} responses filtered) ${rate}%.2f/s")
+              t = currentTimeMillis
+              rate = 1000d / (t - statLastTime) * 1000d
+              _ <- whenA(t > statLastTime)(info[IO](f"Processed ${requestCount} requests and ${responseCount} responses (${requestTimeoutCount} timeouts, ${errorCount} errors, ${filteredRequestCount} requests filtered, ${filteredResponseCount} responses filtered) ${rate}%.2f/s"))
             } yield ()
           )
           _ <- trace[IO](s"Forwarding request to $d")
@@ -317,8 +318,9 @@ Forward requests and one-way messages from one transport to another.
           _ <- whenA(messageCount % 1000 === 0)(
             for {
               statLastTime <- context.statLastTime.modify(t => (currentTimeMillis, t))
-              rate = 1000d / (currentTimeMillis - statLastTime) * 1000d
-              _ <- info[IO](f"Processed ${messageCount} messages (${errorCount} errors, ${filteredMessageCount} filtered) ${rate}%.2f/s")
+              t = currentTimeMillis
+              rate = 1000d / (t - statLastTime) * 1000d
+              _ <- whenA(t > statLastTime)(info[IO](f"Processed ${messageCount} messages (${errorCount} errors, ${filteredMessageCount} filtered) ${rate}%.2f/s"))
             } yield ()
           )
           client <- d match {
@@ -339,15 +341,24 @@ Forward requests and one-way messages from one transport to another.
     context.destination match {
       case destination: TibrvEndpointInfo =>
         context.withDestinationTibrvContext { implicit tibrvContext =>
-          createSenderClient(d => TibrvServiceConfiguration.destination[M](d).client[IO])
+          createSenderClient(d =>
+            info[IO](s"Creating TibRV sender client for $d") >>
+              TibrvServiceConfiguration.destination[M](d).client[IO]
+          )
         }
       case destination: PulsarEndpointInfo =>
         context.withDestinationPulsarContext { implicit pulsarContext =>
-          createSenderClient(d => PulsarServiceConfiguration.destination[M](d).client[IO])
+          createSenderClient(d =>
+            info[IO](s"Creating Pulsar sender client for $d") >>
+              PulsarServiceConfiguration.destination[M](d).client[IO]
+          )
         }
       case destination: ActiveMQEndpointInfo =>
         context.withDestinationJMSSession { implicit session =>
-          createSenderClient(d => JMSServiceConfiguration.destination[M](session.createQueue(d)).client[IO])
+          createSenderClient(d =>
+            info[IO](s"Creating JMS sender client for $d") >>
+              JMSServiceConfiguration.destination[M](session.createQueue(d)).client[IO]
+          )
         }
       case _ =>
         raiseError(new IllegalStateException(s"${context.destination} not supported"))

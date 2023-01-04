@@ -10,6 +10,6 @@ trait EndpointInfoParser {
     def parse(value: String) =
       EndpointInfo(Uri.parse(value))
 
-    def empty = EndpointInfo(Uri.parse("http://")).toOption.get
+    def empty = EndpointInfo(Uri.parse("pulsar://")).toOption.get
   }
 }
