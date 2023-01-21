@@ -4,7 +4,6 @@ import cats.effect.*;
 import io.jobial.scase.util.Hash$;
 import scala.*;
 import scala.concurrent.ExecutionContext;
-import scala.concurrent.ExecutionContext$;
 import scala.concurrent.Future;
 import scala.runtime.BoxedUnit;
 
@@ -102,7 +101,7 @@ public class JavaUtils {
                 .thenApply(r -> new SenderClient(r));
     }
 
-    public static ExecutionContext executionContext = ExecutionContext$.MODULE$.global();
+    public static ExecutionContext executionContext = io.jobial.scase.core.impl.package$.MODULE$.blockerContext();
 
     public static ContextShift<IO> contextShift = IO.contextShift(executionContext);
 

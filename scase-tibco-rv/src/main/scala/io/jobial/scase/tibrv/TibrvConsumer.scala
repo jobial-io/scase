@@ -18,10 +18,11 @@ import io.jobial.scase.core.ReceiveTimeout
 import io.jobial.scase.core.ResponseProducerIdKey
 import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
+import io.jobial.scase.core.impl.blockerContext
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
+
 import java.net.InetAddress
-import scala.concurrent.ExecutionContext
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration.FiniteDuration
 
@@ -70,8 +71,8 @@ class TibrvConsumer[F[_] : Concurrent : Timer, M](
   }.unsafeRunSync()
 
   // TODO: try to get rid of these
-  implicit val ioContextShift: ContextShift[IO] = IO.contextShift(ExecutionContext.Implicits.global)
-  implicit val ioTimer: Timer[IO] = IO.timer(ExecutionContext.Implicits.global)
+  implicit val ioContextShift: ContextShift[IO] = IO.contextShift(blockerContext)
+  implicit val ioTimer: Timer[IO] = IO.timer(blockerContext)
 
   def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]) =
     for {

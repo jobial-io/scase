@@ -17,7 +17,6 @@ import java.util.UUID.randomUUID
 import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
 import scala.compat.java8.FutureConverters.toScala
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration

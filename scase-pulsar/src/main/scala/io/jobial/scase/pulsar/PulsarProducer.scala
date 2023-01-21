@@ -14,7 +14,6 @@ import scala.collection.JavaConverters._
 import scala.compat.java8.FutureConverters.toScala
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class PulsarProducer[F[_] : Concurrent, M](
   topic: String,

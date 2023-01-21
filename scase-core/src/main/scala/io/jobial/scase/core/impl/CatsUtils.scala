@@ -13,10 +13,10 @@ import cats.effect.concurrent.MVar
 import cats.implicits._
 import cats.implicits.catsSyntaxApplicativeError
 import cats.implicits.catsSyntaxFlatMapOps
+
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
-import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration.DurationInt
@@ -47,7 +47,7 @@ trait CatsUtils {
 
   def start[F[_] : Concurrent, A](f: F[A]) = Concurrent[F].start(f)
 
-  def fromFuture[F[_] : Concurrent, A](f: => Future[A])(implicit ec: ExecutionContext): F[A] = {
+  def fromFuture[F[_] : Concurrent, A](f: => Future[A]): F[A] = {
     delay(f).flatMap { f =>
       f.value match {
         case Some(result) =>
@@ -62,7 +62,7 @@ trait CatsUtils {
                 case Success(a) => Right(a)
                 case Failure(e) => Left(e)
               })
-            }(ec)
+            }(blockerContext)
           }
       }
     }

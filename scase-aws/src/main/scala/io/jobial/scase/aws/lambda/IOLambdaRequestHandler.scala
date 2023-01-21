@@ -13,15 +13,12 @@
 package io.jobial.scase.aws.lambda
 
 import cats.effect._
-import io.jobial.scase.core.RequestHandler
-
-import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.DurationInt
+import io.jobial.scase.core.impl.blockerContext
 
 abstract class IOLambdaRequestHandler[REQ, RESP]
   extends LambdaRequestHandler[IO, REQ, RESP] {
 
-  implicit lazy val cs = IO.contextShift(ExecutionContext.global)
+  implicit lazy val cs = IO.contextShift(blockerContext)
 
   implicit lazy val concurrent = IO.ioConcurrentEffect(cs)
 
