@@ -65,8 +65,6 @@ class ForwarderBridge[F[_] : Concurrent : Timer, REQ: Unmarshaller, RESP: Marsha
       }
     } yield ()
 
-  case object MessageDropException extends IllegalStateException
-
   def start =
     start(forward) >> pure(new ForwarderBridgeServiceState(this))
 
@@ -131,3 +129,5 @@ object ForwarderBridge extends CatsUtils with Logging {
       pure(Option(r))
   }
 }
+
+case object MessageDropException extends IllegalStateException

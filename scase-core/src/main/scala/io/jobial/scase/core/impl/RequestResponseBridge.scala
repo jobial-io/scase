@@ -17,6 +17,7 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
   filterResponse: (MessageReceiveResult[F, SOURCEREQ], RequestResponseResult[F, DESTREQ, DESTRESP]) => F[Option[MessageReceiveResult[F, SOURCERESP]]],
   stopped: Ref[F, Boolean],
   requestCounter: Ref[F, Long],
+  sentRequestCounter: Ref[F, Long],
   responseCounter: Ref[F, Long],
   requestTimeoutCounter: Ref[F, Long],
   errorCounter: Ref[F, Long],
@@ -26,6 +27,8 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
   implicit requestResponseMapping: RequestResponseMapping[SOURCEREQ, SOURCERESP]
 ) extends DefaultService[F] with CatsUtils with Logging {
 
+  val maximumPendingMessages = 100
+
   def start =
     for {
       service <- source(new RequestHandler[F, SOURCEREQ, SOURCERESP] {
@@ -34,6 +37,15 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
             val sourceResult = context.receiveResult(request)
             (for {
               _ <- requestCounter.update(_ + 1)
+              requestCount <- requestCount
+              errorCount <- errorCount
+              filteredRequestCount <- filteredRequestCount
+              sentRequestCount <- sentRequestCount
+              pendingMessages = requestCount - errorCount - filteredRequestCount - sentRequestCount
+              _ <- whenA(pendingMessages > maximumPendingMessages)(
+                error("Dropping message (rolling back if supported) because of slow or failing destination") >>
+                  raiseError(MessageDropException)
+              )
               filteredRequest <- filterRequest(sourceResult)
               sendResult <- filteredRequest match {
                 case Some(filteredRequest) =>
@@ -89,6 +101,8 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
     }
 
   def requestCount = requestCounter.get
+  
+  def sentRequestCount = sentRequestCounter.get
 
   def responseCount = responseCounter.get
   
@@ -119,6 +133,7 @@ object RequestResponseBridge extends CatsUtils with Logging {
     for {
       stopped <- Ref.of[F, Boolean](false)
       requestCounter <- Ref.of[F, Long](0)
+      sentRequestCounter <- Ref.of[F, Long](0)
       responseCounter <- Ref.of[F, Long](0)
       requestTimeoutCounter <- Ref.of[F, Long](0)
       errorCounter <- Ref.of[F, Long](0)
@@ -131,6 +146,7 @@ object RequestResponseBridge extends CatsUtils with Logging {
       filterResponse,
       stopped,
       requestCounter,
+      sentRequestCounter,
       responseCounter,
       requestTimeoutCounter,
       errorCounter,

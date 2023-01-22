@@ -72,6 +72,7 @@ trait ConsumerProducerService[F[_], REQ, RESP] extends CatsUtils with Logging {
           }.handleErrorWith {
           case t =>
             error(s"request processing failed: ${request.toString.take(500)}", t) >>
+              request.rollback >>
               response.complete(DefaultSendResponseResult(Left(t), SendMessageContext(responseAttributes)))
         }
 
