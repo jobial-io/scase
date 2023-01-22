@@ -12,6 +12,11 @@ import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
 import org.apache.pulsar.client.api.ConsumerBuilder
 import org.apache.pulsar.client.api.SubscriptionInitialPosition
+import org.apache.pulsar.client.api.SubscriptionMode
+import org.apache.pulsar.client.api.SubscriptionMode.Durable
+import org.apache.pulsar.client.api.SubscriptionType
+import org.apache.pulsar.client.api.SubscriptionType.Exclusive
+
 import java.time.Instant
 import java.util.UUID.randomUUID
 import java.util.concurrent.TimeUnit
@@ -27,7 +32,9 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
   val patternAutoDiscoveryPeriod: Option[FiniteDuration],
   val subscriptionInitialPosition: Option[SubscriptionInitialPosition],
   val subscriptionInitialPublishTime: Option[Instant],
-  val subscriptionName: String
+  val subscriptionName: String,
+  val subscriptionType: SubscriptionType,
+  val subscriptionMode: SubscriptionMode
 )(implicit context: PulsarContext)
   extends DefaultMessageConsumer[F, M] with CatsUtils with RegexUtils with Logging {
 
@@ -36,12 +43,14 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
       f(builder).getOrElse(builder)
   }
 
-  val consumer =
-    context
+  val consumer = {
+    val consumer = context
       .client
       .newConsumer
       .consumerName(s"consumer-${randomUUID}")
       .subscriptionName(subscriptionName)
+      .subscriptionType(subscriptionType)
+      .subscriptionMode(subscriptionMode)
       .apply(b =>
         topic match {
           case Left(topic) =>
@@ -59,6 +68,10 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
         subscriptionInitialPosition.map(b.subscriptionInitialPosition)
       )
       .subscribe()
+    
+    consumer.redeliverUnacknowledgedMessages()
+    consumer
+  }
 
   sys.addShutdownHook { () =>
     if (consumer.isConnected)
@@ -118,13 +131,17 @@ object PulsarConsumer extends CatsUtils with Logging {
     patternAutoDiscoveryPeriod: Option[FiniteDuration] = Some(1.second),
     subscriptionInitialPosition: Option[SubscriptionInitialPosition] = None,
     subscriptionInitialPublishTime: Option[Instant] = None,
-    subscriptionName: String = s"subscription-${randomUUID}"
+    subscriptionName: String = s"subscription-${randomUUID}",
+    subscriptionType: SubscriptionType = Exclusive,
+    subscriptionMode: SubscriptionMode = Durable
   )(implicit context: PulsarContext): F[PulsarConsumer[F, M]] =
     delay(new PulsarConsumer[F, M](
       topic,
       patternAutoDiscoveryPeriod,
       subscriptionInitialPosition,
       subscriptionInitialPublishTime,
-      subscriptionName
+      subscriptionName,
+      subscriptionType,
+      subscriptionMode
     ))
 }

@@ -21,6 +21,7 @@ public class PulsarServiceConfiguration {
             Optional<Duration> patternAutoDiscoveryPeriod,
             Optional<SubscriptionInitialPosition> subscriptionInitialPosition,
             Optional<Instant> subscriptionInitialPublishTime,
+            String subscriptionName,
             Marshalling<REQ> requestMarshalling,
             Marshalling<RESP> responseMarshalling
     ) {
@@ -31,6 +32,7 @@ public class PulsarServiceConfiguration {
                 javaOptionalDurationToScala(patternAutoDiscoveryPeriod),
                 javaOptionalToScala(subscriptionInitialPosition),
                 javaOptionalToScala(subscriptionInitialPublishTime),
+                subscriptionName,
                 requestMarshalling.marshaller(),
                 requestMarshalling.unmarshaller(),
                 responseMarshalling.marshaller(),
@@ -52,6 +54,7 @@ public class PulsarServiceConfiguration {
                 scalaOptionDurationToJava(PulsarServiceConfiguration$.MODULE$.requestResponse$default$4()),
                 scalaOptionToJava(PulsarServiceConfiguration$.MODULE$.requestResponse$default$5()),
                 scalaOptionToJava(PulsarServiceConfiguration$.MODULE$.requestResponse$default$6()),
+                PulsarServiceConfiguration$.MODULE$.requestResponse$default$7(),
                 requestMarshalling,
                 responseMarshalling
         );
@@ -207,11 +210,13 @@ public class PulsarServiceConfiguration {
     public static <M> PulsarMessageDestinationServiceConfiguration<M> destination(
             String topic,
             Optional<Duration> batchingMaxPublishDelay,
+            boolean blockIfQueueFull,
             Marshalling<M> marshalling
     ) {
         return new PulsarMessageDestinationServiceConfiguration(PulsarServiceConfiguration$.MODULE$.destination(
                 topic,
                 javaOptionalDurationToScala(batchingMaxPublishDelay),
+                blockIfQueueFull,
                 marshalling.marshaller()
         ));
     }
@@ -223,6 +228,7 @@ public class PulsarServiceConfiguration {
         return destination(
                 topic,
                 scalaOptionDurationToJava(PulsarServiceConfiguration$.MODULE$.destination$default$2()),
+                PulsarServiceConfiguration$.MODULE$.destination$default$3(),
                 marshalling
         );
     }

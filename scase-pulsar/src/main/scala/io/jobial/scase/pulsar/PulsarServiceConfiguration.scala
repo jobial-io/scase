@@ -75,7 +75,8 @@ class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, 
   val batchingMaxPublishDelay: Option[FiniteDuration],
   val patternAutoDiscoveryPeriod: Option[FiniteDuration],
   val subscriptionInitialPosition: Option[SubscriptionInitialPosition],
-  val subscriptionInitialPublishTime: Option[Instant]
+  val subscriptionInitialPublishTime: Option[Instant],
+  val subscriptionName: String
 )(
   //implicit monitoringPublisher: MonitoringPublisher = noPublisher
   implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
@@ -90,7 +91,8 @@ class PulsarRequestResponseServiceConfiguration[REQ: Marshaller : Unmarshaller, 
         requestTopic,
         patternAutoDiscoveryPeriod,
         subscriptionInitialPosition,
-        subscriptionInitialPublishTime
+        subscriptionInitialPublishTime,
+        subscriptionName
       )
       service <- ConsumerProducerRequestResponseService[F, REQ, RESP](
         consumer, { responseTopicFromMessage =>
@@ -211,7 +213,8 @@ class PulsarMessageSourceServiceConfiguration[M: Unmarshaller](
   val sourceTopic: Either[String, Regex],
   val patternAutoDiscoveryPeriod: Option[FiniteDuration] = Some(1.second),
   val subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Latest),
-  val subscriptionInitialPublishTime: Option[Instant] = None
+  val subscriptionInitialPublishTime: Option[Instant] = None,
+  val subscriptionName: String = s"subscription-${randomUUID}"
 ) {
   def client[F[_] : Concurrent : Timer](
     implicit context: PulsarContext
@@ -221,7 +224,8 @@ class PulsarMessageSourceServiceConfiguration[M: Unmarshaller](
         sourceTopic,
         patternAutoDiscoveryPeriod,
         subscriptionInitialPosition,
-        subscriptionInitialPublishTime
+        subscriptionInitialPublishTime,
+        subscriptionName
       )
       client <- ConsumerReceiverClient[F, M](consumer)
     } yield client
@@ -229,7 +233,8 @@ class PulsarMessageSourceServiceConfiguration[M: Unmarshaller](
 
 class PulsarMessageDestinationServiceConfiguration[M: Marshaller](
   val topic: String,
-  val batchingMaxPublishDelay: Option[FiniteDuration]
+  val batchingMaxPublishDelay: Option[FiniteDuration],
+  val blockIfQueueFull: Boolean
 ) {
 
   def client[F[_] : Concurrent : Timer](
@@ -251,7 +256,8 @@ object PulsarServiceConfiguration {
     batchingMaxPublishDelay: Option[FiniteDuration] = Some(1.millis),
     patternAutoDiscoveryPeriod: Option[FiniteDuration] = Some(1.second),
     subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Latest),
-    subscriptionInitialPublishTime: Option[Instant] = None
+    subscriptionInitialPublishTime: Option[Instant] = None,
+    subscriptionName: String = s"subscription-${randomUUID}"
   )(
     //implicit monitoringPublisher: MonitoringPublisher = noPublisher
     implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
@@ -264,11 +270,13 @@ object PulsarServiceConfiguration {
       batchingMaxPublishDelay,
       patternAutoDiscoveryPeriod,
       subscriptionInitialPosition,
-      subscriptionInitialPublishTime
+      subscriptionInitialPublishTime,
+      subscriptionName
     )
 
   def requestResponse[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
-    requestTopic: Either[String, Regex]
+    requestTopic: Either[String, Regex],
+    subscriptionName: String
   )(
     //implicit monitoringPublisher: MonitoringPublisher = noPublisher
     implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
@@ -286,7 +294,8 @@ object PulsarServiceConfiguration {
       Some(1.millis),
       Some(1.second),
       Some(Latest),
-      None
+      None,
+      subscriptionName
     )
 
   def stream[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
@@ -434,17 +443,20 @@ object PulsarServiceConfiguration {
   )
 
   def source[M: Unmarshaller](
-    sourceTopic: Either[String, Regex]
+    sourceTopic: Either[String, Regex],
+    subscriptionName: String
   ) = new PulsarMessageSourceServiceConfiguration(
     sourceTopic,
     Some(1.second),
     Some(Latest),
-    None
+    None,
+    subscriptionName
   )
 
   def destination[M: Marshaller](
     topic: String,
-    batchingMaxPublishDelay: Option[FiniteDuration] = Some(1.millis)
-  ) = new PulsarMessageDestinationServiceConfiguration[M](topic, batchingMaxPublishDelay)
+    batchingMaxPublishDelay: Option[FiniteDuration] = Some(1.millis),
+    blockIfQueueFull: Boolean = true
+  ) = new PulsarMessageDestinationServiceConfiguration[M](topic, batchingMaxPublishDelay, blockIfQueueFull)
 
 }

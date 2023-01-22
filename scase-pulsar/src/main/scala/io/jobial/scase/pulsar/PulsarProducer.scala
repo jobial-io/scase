@@ -17,7 +17,8 @@ import scala.concurrent.duration.FiniteDuration
 
 class PulsarProducer[F[_] : Concurrent, M](
   topic: String,
-  batchingMaxPublishDelay: Option[FiniteDuration]
+  batchingMaxPublishDelay: Option[FiniteDuration],
+  blockIfQueueFull: Boolean
 )(implicit context: PulsarContext)
   extends MessageProducer[F, M] with CatsUtils with Logging {
 
@@ -32,7 +33,7 @@ class PulsarProducer[F[_] : Concurrent, M](
       .newProducer
       .producerName(s"producer-${randomUUID}")
       .topic(context.fullyQualifiedTopicName(topic))
-      .blockIfQueueFull(true)
+      .blockIfQueueFull(blockIfQueueFull)
       .apply { b =>
         batchingMaxPublishDelay.map(d => b.enableBatching(true).batchingMaxPublishDelay(d.toNanos, TimeUnit.NANOSECONDS))
       }
@@ -64,10 +65,12 @@ object PulsarProducer extends CatsUtils {
 
   def apply[F[_] : Concurrent, M](
     topic: String,
-    batchingMaxPublishDelay: Option[FiniteDuration] = Some(10.millis)
+    batchingMaxPublishDelay: Option[FiniteDuration] = Some(10.millis),
+    blockIfQueueFull: Boolean = true
   )(implicit context: PulsarContext) =
     delay(new PulsarProducer[F, M](
       topic,
-      batchingMaxPublishDelay
+      batchingMaxPublishDelay,
+      blockIfQueueFull
     ))
 }
