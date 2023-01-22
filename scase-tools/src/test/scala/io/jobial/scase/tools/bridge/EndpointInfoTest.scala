@@ -11,12 +11,14 @@ class EndpointInfoTest extends ServiceTestSupport {
 
   "parsing pulsar uri" should "work" in {
     def test(uri: String, context: PulsarContext, topic: String) = {
-      PulsarEndpointInfo(Uri.parse(uri)) match {
-        case Right(c) =>
+      EndpointInfo(Uri.parse(uri)) match {
+        case Right(c: PulsarEndpointInfo) =>
           assert(c.context == context)
           assert(c.topic == topic)
         case Left(t) =>
           fail(t)
+        case _ =>
+          fail
       }
     }
 
@@ -32,12 +34,14 @@ class EndpointInfoTest extends ServiceTestSupport {
 
   "parsing activemq uri" should "work" in {
     def test(uri: String, context: ActiveMQContext, destination: String) = {
-      ActiveMQEndpointInfo(Uri.parse(uri)) match {
-        case Right(c) =>
+      EndpointInfo(Uri.parse(uri)) match {
+        case Right(c: ActiveMQEndpointInfo) =>
           assert(c.context == context)
           assert(c.destinationName == destination)
         case Left(t) =>
           fail(t)
+        case _ =>
+          fail
       }
     }
 
@@ -48,11 +52,13 @@ class EndpointInfoTest extends ServiceTestSupport {
 
   "parsing tibrv uri" should "work" in {
     def test(uri: String, context: TibrvContext, subject: String) = {
-      TibrvEndpointInfo(Uri.parse(uri)) match {
-        case Right(c) =>
+      EndpointInfo(Uri.parse(uri)) match {
+        case Right(c: TibrvEndpointInfo) =>
           assert(c.context == context)
         case Left(t) =>
           fail(t)
+        case _ =>
+          fail
       }
     }
 

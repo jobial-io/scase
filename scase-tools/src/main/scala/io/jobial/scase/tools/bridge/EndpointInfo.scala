@@ -7,19 +7,18 @@ import io.jobial.scase.tibrv.TibrvContext
 import io.lemonlabs.uri.Uri
 import io.lemonlabs.uri.UrlPath
 import cats.implicits._
-import io.jobial.scase.util.EitherUtil
 
 object EndpointInfo {
 
   def apply(uri: Uri): Either[IllegalArgumentException, EndpointInfo] =
     if (uri.schemeOption === Some("pulsar"))
-      Right(new PulsarEndpointInfo(uri))
+      Right(PulsarEndpointInfo(uri))
     else if (uri.schemeOption === Some("tibrv"))
-      Right(new TibrvEndpointInfo(uri))
+      Right(TibrvEndpointInfo(uri))
     else if (uri.schemeOption === Some("activemq"))
-      Right(new ActiveMQEndpointInfo(uri))
+      Right(ActiveMQEndpointInfo(uri))
     else
-      Left(new IllegalArgumentException(s"Not a valid ActiveMQ URI: $uri"))
+      Left(new IllegalArgumentException(s"Not a valid endpoint URI: $uri"))
 }
 
 trait EndpointInfo {
@@ -43,86 +42,61 @@ trait EndpointInfo {
 
   val path = uri.path.parts.map(p => if (p === "") None else Some(p)).padTo(pathLen, None)
 
-  val pathLast = path.last.getOrElse("")
+  val pathLast = path.lastOption.flatten.getOrElse("")
 
   val host = uri.toUrl.hostOption.map(_.toString).filter(_ =!= "")
 
   val port = uri.toUrl.port
 
-  def destinationName = pathLast
+  val destinationName = pathLast
 }
 
-class PulsarEndpointInfo(val uri: Uri) extends EndpointInfo {
+case class PulsarEndpointInfo(uri: Uri) extends EndpointInfo {
 
-  def topic = pathLast
+  val topic = pathLast
 
-  def topicPattern = topic.r
+  val topicPattern = topic.r
 
-  def pathLen = 3
+  val pathLen = 3
 
-  def context = PulsarContext(
+  val context = PulsarContext(
     host.getOrElse(PulsarContext().host),
     port.getOrElse(PulsarContext().port),
-    path(0).getOrElse(PulsarContext().tenant),
-    path(1).getOrElse(PulsarContext().namespace)
+    path.get(0).flatten.getOrElse(PulsarContext().tenant),
+    path.get(1).flatten.getOrElse(PulsarContext().namespace)
   )
 
-  def canonicalUri = Uri.parse(s"pulsar://${context.host}:${context.port}/${context.tenant}/${context.namespace}/${topic}")
+  val canonicalUri = Uri.parse(s"pulsar://${context.host}:${context.port}/${context.tenant}/${context.namespace}/${topic}")
+  
+  val subscriptionName = uri.toUrl.query.param("subscriptionName")
 }
 
-object PulsarEndpointInfo {
+case class TibrvEndpointInfo(uri: Uri) extends EndpointInfo {
 
-  def apply(uri: Uri) =
-    if (uri.schemeOption === Some("pulsar"))
-      Right(new PulsarEndpointInfo(uri))
-    else
-      Left(new IllegalArgumentException(s"Not a valid Pulsar URI: $uri"))
-}
+  val subjects = Seq(pathLast)
 
-class TibrvEndpointInfo(val uri: Uri) extends EndpointInfo {
+  val pathLen = 2
 
-  def subjects = Seq(pathLast)
-
-  def pathLen = 2
-
-  def context = TibrvContext(
+  val context = TibrvContext(
     host.getOrElse(TibrvContext().host),
     port.getOrElse(TibrvContext().port),
-    path(0).orElse(TibrvContext().network),
-    path(1).orElse(TibrvContext().service)
+    path.get(0).flatten.orElse(TibrvContext().network),
+    path.get(1).flatten.orElse(TibrvContext().service)
   )
 
-  def canonicalUri = Uri.parse(s"tibrv://${context.host}:${context.port}/${context.network}/${context.service}/${subjects.mkString(";")}")
+  val canonicalUri = Uri.parse(s"tibrv://${context.host}:${context.port}/${context.network}/${context.service}/${subjects.mkString(";")}")
 }
 
-object TibrvEndpointInfo {
+case class ActiveMQEndpointInfo(uri: Uri) extends EndpointInfo {
 
-  def apply(uri: Uri) =
-    if (uri.schemeOption === Some("tibrv"))
-      Right(new TibrvEndpointInfo(uri))
-    else
-      Left(new IllegalArgumentException(s"Not a valid TibRV URI: $uri"))
-}
+  lazy val destination = context.session.createQueue(destinationName)
 
-class ActiveMQEndpointInfo(val uri: Uri) extends EndpointInfo {
+  val pathLen = 1
 
-  def destination = context.session.createQueue(destinationName)
-
-  def pathLen = 1
-
-  def context = ActiveMQContext(
+  val context = ActiveMQContext(
     host.getOrElse(ActiveMQContext().host),
     port.getOrElse(ActiveMQContext().port)
   )
 
-  def canonicalUri = Uri.parse(s"activemq://${context.host}:${context.port}/${destinationName}")
-}
-
-object ActiveMQEndpointInfo {
-
-  def apply(uri: Uri) =
-    if (uri.schemeOption === Some("activemq"))
-      Right(new ActiveMQEndpointInfo(uri))
-    else
-      Left(new IllegalArgumentException(s"Not a valid ActiveMQ URI: $uri"))
+  val canonicalUri = Uri.parse(s"activemq://${context.host}:${context.port}/${destinationName}")
 }
