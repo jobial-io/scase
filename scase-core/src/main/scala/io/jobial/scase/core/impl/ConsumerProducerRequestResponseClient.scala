@@ -87,7 +87,7 @@ class ConsumerProducerRequestResponseClient[F[_] : TemporalEffect, REQ: Marshall
           ++ sendRequestContext.requestTimeout.map(RequestTimeoutKey -> _.toMillis.toString)
           ++ sendRequestContext.attributes
       ).asInstanceOf[F[MessageSendResult[F, REQUEST]]]
-      _ <- trace(s"waiting for request with correlation id $correlationId")
+      _ <- trace(s"waiting for response with correlation id $correlationId")
       receiveResult <- sendRequestContext.requestTimeout match {
         case Some(requestTimeout) =>
           requestTimeout match {
@@ -157,7 +157,8 @@ object ConsumerProducerRequestResponseClient extends CatsUtils with Logging {
                 correlations <- correlationsRef.get
                 _ <- correlations.get(correlationId) match {
                   case Some(correlationInfo) =>
-                    correlationInfo.responseDeferred.complete(receiveResult)
+                    trace(s"correlations size: " + correlations.size) >>
+                      correlationInfo.responseDeferred.complete(receiveResult)
                   case None =>
                     trace(s"$this received message that cannot be correlated to a request: ${receiveResult.toString.take(500)}")
                 }

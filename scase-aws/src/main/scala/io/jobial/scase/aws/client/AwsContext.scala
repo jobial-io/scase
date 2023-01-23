@@ -22,7 +22,7 @@ case class AwsContext(
 ) {
 
   implicit val awsContext = this
-  
+
   // Amazon recommends sharing and reusing clients  
   lazy val sqsClient = SqsClient[IO]
 

@@ -16,9 +16,14 @@ class ForwarderBridge[F[_] : TemporalEffect, REQ: Unmarshaller, RESP: Marshaller
   filter: MessageReceiveResult[F, REQ] => F[Option[MessageReceiveResult[F, RESP]]],
   val stopped: Ref[F, Boolean],
   messageCounter: Ref[F, Long],
+  sentMessageCounter: Ref[F, Long],
   errorCounter: Ref[F, Long],
   filteredMessageCounter: Ref[F, Long]
 ) extends DefaultService[F] with CatsUtils with Logging {
+
+  val maximumPendingMessages = 100
+
+  val receiveTimeout = 1.second
 
   def continueForwarding =
     for {
@@ -27,31 +32,44 @@ class ForwarderBridge[F[_] : TemporalEffect, REQ: Unmarshaller, RESP: Marshaller
     } yield r
 
   def forward: F[Unit] =
-    (for {
-      receiveResult <- source.receiveWithContext(1.second)
-      _ <- start(continueForwarding)
-      _ <- messageCounter.update(_ + 1)
-      filteredReceiveResult <- filter(receiveResult)
-      sendResult <- filteredReceiveResult match {
-        case Some(filteredReceiveResult) =>
-          destination(filteredReceiveResult)
-        case None =>
-          filteredMessageCounter.update(_ + 1) >>
-            pure(None)
-      }
-    } yield ()) handleErrorWith {
-      case t: ReceiveTimeout =>
-        continueForwarding
-      case t: Throwable =>
-        errorCounter.update(_ + 1) >>
-          error(s"error while forwarding in $this", t) >>
+    for {
+      receiveResult <- source.receiveWithContext(receiveTimeout)
+      _ <- (for {
+        _ <- start(continueForwarding)
+        _ <- messageCounter.update(_ + 1)
+        messageCount <- messageCount
+        errorCount <- errorCount
+        filteredMessageCount <- filteredMessageCount
+        sentMessageCount <- sentMessageCount
+        pendingMessages = messageCount - errorCount - filteredMessageCount - sentMessageCount
+        _ <- whenA(pendingMessages > maximumPendingMessages)(
+          error("Dropping message (rolling back if supported) because of slow or failing destination") >>
+            raiseError(MessageDropException)
+        )
+        filteredReceiveResult <- filter(receiveResult)
+        _ <- filteredReceiveResult match {
+          case Some(filteredReceiveResult) =>
+            destination(filteredReceiveResult) >>
+              sentMessageCounter.update(_ + 1)
+          case None =>
+            filteredMessageCounter.update(_ + 1)
+        }
+      } yield ()) handleErrorWith {
+        case t: ReceiveTimeout =>
           continueForwarding
-    }
+        case t: Throwable =>
+          errorCounter.update(_ + 1) >>
+            receiveResult.rollback >>
+            error(s"error while forwarding in $this")
+      }
+    } yield ()
 
   def start =
     start(forward) >> pure(new ForwarderBridgeServiceState(this))
 
   def messageCount = messageCounter.get
+
+  def sentMessageCount = sentMessageCounter.get
 
   def errorCount = errorCounter.get
 
@@ -78,10 +96,11 @@ object ForwarderBridge extends CatsUtils with Logging {
     for {
       stopped <- Ref.of[F, Boolean](false)
       messageCounter <- Ref.of[F, Long](0)
+      sentMessageCounter <- Ref.of[F, Long](0)
       errorCounter <- Ref.of[F, Long](0)
       filteredMessageCounter <- Ref.of[F, Long](0)
     } yield
-      new ForwarderBridge[F, M, M](source, destination, filter, stopped, messageCounter, errorCounter, filteredMessageCounter)
+      new ForwarderBridge[F, M, M](source, destination, filter, stopped, messageCounter, sentMessageCounter, errorCounter, filteredMessageCounter)
 
   def fixedDestination[F[_] : Concurrent, M](destination: SenderClient[F, M]) = { r: MessageReceiveResult[F, M] =>
     for {
@@ -109,3 +128,5 @@ object ForwarderBridge extends CatsUtils with Logging {
       pure(Option(r))
   }
 }
+
+case object MessageDropException extends IllegalStateException

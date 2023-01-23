@@ -71,6 +71,6 @@ abstract class DefaultMessageConsumer[F[_] : ConcurrentEffect, M] extends Messag
       }
       _ <- start(receiveMessagesUntilCancelled(callback, cancelled, receiving))
       _ <- receiving.get
-      _ <- trace(s"new subscription $subscription")
+      _ <- trace(s"new subscription in $this")
     } yield subscription
 }

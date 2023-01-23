@@ -16,13 +16,17 @@ class RequestResponseBridge[F[_] : ConcurrentEffect, SOURCEREQ: Unmarshaller, SO
   filterResponse: (MessageReceiveResult[F, SOURCEREQ], RequestResponseResult[F, DESTREQ, DESTRESP]) => F[Option[MessageReceiveResult[F, SOURCERESP]]],
   stopped: Ref[F, Boolean],
   requestCounter: Ref[F, Long],
+  sentRequestCounter: Ref[F, Long],
   responseCounter: Ref[F, Long],
+  requestTimeoutCounter: Ref[F, Long],
   errorCounter: Ref[F, Long],
   filteredRequestCounter: Ref[F, Long],
   filteredResponseCounter: Ref[F, Long]
 )(
   implicit requestResponseMapping: RequestResponseMapping[SOURCEREQ, SOURCERESP]
 ) extends DefaultService[F] with CatsUtils with Logging {
+
+  val maximumPendingMessages = 100
 
   def start =
     for {
@@ -32,6 +36,15 @@ class RequestResponseBridge[F[_] : ConcurrentEffect, SOURCEREQ: Unmarshaller, SO
             val sourceResult = context.receiveResult(request)
             (for {
               _ <- requestCounter.update(_ + 1)
+              requestCount <- requestCount
+              errorCount <- errorCount
+              filteredRequestCount <- filteredRequestCount
+              sentRequestCount <- sentRequestCount
+              pendingMessages = requestCount - errorCount - filteredRequestCount - sentRequestCount
+              _ <- whenA(pendingMessages > maximumPendingMessages)(
+                error("Dropping message (rolling back if supported) because of slow or failing destination") >>
+                  raiseError(MessageDropException)
+              )
               filteredRequest <- filterRequest(sourceResult)
               sendResult <- filteredRequest match {
                 case Some(filteredRequest) =>
@@ -67,10 +80,14 @@ class RequestResponseBridge[F[_] : ConcurrentEffect, SOURCEREQ: Unmarshaller, SO
                 case None =>
                   filteredRequestCounter.update(_ + 1) >>
                     trace(s"not forwarding request: ${sourceResult}") >>
-                    raiseError[F, SendResponseResult[SOURCERESP]](new IllegalStateException)
+                    raiseError[F, SendResponseResult[SOURCERESP]](new IllegalStateException("Error forwarding request"))
               }
-            } yield sendResult) onError { case t =>
-              errorCounter.update(_ + 1)
+            } yield sendResult) onError {
+              case t: RequestTimeout =>
+                error(s"Request timed out: ${request.toString.take(500)}") >>
+                  requestTimeoutCounter.update(_ + 1)
+              case t =>
+                errorCounter.update(_ + 1)
             }
         }
       })
@@ -83,8 +100,12 @@ class RequestResponseBridge[F[_] : ConcurrentEffect, SOURCEREQ: Unmarshaller, SO
     }
 
   def requestCount = requestCounter.get
+  
+  def sentRequestCount = sentRequestCounter.get
 
   def responseCount = responseCounter.get
+  
+  def requestTimeoutCount = requestTimeoutCounter.get
 
   def errorCount = errorCounter.get
 
@@ -111,7 +132,9 @@ object RequestResponseBridge extends CatsUtils with Logging {
     for {
       stopped <- Ref.of[F, Boolean](false)
       requestCounter <- Ref.of[F, Long](0)
+      sentRequestCounter <- Ref.of[F, Long](0)
       responseCounter <- Ref.of[F, Long](0)
+      requestTimeoutCounter <- Ref.of[F, Long](0)
       errorCounter <- Ref.of[F, Long](0)
       filteredRequestCounter <- Ref.of[F, Long](0)
       filteredResponseCounter <- Ref.of[F, Long](0)
@@ -122,7 +145,9 @@ object RequestResponseBridge extends CatsUtils with Logging {
       filterResponse,
       stopped,
       requestCounter,
+      sentRequestCounter,
       responseCounter,
+      requestTimeoutCounter,
       errorCounter,
       filteredRequestCounter,
       filteredResponseCounter

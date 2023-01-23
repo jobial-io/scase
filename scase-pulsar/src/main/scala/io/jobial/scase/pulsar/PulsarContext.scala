@@ -2,6 +2,7 @@ package io.jobial.scase.pulsar
 
 import cats.effect.IO
 import cats.implicits.catsSyntaxFlatMapOps
+import io.jobial.scase.core.impl.blockerContext
 import org.apache.pulsar.client.api.PulsarClient
 
 case class PulsarContext(

@@ -1,8 +1,11 @@
 package io.jobial.scase.tools.bridge
 
 import cats.effect.IO
+import cats.effect.IO.delay
+import cats.effect.IO.pure
+import cats.effect.IO.sleep
+import cats.kernel.Eq
 import io.circe.generic.auto._
-import io.jobial.scase.activemq.ActiveMQContext
 import io.jobial.scase.core.ReceiverClient
 import io.jobial.scase.core.RequestHandler
 import io.jobial.scase.core.RequestResponseClient
@@ -23,34 +26,150 @@ import scala.concurrent.duration.DurationInt
 
 class ScaseBridgeTest extends ServiceTestSupport {
 
-  implicit val tibrvContext = TibrvContext()
-  implicit val pulsarContext = PulsarContext()
-  implicit val activemqContext = ActiveMQContext()
+  implicit val pulsarContextEq = Eq.fromUniversalEquals[PulsarContext]
 
-  "parsing command line" should "work" in {
+  implicit val tibrvContextEq = Eq.fromUniversalEquals[TibrvContext]
+
+  implicit def parseEndpointInfo(v: String) = endpointInfoArgumentValueParser.parse(v).toOption.get
+
+  //  "destination name pattern" should "work" in {
+  //    assert("pulsar://host:port/tenant/namespace/XXX.DEV.YYY.ZZZ" == substituteDestinationName("pulsar://host:port/tenant/namespace/([A-Z].*)\\.PROD\\.(.*)", "pulsar://host:port/tenant/namespace/$1.DEV.$2", "pulsar://host:port/tenant/namespace/XXX.PROD.YYY.ZZZ"))
+  //    assert("pulsar://host:port/tenant/namespace/XXX.DEV.XXX.YYY.ZZZ" == substituteDestinationName("tibrv://host:port/network/service/([A-Z].*)\\.PROD\\.(.*)", "pulsar://host:port/tenant/namespace/$1.DEV.$2", "tibrv://host:port/network/service/XXX.PROD.XXX.YYY.ZZZ"))
+  //    assert("pulsar://host:port/tenant/namespace/XXX.DEV.XXX.YYY.ZZZ" == substituteDestinationName("tibrv://host:port/network/service/([A-Z].*)\\.PROD\\.(.*).>", "pulsar://host:port/tenant/namespace/$1.DEV.$2", "tibrv://host:port/network/service/XXX.PROD.XXX.YYY.ZZZ"))
+  //  }
+
+  "pulsar to pulsar one-way" should "work" in {
+    val topic = s"hello-test-${uuid(6)}"
+    import io.jobial.scase.marshalling.tibrv.circe._
+    import io.jobial.scase.marshalling.tibrv.raw.tibrvMsgRawMarshalling
+
     for {
-      _ <- pulsarContextArgumentValueParser.parse("localhost::tenant:namespace")
-      _ <- tibrvContextArgumentValueParser.parse("localhost::network::")
-      _ <- activemqContextArgumentValueParser.parse("localhost:1:true:1")
-    } yield succeed
+      context <- BridgeContext(s"pulsar://///(${topic})", "pulsar://///$1-destination", true, 300.seconds)
+      r <- {
+        implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpointInfo].context
+        testOneWayBridge(
+          PulsarServiceConfiguration.source[TestRequest1](s"$topic-destination").client,
+          PulsarServiceConfiguration.destination[TestRequest1](topic).client,
+          pure(context)
+        )
+      }
+    } yield r
   }
 
-  "pulsar to rv" should "work" in {
+  "pulsar to pulsar one-way with different tenant and namespace" should "work" in {
+    assume(!onGithub)
+    
+    import org.apache.pulsar.client.admin.PulsarAdmin
+    val url = "http://localhost:8080"
+    val admin = PulsarAdmin.builder.serviceHttpUrl(url)
+      .allowTlsInsecureConnection(true).build
+
+    val topic = s"hello-test-${uuid(6)}"
+    import io.jobial.scase.marshalling.tibrv.circe._
+    import io.jobial.scase.marshalling.tibrv.raw.tibrvMsgRawMarshalling
+
+    for {
+      _ <- (delay(admin.tenants().createTenant("test", admin.tenants().getTenantInfo("public"))) >> sleep(1.second)).attempt
+      _ <- (delay(admin.namespaces.createNamespace("test/scase-bridge")) >> sleep(1.second)).attempt
+      context <- BridgeContext(s"pulsar://///(${topic})", "pulsar:///test/scase-bridge/$1-destination", true, 300.seconds)
+      r <-
+        testOneWayBridge(
+          {
+            implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpointInfo].context
+            PulsarServiceConfiguration.source[TestRequest1](s"$topic-destination").client
+          },
+          {
+            implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpointInfo].context
+            PulsarServiceConfiguration.destination[TestRequest1](topic).client
+          },
+          pure(context)
+        )
+    } yield r
+  }
+
+  "pulsar to pulsar request-response" should "work" in {
+    val topic = s"hello-test-${uuid(6)}"
+    import io.jobial.scase.marshalling.tibrv.circe._
+    import io.jobial.scase.marshalling.tibrv.raw.tibrvMsgRawMarshalling
+
+    for {
+      context <- BridgeContext(s"pulsar://///(${topic})", "pulsar://///$1-destination", false, 300.seconds)
+      r <- {
+        implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpointInfo].context
+        testRequestResponseBridge(
+          PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"$topic-destination").service(_),
+          PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).client,
+          pure(context)
+        )
+      }
+    } yield r
+  }
+
+  "pulsar to pulsar request-response with different tenant and namespace" should "work" in {
+    assume(!onGithub)
+
+    val topic = s"hello-test-${uuid(6)}"
+    import io.jobial.scase.marshalling.tibrv.circe._
+    import io.jobial.scase.marshalling.tibrv.raw.tibrvMsgRawMarshalling
+
+    for {
+      context <- BridgeContext(s"pulsar://///(${topic})", "pulsar:///test/scase-bridge/$1-destination", false, 300.seconds)
+      r <- {
+        testRequestResponseBridge(
+          {
+            implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpointInfo].context
+            PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"$topic-destination").service(_)
+          },
+          {
+            implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpointInfo].context
+            PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).client
+          },
+          pure(context)
+        )
+      }
+    } yield r
+  }
+
+  "pulsar to rv one-way" should "work" in {
     assume(!onMacOS)
 
     val topic = s"hello-test-${uuid(6)}"
     import io.jobial.scase.marshalling.tibrv.circe._
     import io.jobial.scase.marshalling.tibrv.raw.tibrvMsgRawMarshalling
 
-    testBridge(
-      TibrvServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(topic)).service(_),
-      PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).client,
-      TibrvServiceConfiguration.source[TestRequest1](Seq(topic)).client,
-      PulsarServiceConfiguration.destination[TestRequest1](topic).client,
-      s"pulsar://${topic}",
-      "tibrv://",
-      BridgeContext(tibrvContext = Some(tibrvContext), pulsarContext = Some(pulsarContext))
-    )
+    for {
+      context <- BridgeContext(s"pulsar://///${topic}", "tibrv://", true, 300.seconds)
+      r <- {
+        implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpointInfo].context
+        implicit val tibrvContext = context.destination.asInstanceOf[TibrvEndpointInfo].context
+        testOneWayBridge(
+          TibrvServiceConfiguration.source[TestRequest1](Seq(topic)).client,
+          PulsarServiceConfiguration.destination[TestRequest1](topic).client,
+          pure(context)
+        )
+      }
+    } yield r
+  }
+
+  "pulsar to rv request-response" should "work" in {
+    assume(!onMacOS)
+
+    val topic = s"hello-test-${uuid(6)}"
+    import io.jobial.scase.marshalling.tibrv.circe._
+    import io.jobial.scase.marshalling.tibrv.raw.tibrvMsgRawMarshalling
+
+    for {
+      context <- BridgeContext(s"pulsar://///${topic}", "tibrv://", false, 300.seconds)
+      r <- {
+        implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpointInfo].context
+        implicit val tibrvContext = context.destination.asInstanceOf[TibrvEndpointInfo].context
+        testRequestResponseBridge(
+          TibrvServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(topic)).service(_),
+          PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).client,
+          pure(context)
+        )
+      }
+    } yield r
   }
 
   "rv to pulsar" should "work" in {
@@ -60,56 +179,88 @@ class ScaseBridgeTest extends ServiceTestSupport {
     import io.jobial.scase.marshalling.tibrv.circe._
     import io.jobial.scase.marshalling.tibrv.raw.tibrvMsgRawMarshalling
 
-    testBridge(
-      PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).service(_),
-      TibrvServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(topic)).client,
-      PulsarServiceConfiguration.source[TestRequest1](topic).client,
-      TibrvServiceConfiguration.destination[TestRequest1](topic).client,
-      s"tibrv://${topic}",
-      "pulsar://",
-      BridgeContext(tibrvContext = Some(tibrvContext), pulsarContext = Some(pulsarContext))
-    )
+    for {
+      context <- BridgeContext(s"tibrv://///${topic}", "pulsar://", false, 300.seconds)
+      r <- {
+        implicit val tibrvContext = context.source.asInstanceOf[TibrvEndpointInfo].context
+        implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpointInfo].context
+        testRequestResponseBridge(
+          PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).service(_),
+          TibrvServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(topic)).client,
+          pure(context)
+        )
+      }
+    } yield r
   }
 
-  "pulsar to jms" should "work" in {
+  "pulsar to activemq one-way" should "work" in {
     val topic = s"hello-test-${uuid(6)}"
     import io.jobial.scase.marshalling.serialization._
-    implicit val session = activemqContext.session
 
-    testBridge(
-      JMSServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic, session.createQueue(topic)).service(_),
-      PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).client,
-      JMSServiceConfiguration.source[TestRequest1](session.createQueue(topic)).client,
-      PulsarServiceConfiguration.destination[TestRequest1](topic).client,
-      s"pulsar://${topic}",
-      "jms://",
-      BridgeContext[Any](pulsarContext = Some(pulsarContext), activemqContext = Some(activemqContext))
-    )
+    for {
+      context <- BridgeContext[Any](s"pulsar://///${topic}", "activemq://", true, 300.seconds)
+      r <- {
+        implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpointInfo].context
+        implicit val session = context.destination.asInstanceOf[ActiveMQEndpointInfo].context.session
+
+        testOneWayBridge(
+          JMSServiceConfiguration.source[TestRequest1](session.createQueue(topic)).client,
+          PulsarServiceConfiguration.destination[TestRequest1](topic).client,
+          pure(context)
+        )
+      }
+    } yield r
   }
 
-    "jms to pulsar" should "work" in {
-      val topic = s"hello-test-${uuid(6)}"
-      import io.jobial.scase.marshalling.serialization._
-      implicit val session = activemqContext.session
+  "activemq to pulsar" should "work" in {
+    val topic = s"hello-test-${uuid(6)}"
+    import io.jobial.scase.marshalling.serialization._
 
-      testBridge(
-        PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).service(_),
-        JMSServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic, session.createQueue(topic)).client,
-        PulsarServiceConfiguration.source[TestRequest1](topic).client,
-        JMSServiceConfiguration.destination[TestRequest1](session.createQueue(topic)).client,
-        s"jms://${topic}",
-        "pulsar://",
-        BridgeContext[Any](pulsarContext = Some(pulsarContext), activemqContext = Some(activemqContext))
-      )
-    }
+    for {
+      context <- BridgeContext[Any](s"activemq:///${topic}", "pulsar://", false, 300.seconds)
+      r <- {
+        implicit val session = context.source.asInstanceOf[ActiveMQEndpointInfo].context.session
+        implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpointInfo].context
 
-  def testBridge[M](
+        testRequestResponseBridge(
+          PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).service(_),
+          JMSServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic, session.createQueue(topic)).client,
+          pure(context)
+        )
+      }
+    } yield r
+  }
+
+
+  "pulsar to activemq request-response" should "work" in {
+    val topic = s"hello-test-${uuid(6)}"
+    import io.jobial.scase.marshalling.serialization._
+
+    println("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+
+    for {
+      context <- BridgeContext[Any](s"pulsar://///${topic}", "activemq://", false, 300.seconds)
+      r <- {
+        implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpointInfo].context
+        implicit val session = context.destination.asInstanceOf[ActiveMQEndpointInfo].context.session
+
+        println("yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy")
+
+        testRequestResponseBridge(
+          JMSServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic, session.createQueue(topic)).service(_),
+          PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).client,
+          pure(context)
+        )
+      }
+    } yield r
+  }
+
+
+  def testRequestResponseBridge[M](
     destinationService: RequestHandler[IO, TestRequest[_ <: TestResponse], TestResponse] => IO[Service[IO]],
     sourceClient: IO[RequestResponseClient[IO, TestRequest[_ <: TestResponse], TestResponse]],
-    destinationReceiverClient: IO[ReceiverClient[IO, TestRequest1]],
-    sourceSenderClient: IO[SenderClient[IO, TestRequest1]],
-    source: String,
-    destination: String,
+    //    destinationReceiverClient: IO[ReceiverClient[IO, TestRequest1]],
+    //    sourceSenderClient: IO[SenderClient[IO, TestRequest1]],
     bridgeContext: IO[BridgeContext[M]]
   ) =
     for {
@@ -118,10 +269,23 @@ class ScaseBridgeTest extends ServiceTestSupport {
       bridgeContext <- bridgeContext
       //      sourceSenderClient <- sourceSenderClient
       //      destinationReceiverClient <- destinationReceiverClient
-      bridge <- startBridge(source, destination, false, 10.seconds)(bridgeContext)
+      bridge <- startBridge(bridgeContext)
       r <- testSuccessfulReply(service, client)
       //_ <- testSenderReceiver(sourceSenderClient, destinationReceiverClient, request1)
       _ <- bridge.stop
     } yield r
 
+  def testOneWayBridge[M](
+    destinationReceiverClient: IO[ReceiverClient[IO, TestRequest1]],
+    sourceSenderClient: IO[SenderClient[IO, TestRequest1]],
+    bridgeContext: IO[BridgeContext[M]]
+  ) =
+    for {
+      bridgeContext <- bridgeContext
+      sourceSenderClient <- sourceSenderClient
+      destinationReceiverClient <- destinationReceiverClient
+      bridge <- startBridge(bridgeContext)
+      r <- testSenderReceiver(sourceSenderClient, destinationReceiverClient, request1)
+      _ <- bridge.stop
+    } yield r
 }

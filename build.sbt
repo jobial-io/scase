@@ -15,7 +15,7 @@ name := "scase"
 ThisBuild / organization := "io.jobial"
 ThisBuild / scalaVersion := "2.13.8"
 ThisBuild / crossScalaVersions := Seq("2.12.15", "2.13.8")
-ThisBuild / version := "2.1.0"
+ThisBuild / version := "2.2.0"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
 ThisBuild / javacOptions ++= Seq("-source", "11", "-target", "11")
 ThisBuild / Test / packageBin / publishArtifact := true
@@ -67,6 +67,7 @@ lazy val ProguardVersion = "7.3.0"
 lazy val ActivemqVersion = "5.16.3"
 lazy val JmsVersion = "2.0.1"
 lazy val Http4sVersion = "1.0.0-M30"
+lazy val ScalaUriVersion = "1.4.10"
 
 lazy val root: Project = project
   .in(file("."))
@@ -228,7 +229,9 @@ lazy val `scase-tools` = project
   .settings(
     libraryDependencies ++= Seq(
       "io.jobial" %% "sclap" % SclapVersion,
-      "ch.qos.logback" % "logback-classic" % LogbackVersion
+      "ch.qos.logback" % "logback-classic" % LogbackVersion,
+      "io.lemonlabs" %% "scala-uri" % ScalaUriVersion,
+      "org.apache.pulsar" % "pulsar-client-admin" % PulsarVersion
     )
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
