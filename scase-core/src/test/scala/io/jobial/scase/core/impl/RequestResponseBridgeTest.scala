@@ -38,7 +38,7 @@ class RequestResponseBridgeTest
     mapping1: RequestResponseMapping[REQUEST, RESPONSE]
   ) =
     for {
-      bridge <- RequestResponseBridge(source, fixedDestination(destClient), allowAllFilter[IO, REQ])
+      bridge <- RequestResponseBridge(source, fixedDestination(destClient), allowAllFilter[IO, REQ], 100)
       h <- destination.start
       serviceState <- bridge.start
       client <- sourceClient(serviceState.asInstanceOf[RequestResponseBridgeServiceState[IO]].requestResponseService)

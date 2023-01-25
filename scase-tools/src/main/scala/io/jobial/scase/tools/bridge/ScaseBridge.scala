@@ -62,6 +62,8 @@ Forward requests and one-way messages from one transport to another.
           .description("Forward one-way only messages - the default is request-response only")
         timeout <- opt[FiniteDuration]("timeout", "t").default(300.seconds)
           .description("Request timeout in seconds, unless specified by the client and the transport supports it (TibRV does not)")
+        maxPendingMessages <- opt[Int]("max-pending-messages").default(3000)
+          .description("The maximum number of pending messages before the bridge starts dropping and rolling back")
       } yield for {
         marshalling <- source match {
           case source: ActiveMQEndpointInfo =>
@@ -74,7 +76,7 @@ Forward requests and one-way messages from one transport to another.
                 delay(new TibrvMsgRawMarshalling().asInstanceOf[Marshalling[Any]])
             }
         }
-        bridgeContext <- BridgeContext(source, destination, oneWay, timeout)(marshalling)
+        bridgeContext <- BridgeContext(source, destination, oneWay, timeout, maxPendingMessages)(marshalling)
         bridge <- bridgeContext.runBridge
         r <- bridge.join
       } yield r
@@ -85,6 +87,7 @@ Forward requests and one-way messages from one transport to another.
     destination: EndpointInfo,
     oneWay: Boolean,
     timeout: FiniteDuration,
+    maximumPendingMessages: Int,
     requestResponseClientCache: Cache[IO, String, RequestResponseClient[IO, M, M]],
     senderClientCache: Cache[IO, String, SenderClient[IO, M]],
     forwarderBridgeServiceState: Deferred[IO, ForwarderBridgeServiceState[IO]],
@@ -147,7 +150,8 @@ Forward requests and one-way messages from one transport to another.
       source: EndpointInfo,
       destination: EndpointInfo,
       oneWay: Boolean,
-      timeout: FiniteDuration
+      timeout: FiniteDuration,
+      maximumPendingMessages: Int = 3000
     ): IO[BridgeContext[M]] =
       for {
         requestResponseClientCache <- Cache[IO, String, RequestResponseClient[IO, M, M]](5.minutes)
@@ -155,7 +159,7 @@ Forward requests and one-way messages from one transport to another.
         forwarderBridgeState <- Deferred[IO, ForwarderBridgeServiceState[IO]]
         requestResponseBridgeState <- Deferred[IO, RequestResponseBridgeServiceState[IO]]
         statLastTime <- Ref.of[IO, Long](currentTimeMillis)
-      } yield BridgeContext[M](source, destination, oneWay, timeout, requestResponseClientCache,
+      } yield BridgeContext[M](source, destination, oneWay, timeout, maximumPendingMessages, requestResponseClientCache,
         senderClientCache, forwarderBridgeState, requestResponseBridgeState, statLastTime)
   }
 
@@ -363,19 +367,20 @@ Forward requests and one-way messages from one transport to another.
     destination: MessageReceiveResult[IO, M] => IO[Option[RequestResponseClient[IO, M, M]]],
     timeout: FiniteDuration
   )(
-    implicit mapping: RequestResponseMapping[M, M]
+    implicit mapping: RequestResponseMapping[M, M],
+    context: BridgeContext[M]
   ) =
     for {
-      bridge <- RequestResponseBridge(source, destinationBasedOnSourceRequest(destination, timeout), requestResponseOnlyFilter[IO, M])
+      bridge <- RequestResponseBridge(source, destinationBasedOnSourceRequest(destination, timeout), requestResponseOnlyFilter[IO, M], context.maximumPendingMessages)
       serviceState <- bridge.start
     } yield serviceState.asInstanceOf[RequestResponseBridgeServiceState[IO]]
 
   def startForwarderBridge[M: Marshalling](
     sourceClient: ReceiverClient[IO, M],
     destinationClient: MessageReceiveResult[IO, M] => IO[Option[SenderClient[IO, M]]]
-  ) =
+  )(implicit context: BridgeContext[M]) =
     for {
-      bridge <- ForwarderBridge(sourceClient, destinationBasedOnSource(destinationClient), oneWayOnlyFilter[IO, M])
+      bridge <- ForwarderBridge(sourceClient, destinationBasedOnSource(destinationClient), oneWayOnlyFilter[IO, M], context.maximumPendingMessages)
       serviceState <- bridge.start
     } yield serviceState.asInstanceOf[ForwarderBridgeServiceState[IO]]
 }
