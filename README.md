@@ -2,7 +2,7 @@
 
 [![Continuous Integration](https://github.com/jobial-io/scase/actions/workflows/ci.yml/badge.svg)](https://github.com/jobial-io/scase/actions/workflows/ci.yml)
 [![Scala version support](https://index.scala-lang.org/jobial-io/scase/scase/latest-by-scala-version.svg?targetType=Js)](https://index.scala-lang.org/jobial-io/scase)
-[![Codecov](https://codecov.io/gh/jobial-io/scase/branch/master/graph/badge.svg?token=WP67SLCC4P)](https://codecov.io/gh/jobial-io/scase)
+[![Codecov](https://codecov.io/gh/jobial-io/scase/branch/2.x/graph/badge.svg?token=WP67SLCC4P)](https://codecov.io/gh/jobial-io/scase)
 
 **Run Scala or Java code as a portable serverless function or microservice**
 
@@ -135,7 +135,7 @@ You need to add
 
 ```scala
 libraryDependencies ++= Seq(
-  "io.jobial" %% "scase" % "2.1.0""
+  "io.jobial" %% "scase" % "2.2.1""
 )
 ```
 
@@ -146,7 +146,7 @@ to `build.sbt` or
 <dependency>
     <groupId>io.jobial</groupId>
     <artifactId>scase_${scala.version}</artifactId>
-    <version>2.1.0</version>
+    <version>2.2.1</version>
 </dependency>
 ```
 
