@@ -33,7 +33,14 @@ class ForwarderBridge[F[_] : Concurrent : Timer, REQ: Unmarshaller, RESP: Marsha
 
   def forward: F[Unit] =
     for {
-      receiveResult <- source.receiveWithContext(receiveTimeout)
+      receiveResult <- source.receiveWithContext(receiveTimeout) onError {
+        case t: ReceiveTimeout =>
+          continueForwarding
+        case t: Throwable =>
+          errorCounter.update(_ + 1) >>
+            error(s"Error while receiving in $this") >>
+            continueForwarding
+      }
       _ <- (for {
         _ <- start(continueForwarding)
         _ <- messageCounter.update(_ + 1)
@@ -54,13 +61,10 @@ class ForwarderBridge[F[_] : Concurrent : Timer, REQ: Unmarshaller, RESP: Marsha
           case None =>
             filteredMessageCounter.update(_ + 1)
         }
-      } yield ()) handleErrorWith {
-        case t: ReceiveTimeout =>
-          continueForwarding
-        case t: Throwable =>
-          errorCounter.update(_ + 1) >>
-            receiveResult.rollback >>
-            error(s"error while forwarding in $this")
+      } yield ()) handleErrorWith { case t =>
+        errorCounter.update(_ + 1) >>
+          receiveResult.rollback >>
+          error(s"Error while forwarding in $this")
       }
     } yield ()
 
@@ -130,4 +134,5 @@ object ForwarderBridge extends CatsUtils with Logging {
   }
 }
 
+// TODO: rename this
 case object MessageDropException extends IllegalStateException
