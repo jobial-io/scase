@@ -21,12 +21,11 @@ class RequestResponseBridge[F[_] : ConcurrentEffect, SOURCEREQ: Unmarshaller, SO
   requestTimeoutCounter: Ref[F, Long],
   errorCounter: Ref[F, Long],
   filteredRequestCounter: Ref[F, Long],
-  filteredResponseCounter: Ref[F, Long]
+  filteredResponseCounter: Ref[F, Long],
+  maximumPendingMessages: Int
 )(
   implicit requestResponseMapping: RequestResponseMapping[SOURCEREQ, SOURCERESP]
 ) extends DefaultService[F] with CatsUtils with Logging {
-
-  val maximumPendingMessages = 100
 
   def start =
     for {
@@ -125,7 +124,8 @@ object RequestResponseBridge extends CatsUtils with Logging {
     source: RequestHandler[F, SOURCEREQ, SOURCERESP] => F[Service[F]],
     destination: MessageReceiveResult[F, DESTREQ] => F[Option[RequestResponseResult[F, DESTREQ, DESTRESP]]],
     filterRequest: MessageReceiveResult[F, SOURCEREQ] => F[Option[MessageReceiveResult[F, DESTREQ]]],
-    filterResponse: (MessageReceiveResult[F, SOURCEREQ], RequestResponseResult[F, DESTREQ, DESTRESP]) => F[Option[MessageReceiveResult[F, SOURCERESP]]]
+    filterResponse: (MessageReceiveResult[F, SOURCEREQ], RequestResponseResult[F, DESTREQ, DESTRESP]) => F[Option[MessageReceiveResult[F, SOURCERESP]]],
+    maximumPendingMessages: Int
   )(
     implicit requestResponseMapping: RequestResponseMapping[SOURCEREQ, SOURCERESP]
   ): F[RequestResponseBridge[F, SOURCEREQ, SOURCERESP, DESTREQ, DESTRESP]] =
@@ -150,13 +150,15 @@ object RequestResponseBridge extends CatsUtils with Logging {
       requestTimeoutCounter,
       errorCounter,
       filteredRequestCounter,
-      filteredResponseCounter
+      filteredResponseCounter,
+      maximumPendingMessages
     )
 
   def apply[F[_] : ConcurrentEffect, REQ: Unmarshaller, RESP: Marshaller](
     source: RequestHandler[F, REQ, RESP] => F[Service[F]],
     destination: MessageReceiveResult[F, REQ] => F[Option[RequestResponseResult[F, REQ, RESP]]],
-    filterRequest: MessageReceiveResult[F, REQ] => F[Option[MessageReceiveResult[F, REQ]]]
+    filterRequest: MessageReceiveResult[F, REQ] => F[Option[MessageReceiveResult[F, REQ]]],
+    maximumPendingMessages: Int
   )(
     implicit requestResponseMapping: RequestResponseMapping[REQ, RESP]
   ): F[RequestResponseBridge[F, REQ, RESP, REQ, RESP]] =
@@ -164,7 +166,8 @@ object RequestResponseBridge extends CatsUtils with Logging {
       source,
       destination,
       filterRequest,
-      { (_, result) => pure(Some(result.response)) }
+      { (_, result) => pure(Some(result.response)) },
+      maximumPendingMessages
     )
 
   def fixedDestination[F[_] : ConcurrentEffect, REQ, RESP](destination: RequestResponseClient[F, REQ, RESP])(implicit requestResponseMapping: RequestResponseMapping[REQ, RESP]) = { r: MessageReceiveResult[F, REQ] =>

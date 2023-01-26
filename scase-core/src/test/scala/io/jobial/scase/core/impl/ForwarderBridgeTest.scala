@@ -31,7 +31,7 @@ class ForwarderBridgeTest
       destination <- InMemoryProducer[IO, REQ]
       receiverClient <- ConsumerReceiverClient(source)
       senderClient <- ProducerSenderClient(destination)
-      bridge <- ForwarderBridge(receiverClient, fixedDestination(senderClient), oneWayOnlyFilter[IO, REQ])
+      bridge <- ForwarderBridge(receiverClient, fixedDestination(senderClient), oneWayOnlyFilter[IO, REQ], 100)
       bridgeState <- bridge.start
       sourceProducer <- source.producer
       destinationConsumer <- destination.consumer
