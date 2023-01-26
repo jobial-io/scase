@@ -92,7 +92,8 @@ Forward requests and one-way messages from one transport to another.
     senderClientCache: Cache[IO, String, SenderClient[IO, M]],
     forwarderBridgeServiceState: Deferred[IO, ForwarderBridgeServiceState[IO]],
     requestResponseBridgeServiceState: Deferred[IO, RequestResponseBridgeServiceState[IO]],
-    statLastTime: Ref[IO, Long]
+    statLastTime: Ref[IO, Long],
+    statLastCount: Ref[IO, Long]
   ) {
 
     val marshalling = Marshalling[M]
@@ -159,8 +160,9 @@ Forward requests and one-way messages from one transport to another.
         forwarderBridgeState <- Deferred[IO, ForwarderBridgeServiceState[IO]]
         requestResponseBridgeState <- Deferred[IO, RequestResponseBridgeServiceState[IO]]
         statLastTime <- Ref.of[IO, Long](currentTimeMillis)
+        statLastCount <- Ref.of[IO, Long](0)
       } yield BridgeContext[M](source, destination, oneWay, timeout, maximumPendingMessages, requestResponseClientCache,
-        senderClientCache, forwarderBridgeState, requestResponseBridgeState, statLastTime)
+        senderClientCache, forwarderBridgeState, requestResponseBridgeState, statLastTime, statLastCount)
   }
 
   implicit def requestResponseMapping[M] = new RequestResponseMapping[M, M] {}
@@ -246,9 +248,12 @@ Forward requests and one-way messages from one transport to another.
           _ <- whenA(requestCount % 1000 === 0)(
             for {
               statLastTime <- context.statLastTime.modify(t => (currentTimeMillis, t))
+              statLastCount <- context.statLastCount.modify(c => (requestCount, c))
               t = currentTimeMillis
-              rate = 1000d / (t - statLastTime) * 1000d
-              _ <- whenA(t > statLastTime)(info[IO](f"Processed ${requestCount} requests and ${responseCount} responses (${requestTimeoutCount} timeouts, ${errorCount} errors, ${filteredRequestCount} requests filtered, ${filteredResponseCount} responses filtered) ${rate}%.2f/s"))
+              rate = (requestCount - statLastCount).toDouble / (t - statLastTime) * 1000d
+              _ <- whenA(t > statLastTime && requestCount > statLastCount)(
+                info[IO](f"Processed ${requestCount} requests and ${responseCount} responses (${requestTimeoutCount} timeouts, ${errorCount} errors, ${filteredRequestCount} requests filtered, ${filteredResponseCount} responses filtered) ${rate}%.2f/s")
+              )
             } yield ()
           )
           _ <- trace[IO](s"Forwarding request to $d")
@@ -289,7 +294,7 @@ Forward requests and one-way messages from one transport to another.
     )
 
   val defaultPulsarSubscriptionName = s"scase-bridge-${randomUUID}"
-  
+
   def clientForSource[M: Marshalling](implicit context: BridgeContext[M]) =
     context.source match {
       case source: PulsarEndpointInfo =>
@@ -321,9 +326,12 @@ Forward requests and one-way messages from one transport to another.
           _ <- whenA(messageCount % 1000 === 0)(
             for {
               statLastTime <- context.statLastTime.modify(t => (currentTimeMillis, t))
+              statLastCount <- context.statLastCount.modify(c => (messageCount, c))
               t = currentTimeMillis
-              rate = 1000d / (t - statLastTime) * 1000d
-              _ <- whenA(t > statLastTime)(info[IO](f"Processed ${messageCount} messages (${errorCount} errors, ${filteredMessageCount} filtered) ${rate}%.2f/s"))
+              rate = (messageCount - statLastCount).toDouble / (t - statLastTime) * 1000d
+              _ <- whenA(t > statLastTime && messageCount > statLastCount)(
+                info[IO](f"Processed ${messageCount} messages (${errorCount} errors, ${filteredMessageCount} filtered) ${rate}%.2f/s")
+              )
             } yield ()
           )
           client <- d match {
