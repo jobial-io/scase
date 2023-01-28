@@ -5,6 +5,8 @@ import cats.implicits.catsSyntaxFlatMapOps
 import io.jobial.scase.core.impl.blockerContext
 import org.apache.pulsar.client.api.PulsarClient
 
+import java.lang.Thread.currentThread
+
 case class PulsarContext(
   host: String = "localhost",
   port: Int = 6650,
@@ -14,11 +16,13 @@ case class PulsarContext(
 ) {
   val brokerUrl = s"pulsar://$host:$port"
 
-  def createClient =
+  def createClient = {
+    assert(currentThread.isDaemon)
     PulsarClient
       .builder
       .serviceUrl(brokerUrl)
       .build
+  }
 
   lazy val client =
     if (useDaemonThreadsInClient) {
