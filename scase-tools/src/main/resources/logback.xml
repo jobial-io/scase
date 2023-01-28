@@ -14,4 +14,5 @@
     <logger name="org.apache" level="WARN"/>
     <logger name="com.amazonaws" level="INFO"/>
     <logger name="ch.qos.logback.classic" level="WARN"/>
+    <logger name="com.scurrilous.circe.checksum" level="WARN"/>
 </configuration>
