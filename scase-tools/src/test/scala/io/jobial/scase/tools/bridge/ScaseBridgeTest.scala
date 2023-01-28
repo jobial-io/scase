@@ -236,15 +236,11 @@ class ScaseBridgeTest extends ServiceTestSupport {
     val topic = s"hello-test-${uuid(6)}"
     import io.jobial.scase.marshalling.serialization._
 
-    println("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-
     for {
       context <- BridgeContext[Any](s"pulsar://///${topic}", "activemq://", false, 300.seconds)
       r <- {
         implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpointInfo].context
         implicit val session = context.destination.asInstanceOf[ActiveMQEndpointInfo].context.session
-
-        println("yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy")
 
         testRequestResponseBridge(
           JMSServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic, session.createQueue(topic)).service(_),
