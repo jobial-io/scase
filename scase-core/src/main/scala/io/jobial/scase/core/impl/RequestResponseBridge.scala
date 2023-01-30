@@ -50,6 +50,7 @@ class RequestResponseBridge[F[_] : Concurrent, SOURCEREQ: Unmarshaller, SOURCERE
                 case Some(filteredRequest) =>
                   for {
                     destinationResult <- destination(filteredRequest)
+                    _ <- sentRequestCounter.update(_ + 1)
                     _ <- trace(s"received result from destination: $destinationResult")
                     filteredResponse <- {
                       for {
