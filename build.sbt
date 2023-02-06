@@ -14,7 +14,7 @@ name := "scase"
 
 ThisBuild / organization := "io.jobial"
 ThisBuild / scalaVersion := "2.13.8"
-ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.15", "2.13.10")
+ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.15", "2.13.8")
 ThisBuild / version := "1.2.8"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
 ThisBuild / javacOptions ++= Seq("-source", "11", "-target", "11")
