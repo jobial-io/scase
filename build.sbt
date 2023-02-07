@@ -15,7 +15,7 @@ name := "scase"
 ThisBuild / organization := "io.jobial"
 ThisBuild / scalaVersion := "2.13.8"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.15", "2.13.8")
-ThisBuild / version := "1.2.8"
+ThisBuild / version := "1.2.9"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
 ThisBuild / javacOptions ++= Seq("-source", "11", "-target", "11")
 ThisBuild / Test / packageBin / publishArtifact := true
@@ -217,7 +217,8 @@ lazy val `scase-tools` = project
       "ch.qos.logback" % "logback-classic" % LogbackVersion,
       "io.lemonlabs" %% "scala-uri" % ScalaUriVersion,
       "org.apache.pulsar" % "pulsar-client-admin" % PulsarVersion
-    )
+    ),
+    Compile / packageBin / mappings ~= { _.filter(!_._1.getName.endsWith("logback.xml")) }
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-pulsar`)
