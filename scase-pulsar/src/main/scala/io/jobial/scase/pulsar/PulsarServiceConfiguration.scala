@@ -359,6 +359,22 @@ object PulsarServiceConfiguration {
     )
 
   def handler[M: Marshaller : Unmarshaller](
+    requestTopic: Either[String, Regex],
+    patternAutoDiscoveryPeriod: Option[FiniteDuration],
+    subscriptionInitialPosition: Option[SubscriptionInitialPosition],
+    subscriptionInitialPublishTime: Option[Instant],
+    subscriptionName: String
+  ) =
+    new PulsarMessageHandlerServiceConfiguration[M](
+      subscriptionName,
+      requestTopic,
+      patternAutoDiscoveryPeriod,
+      subscriptionInitialPosition,
+      subscriptionInitialPublishTime,
+      subscriptionName
+    )
+
+  def handler[M: Marshaller : Unmarshaller](
     requestTopic: String,
     patternAutoDiscoveryPeriod: Option[FiniteDuration] = Some(1.second),
     subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Latest),
@@ -429,6 +445,18 @@ object PulsarServiceConfiguration {
       None,
       s"subscription-${randomUUID}"
     )
+
+  def source[M: Unmarshaller](
+    sourceTopic: Either[String, Regex],
+    patternAutoDiscoveryPeriod: Option[FiniteDuration],
+    subscriptionInitialPosition: Option[SubscriptionInitialPosition],
+    subscriptionInitialPublishTime: Option[Instant]
+  ) = new PulsarMessageSourceServiceConfiguration(
+    sourceTopic,
+    patternAutoDiscoveryPeriod,
+    subscriptionInitialPosition,
+    subscriptionInitialPublishTime
+  )
 
   def source[M: Unmarshaller](
     sourceTopic: String,
