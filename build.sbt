@@ -65,14 +65,15 @@ lazy val ProguardVersion = "7.2.2"
 lazy val ActivemqVersion = "5.16.3"
 lazy val JmsVersion = "2.0.1"
 lazy val ScalaUriVersion = "1.4.10"
+lazy val MonixVersion = "3.3.0"
 
 lazy val root: Project = project
   .in(file("."))
   .settings(commonSettings)
   .aggregate(`scase-core`, `scase-aws`, `scase-aws-test`, `scase-circe`, `scase-spray-json`,
-    `scase-pulsar`, `scase-jms`, `scase-activemq`, `scase-tibco-rv`, `scase-tools`)
+    `scase-pulsar`, `scase-jms`, `scase-activemq`, `scase-tibco-rv`, `scase-tools`, `scase-monix`)
   .dependsOn(`scase-core`, `scase-aws`, `scase-circe`, `scase-spray-json`,
-    `scase-pulsar`, `scase-jms`, `scase-activemq`, `scase-tibco-rv`)
+    `scase-pulsar`, `scase-jms`, `scase-activemq`, `scase-tibco-rv`, `scase-monix`)
 
 lazy val `scase-core` = project
   .settings(commonSettings)
@@ -218,9 +219,21 @@ lazy val `scase-tools` = project
       "io.lemonlabs" %% "scala-uri" % ScalaUriVersion,
       "org.apache.pulsar" % "pulsar-client-admin" % PulsarVersion
     ),
-    Compile / packageBin / mappings ~= { _.filter(!_._1.getName.endsWith("logback.xml")) }
+    Compile / packageBin / mappings ~= {
+      _.filter(!_._1.getName.endsWith("logback.xml"))
+    }
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-pulsar`)
   .dependsOn(`scase-tibco-rv`)
   .dependsOn(`scase-activemq`)
+
+lazy val `scase-monix` = project
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.monix" %% "monix" % MonixVersion,
+      "io.jobial" %% "sclap" % SclapVersion
+    )
+  )
+  .dependsOn(`scase-core` % "compile->compile;test->test")
