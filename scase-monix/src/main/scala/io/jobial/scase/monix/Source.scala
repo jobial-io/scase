@@ -10,15 +10,28 @@ import cats.implicits._
 import monix.eval.TaskLike
 import monix.reactive.Observable
 
-class Source[F[_] : Monad : TaskLike, A](value: MVar2[F, A], last: Ref[F, Option[A]])
+class Source[F[_] : Monad : TaskLike, A](value: MVar2[F, Option[A]], last: Ref[F, Option[A]])
   extends SwitchMapObservable[A] {
 
   def push(a: A) =
     for {
       _ <- last.update(_ => Some(a))
-      _ <- value.put(a)
+      _ <- value.put(Some(a))
     } yield ()
-
+    
+  def takeOrStop =
+    for {
+      v <- value.tryTake
+      _ <- v match {
+        case Some(v) =>
+          v match {
+            case Some(v) =>
+            case None =>
+              
+          }
+      }      
+    }
+    
   val observable =
     Observable.concat(
       Observable.from {
@@ -40,7 +53,7 @@ object Source {
 
   def apply[F[_] : Concurrent : TaskLike, A] =
     for {
-      value <- MVar.empty[F, A]
+      value <- MVar.empty[F, Option[A]]
       last <- Ref.of[F, Option[A]](None)
     } yield new Source(value, last)
 }
