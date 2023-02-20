@@ -32,11 +32,59 @@ class ScaseBridgeTest extends ServiceTestSupport {
 
   implicit def parseEndpointInfo(v: String) = endpointInfoArgumentValueParser.parse(v).toOption.get
 
-  //  "destination name pattern" should "work" in {
-  //    assert("pulsar://host:port/tenant/namespace/XXX.DEV.YYY.ZZZ" == substituteDestinationName("pulsar://host:port/tenant/namespace/([A-Z].*)\\.PROD\\.(.*)", "pulsar://host:port/tenant/namespace/$1.DEV.$2", "pulsar://host:port/tenant/namespace/XXX.PROD.YYY.ZZZ"))
-  //    assert("pulsar://host:port/tenant/namespace/XXX.DEV.XXX.YYY.ZZZ" == substituteDestinationName("tibrv://host:port/network/service/([A-Z].*)\\.PROD\\.(.*)", "pulsar://host:port/tenant/namespace/$1.DEV.$2", "tibrv://host:port/network/service/XXX.PROD.XXX.YYY.ZZZ"))
-  //    assert("pulsar://host:port/tenant/namespace/XXX.DEV.XXX.YYY.ZZZ" == substituteDestinationName("tibrv://host:port/network/service/([A-Z].*)\\.PROD\\.(.*).>", "pulsar://host:port/tenant/namespace/$1.DEV.$2", "tibrv://host:port/network/service/XXX.PROD.XXX.YYY.ZZZ"))
-  //  }
+  "destination name pattern" should "work" in {
+    val pulsarUriPrefix = "pulsar://host:6650/tenant/namespace"
+    val tibrvUriPrefix = "tibrv://host:7500/network/service"
+
+    assert(parseEndpointInfo(s"${pulsarUriPrefix}/XXX.DEV.YYY.ZZZ") ==
+      substituteDestinationName(
+        s"${pulsarUriPrefix}/([A-Z].*)\\.PROD\\.(.*)",
+        s"${pulsarUriPrefix}/$$1.DEV.$$2",
+        s"${pulsarUriPrefix}/XXX.PROD.YYY.ZZZ")
+    )
+
+    assert(parseEndpointInfo(s"${pulsarUriPrefix}/XXX.DEV.XXX.YYY.ZZZ") ==
+      substituteDestinationName(
+        s"${tibrvUriPrefix}/([A-Z].*)\\.PROD\\.(.*)",
+        s"${pulsarUriPrefix}/$$1.DEV.$$2",
+        s"${tibrvUriPrefix}/XXX.PROD.XXX.YYY.ZZZ")
+    )
+
+    assert(parseEndpointInfo(s"${pulsarUriPrefix}/XXX.DEV.XXX.YYY.ZZZ") ==
+      substituteDestinationName(
+        s"${tibrvUriPrefix}/([A-Z].*)\\.PROD\\.(.*).>",
+        s"${pulsarUriPrefix}/$$1.DEV.$$2",
+        s"${tibrvUriPrefix}/XXX.PROD.XXX.YYY.ZZZ")
+    )
+
+    assert(parseEndpointInfo(s"${tibrvUriPrefix}/XXX.DEV.XXX.YYY.ZZZ") ==
+      substituteDestinationName(
+        s"${pulsarUriPrefix}/XXX.*",
+        s"${tibrvUriPrefix}/",
+        s"${pulsarUriPrefix}/XXX.DEV.XXX.YYY.ZZZ")
+    )
+
+    assert(parseEndpointInfo(s"${pulsarUriPrefix}/XXX.DEV.XXX.YYY.ZZZ") ==
+      substituteDestinationName(
+        s"${tibrvUriPrefix}/.>",
+        s"${pulsarUriPrefix}/",
+        s"${tibrvUriPrefix}/XXX.DEV.XXX.YYY.ZZZ")
+    )
+
+    assert(parseEndpointInfo(s"${tibrvUriPrefix}/XXX.DEV.XXX.YYY.ZZZ") ==
+      substituteDestinationName(
+        s"${pulsarUriPrefix}/",
+        s"${tibrvUriPrefix}/",
+        s"${pulsarUriPrefix}/XXX.DEV.XXX.YYY.ZZZ")
+    )
+
+    assert(parseEndpointInfo(s"${pulsarUriPrefix}/XXX.DEV.XXX.YYY.ZZZ") ==
+      substituteDestinationName(
+        s"${tibrvUriPrefix}/",
+        s"${pulsarUriPrefix}/",
+        s"${tibrvUriPrefix}/XXX.DEV.XXX.YYY.ZZZ")
+    )
+  }
 
   "pulsar to pulsar one-way" should "work" in {
     val topic = s"hello-test-${uuid(6)}"
@@ -58,7 +106,7 @@ class ScaseBridgeTest extends ServiceTestSupport {
 
   "pulsar to pulsar one-way with different tenant and namespace" should "work" in {
     assume(!onGithub)
-    
+
     import org.apache.pulsar.client.admin.PulsarAdmin
     val url = "http://localhost:8080"
     val admin = PulsarAdmin.builder.serviceHttpUrl(url)
