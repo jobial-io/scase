@@ -1,12 +1,12 @@
 package io.jobial.scase.tools.bridge
 
+import cats.implicits._
 import cats.implicits.catsSyntaxEq
 import io.jobial.scase.activemq.ActiveMQContext
 import io.jobial.scase.pulsar.PulsarContext
 import io.jobial.scase.tibrv.TibrvContext
 import io.lemonlabs.uri.Uri
 import io.lemonlabs.uri.UrlPath
-import cats.implicits._
 
 object EndpointInfo {
 
@@ -26,6 +26,14 @@ trait EndpointInfo {
   def uri: Uri
 
   def canonicalUri: Uri
+
+  def asSourceUriString = (
+    if (pathLast === "")
+      withDestinationName(".*")
+    else this
+    ).canonicalUri.toStringRaw
+
+  def asDestinationUriString(actualSource: EndpointInfo) = (if (pathLast === "") withDestinationName(actualSource.pathLast) else this).canonicalUri.toStringRaw
 
   def forSource(source: EndpointInfo) =
     if (destinationName.isEmpty)
@@ -67,13 +75,13 @@ case class PulsarEndpointInfo(uri: Uri) extends EndpointInfo {
   )
 
   val canonicalUri = Uri.parse(s"pulsar://${context.host}:${context.port}/${context.tenant}/${context.namespace}/${topic}")
-  
+
   val subscriptionName = uri.toUrl.query.param("subscriptionName")
 }
 
 case class TibrvEndpointInfo(uri: Uri) extends EndpointInfo {
 
-  val subjects = Seq(pathLast)
+  val subjects = Seq(pathLast.replaceAll("\\.\\*$", ".>"))
 
   val pathLen = 2
 
@@ -84,7 +92,9 @@ case class TibrvEndpointInfo(uri: Uri) extends EndpointInfo {
     path.get(1).flatten.orElse(TibrvContext().service)
   )
 
-  val canonicalUri = Uri.parse(s"tibrv://${context.host}:${context.port}/${context.network}/${context.service}/${subjects.mkString(";")}")
+  val canonicalUri = Uri.parse(s"tibrv://${context.host}:${context.port}/${context.network.getOrElse("")}/${context.service.getOrElse("")}/${subjects.mkString(";")}")
+
+  override def asSourceUriString = super.asSourceUriString.replaceAll("\\.>$", ".*")
 }
 
 case class ActiveMQEndpointInfo(uri: Uri) extends EndpointInfo {

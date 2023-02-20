@@ -32,7 +32,6 @@ import io.jobial.scase.pulsar.PulsarContext
 import io.jobial.scase.pulsar.PulsarServiceConfiguration
 import io.jobial.scase.tibrv.TibrvContext
 import io.jobial.scase.tibrv.TibrvServiceConfiguration
-import io.jobial.scase.tools.bridge
 import io.jobial.scase.util.Cache
 import io.jobial.sclap.CommandLineApp
 import io.lemonlabs.uri.Uri
@@ -51,10 +50,38 @@ Forward requests and one-way messages from one transport to another.
 """) {
       for {
         source <- opt[EndpointInfo]("source", "s").required
-          .description("tibrv://<subject> or pulsar://<topic> or activemq://<destination>")
+          .description("""The uri for the source. Supported schemes: tibrv://, pulsar://, activemq://.
+          
+Patterns with matching groups are supported.
+
+Examples:
+
+Options: --source=pulsar://host:6650/tenant/namespace/xxx.* --destination=tibrv://host:7500/network/service
+Actual source: pulsar://host:6650/tenant/namespace/xxx.yyy
+Resulting destination: tibrv://host:7500/network/service/xxx.yyy
+
+Options: --source=pulsar://host:6650/tenant/namespace/xxx.* --destination=tibrv://host:7500/network/service/zzz
+Actual source: pulsar://host:6650/tenant/namespace/xxx.yyy
+Resulting destination: tibrv://host:7500/network/service/zzz
+
+Options: --source=tibrv://host:7500/network/service/xxx.> --destination=pulsar://host:6650/tenant/namespace
+Actual source: tibrv://host:7500/network/service/xxx.yyy
+Resulting destination: pulsar://host:6650/tenant/namespace/xxx.yyy
+
+Options: --source=tibrv://host:7500/network/service/xxx.* --destination=pulsar://host:6650/tenant/namespace/
+Actual source: tibrv://host:7500/network/service/xxx.yyy
+Resulting destination: pulsar://host:6650/tenant/namespace/xxx.yyy
+
+Options: --source=pulsar://host:6650/tenant/namespace/([A-Z].*)\\.prod\\.(.*) --destination=tibrv://host:7500/network/service/$1.dev.$2
+Actual source: pulsar://host:6650/tenant/namespace/xxx.prod.yyy
+Resulting destination: tibrv://host:7500/network/service/xxx.dev.yyy
+
+Also see --destination.""")
         destination <- opt[EndpointInfo]("destination", "d").required
-          .description("tibrv:// or pulsar:// or activemq://, no subject or topic should be specified to select destination " +
-            "based on the source topic or subject")
+          .description("""The uri for the destination. Supported schemes: tibrv://, pulsar://, activemq://. 
+If no subject or topic is specified, it will be copied from the source. Back references to pattern matching groups in --source are supported.
+            
+See --source for details on pattern matching and substitution examples.""")
         protocol <- opt[String]("protocol", "p").default("TibrvMsg")
           .description("The marshalling protocol to use: currently TibrvMsg and Serialization are supported")
         oneWay <- opt[Boolean]("one-way", "o").default(false)
@@ -206,7 +233,10 @@ Forward requests and one-way messages from one transport to another.
     }
 
   def substituteDestinationName(source: EndpointInfo, destination: EndpointInfo, actualSource: EndpointInfo): EndpointInfo =
-    EndpointInfo.apply(Uri.parse(actualSource.uri.toString.replaceAll(source.canonicalUri.toString, destination.canonicalUri.toString))).toOption.get
+    EndpointInfo.apply(Uri.parse(actualSource.uri.toStringRaw.replaceAll(
+      source.asSourceUriString,
+      destination.asDestinationUriString(actualSource)
+    ))).toOption.get
 
   def substituteDestinationName[M](actualSource: EndpointInfo)(implicit context: BridgeContext[M]): String = {
     val destinationForSource = context.destination.forSource(context.source)
@@ -215,18 +245,21 @@ Forward requests and one-way messages from one transport to another.
     r.destinationName
   }
 
+  def substituteDestinationName[M](destinationName: String)(implicit context: BridgeContext[M]): String =
+    substituteDestinationName(context.source.withDestinationName(destinationName))
+
   def getDestinationName[M](r: MessageReceiveResult[IO, M])(implicit context: BridgeContext[M]) =
     for {
       message <- r.underlyingMessage[Any]
     } yield message match {
       case m: Message[_] =>
         val topicName = m.getTopicName
-        val r = substituteDestinationName(context.source.withDestinationName(topicName.replace("persistent://", "")))
+        val r = substituteDestinationName(topicName.replace("persistent://", ""))
         Some(r)
       case m: TibrvMsg =>
-        Some(substituteDestinationName(context.source.withDestinationName(m.getSendSubject)))
+        Some(substituteDestinationName(m.getSendSubject))
       case m: javax.jms.Message =>
-        Some(substituteDestinationName(context.source.withDestinationName(stripUriScheme(m.getJMSDestination.toString))))
+        Some(substituteDestinationName(stripUriScheme(m.getJMSDestination.toString)))
       case _ =>
         None
     }
