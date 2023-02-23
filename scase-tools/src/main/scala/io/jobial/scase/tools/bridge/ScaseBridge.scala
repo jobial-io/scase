@@ -36,7 +36,10 @@ import io.jobial.scase.util.Cache
 import io.jobial.sclap.CommandLineApp
 import io.lemonlabs.uri.Uri
 import org.apache.pulsar.client.api.Message
+import org.apache.pulsar.client.api.SubscriptionInitialPosition
+import org.apache.pulsar.client.api.SubscriptionInitialPosition.Earliest
 import java.lang.System.currentTimeMillis
+import java.time.Instant
 import java.util.UUID.randomUUID
 import javax.jms.Session
 import scala.concurrent.duration.DurationInt
@@ -218,7 +221,15 @@ See --source for details on pattern matching and substitution examples.""")
     context.source match {
       case source: PulsarEndpointInfo =>
         context.withSourcePulsarContext { implicit context =>
-          delay(PulsarServiceConfiguration.requestResponse[M, M](Right(source.topicPattern), subscriptionName = source.subscriptionName.getOrElse(defaultPulsarSubscriptionName)).service[IO](_))
+          delay(PulsarServiceConfiguration.requestResponse[M, M](
+            Right(source.topicPattern),
+            None,
+            Some(1.millis),
+            Some(1.second),
+            source.subscriptionInitialPosition.orElse(defaultSubscriptionInitialPosition),
+            source.subscriptionInitialPublishTime.orElse(defaultSubscriptionInitialPublishTime),
+            source.subscriptionName.getOrElse(defaultPulsarSubscriptionName)
+          ).service[IO](_))
         }
       case source: TibrvEndpointInfo =>
         context.withSourceTibrvContext { implicit context =>
@@ -323,11 +334,21 @@ See --source for details on pattern matching and substitution examples.""")
 
   val defaultPulsarSubscriptionName = s"scase-bridge-${randomUUID}"
 
+  val defaultSubscriptionInitialPosition = Some(Earliest)
+
+  def defaultSubscriptionInitialPublishTime = Some(Instant.now.minusSeconds(60))
+  
   def clientForSource[M: Marshalling](implicit context: BridgeContext[M]) =
     context.source match {
       case source: PulsarEndpointInfo =>
         context.withSourcePulsarContext { implicit context =>
-          PulsarServiceConfiguration.source[M](Right(source.topicPattern), source.subscriptionName.getOrElse(defaultPulsarSubscriptionName)).client[IO]
+          PulsarServiceConfiguration.source[M](
+            Right(source.topicPattern),
+            Some(1.second),
+            source.subscriptionInitialPosition.orElse(defaultSubscriptionInitialPosition),
+            source.subscriptionInitialPublishTime.orElse(defaultSubscriptionInitialPublishTime),
+            source.subscriptionName.getOrElse(defaultPulsarSubscriptionName)
+          ).client[IO]
         }
       case source: TibrvEndpointInfo =>
         context.withSourceTibrvContext { implicit context =>

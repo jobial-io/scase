@@ -7,6 +7,8 @@ import io.jobial.scase.pulsar.PulsarContext
 import io.jobial.scase.tibrv.TibrvContext
 import io.lemonlabs.uri.Uri
 import io.lemonlabs.uri.UrlPath
+import org.apache.pulsar.client.api.SubscriptionInitialPosition
+import java.time.Instant
 
 object EndpointInfo {
 
@@ -71,6 +73,10 @@ case class PulsarEndpointInfo(uri: Uri) extends EndpointInfo {
   val canonicalUri = Uri.parse(s"pulsar://${context.host}:${context.port}/${context.tenant}/${context.namespace}/${topic}")
 
   val subscriptionName = uri.toUrl.query.param("subscriptionName")
+
+  val subscriptionInitialPosition = uri.toUrl.query.param("subscriptionInitialPosition").map(SubscriptionInitialPosition.valueOf)
+
+  val subscriptionInitialPublishTime = uri.toUrl.query.param("subscriptionInitialPublishTime").map(Instant.parse)
 }
 
 case class TibrvEndpointInfo(uri: Uri) extends EndpointInfo {

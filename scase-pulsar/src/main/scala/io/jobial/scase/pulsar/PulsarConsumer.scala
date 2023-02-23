@@ -12,11 +12,11 @@ import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
 import org.apache.pulsar.client.api.ConsumerBuilder
 import org.apache.pulsar.client.api.SubscriptionInitialPosition
+import org.apache.pulsar.client.api.SubscriptionInitialPosition.Earliest
 import org.apache.pulsar.client.api.SubscriptionMode
 import org.apache.pulsar.client.api.SubscriptionMode.Durable
 import org.apache.pulsar.client.api.SubscriptionType
 import org.apache.pulsar.client.api.SubscriptionType.Exclusive
-
 import java.time.Instant
 import java.util.UUID.randomUUID
 import java.util.concurrent.TimeUnit
@@ -65,7 +65,7 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
         patternAutoDiscoveryPeriod.map(p => b.patternAutoDiscoveryPeriod(p.toSeconds.toInt, TimeUnit.SECONDS))
       )
       .apply(b =>
-        subscriptionInitialPosition.map(b.subscriptionInitialPosition)
+        subscriptionInitialPosition.orElse(subscriptionInitialPublishTime.map(_ => Earliest)).map(b.subscriptionInitialPosition)
       )
       .subscribe()
     

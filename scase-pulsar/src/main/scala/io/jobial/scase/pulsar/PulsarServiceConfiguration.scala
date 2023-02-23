@@ -251,6 +251,35 @@ class PulsarMessageDestinationServiceConfiguration[M: Marshaller](
 object PulsarServiceConfiguration {
 
   def requestResponse[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
+    requestTopic: Either[String, Regex],
+    responseTopicOverride: Option[String],
+    batchingMaxPublishDelay: Option[FiniteDuration],
+    patternAutoDiscoveryPeriod: Option[FiniteDuration],
+    subscriptionInitialPosition: Option[SubscriptionInitialPosition],
+    subscriptionInitialPublishTime: Option[Instant],
+    subscriptionName: String
+  )(
+    //implicit monitoringPublisher: MonitoringPublisher = noPublisher
+    implicit responseMarshaller: Marshaller[Either[Throwable, RESP]],
+    responseUnmarshaller: Unmarshaller[Either[Throwable, RESP]]
+  ): PulsarRequestResponseServiceConfiguration[REQ, RESP] =
+    new PulsarRequestResponseServiceConfiguration[REQ, RESP](
+      requestTopic match {
+        case Right(r) =>
+          r.toString
+        case Left(l) =>
+          l
+      },
+      requestTopic,
+      responseTopicOverride,
+      batchingMaxPublishDelay,
+      patternAutoDiscoveryPeriod,
+      subscriptionInitialPosition,
+      subscriptionInitialPublishTime,
+      subscriptionName
+    )
+
+  def requestResponse[REQ: Marshaller : Unmarshaller, RESP: Marshaller : Unmarshaller](
     requestTopic: String,
     responseTopicOverride: Option[String] = None,
     batchingMaxPublishDelay: Option[FiniteDuration] = Some(1.millis),
@@ -287,7 +316,7 @@ object PulsarServiceConfiguration {
         case Right(r) =>
           r.toString
         case Left(l) =>
-          l.toString
+          l
       },
       requestTopic,
       None,
@@ -445,6 +474,20 @@ object PulsarServiceConfiguration {
       None,
       s"subscription-${randomUUID}"
     )
+
+  def source[M: Unmarshaller](
+    sourceTopic: Either[String, Regex],
+    patternAutoDiscoveryPeriod: Option[FiniteDuration],
+    subscriptionInitialPosition: Option[SubscriptionInitialPosition],
+    subscriptionInitialPublishTime: Option[Instant],
+    subscriptionName: String
+  ) = new PulsarMessageSourceServiceConfiguration(
+    sourceTopic,
+    patternAutoDiscoveryPeriod,
+    subscriptionInitialPosition,
+    subscriptionInitialPublishTime,
+    subscriptionName
+  )
 
   def source[M: Unmarshaller](
     sourceTopic: Either[String, Regex],
