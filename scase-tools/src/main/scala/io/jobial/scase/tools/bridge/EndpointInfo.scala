@@ -35,12 +35,6 @@ trait EndpointInfo {
 
   def asDestinationUriString(actualSource: EndpointInfo) = (if (pathLast === "") withDestinationName(actualSource.pathLast) else this).canonicalUri.toStringRaw
 
-  def forSource(source: EndpointInfo) =
-    if (destinationName.isEmpty)
-      withDestinationName(source.destinationName)
-    else
-      this
-
   def withDestinationName(destinationName: String) = {
     val destinationPath = UrlPath.parse(destinationName)
     EndpointInfo.apply(canonicalUri.toUrl.withPath(UrlPath(canonicalUri.path.parts.dropRight(destinationPath.parts.size) ++ destinationPath.parts))).toOption.get

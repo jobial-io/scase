@@ -238,12 +238,8 @@ See --source for details on pattern matching and substitution examples.""")
       destination.asDestinationUriString(actualSource)
     ))).toOption.get
 
-  def substituteDestinationName[M](actualSource: EndpointInfo)(implicit context: BridgeContext[M]): String = {
-    val destinationForSource = context.destination.forSource(context.source)
-
-    val r = substituteDestinationName(context.source, destinationForSource, actualSource)
-    r.destinationName
-  }
+  def substituteDestinationName[M](actualSource: EndpointInfo)(implicit context: BridgeContext[M]): String =
+    substituteDestinationName(context.source, context.destination, actualSource).destinationName
 
   def substituteDestinationName[M](destinationName: String)(implicit context: BridgeContext[M]): String =
     substituteDestinationName(context.source.withDestinationName(destinationName))
@@ -382,7 +378,7 @@ See --source for details on pattern matching and substitution examples.""")
 
   def clientForDestination[M: Marshalling](implicit context: BridgeContext[M]) =
     createSenderClient(d =>
-      info[IO](s"Creating sender client for $d for destination ${context.destination.uri}") >> {
+      info[IO](s"Creating sender client for $d for destination uri ${context.destination.uri}") >> {
         context.destination match {
           case destination: TibrvEndpointInfo =>
             context.withDestinationTibrvContext { implicit tibrvContext =>
