@@ -53,7 +53,7 @@ Forward requests and one-way messages from one transport to another.
 """) {
       for {
         source <- opt[EndpointInfo]("source", "s").required
-          .description("""The uri for the source. Supported schemes: tibrv://, pulsar://, activemq://.
+          .description("""The URI for the source. Supported schemes: tibrv://, pulsar://, activemq://.
           
 Patterns with matching groups are supported.
 
@@ -81,7 +81,7 @@ Resulting destination: tibrv://host:7500/network/service/xxx.dev.yyy
 
 Also see --destination.""")
         destination <- opt[EndpointInfo]("destination", "d").required
-          .description("""The uri for the destination. Supported schemes: tibrv://, pulsar://, activemq://. 
+          .description("""The URI for the destination. Supported schemes: tibrv://, pulsar://, activemq://. 
 If no subject or topic is specified, it will be copied from the source. Back references to pattern matching groups in --source are supported.
             
 See --source for details on pattern matching and substitution examples.""")
@@ -399,7 +399,7 @@ See --source for details on pattern matching and substitution examples.""")
 
   def clientForDestination[M: Marshalling](implicit context: BridgeContext[M]) =
     createSenderClient(d =>
-      info[IO](s"Creating sender client for $d for destination uri ${context.destination.uri}") >> {
+      info[IO](s"Creating sender client for $d for destination URI ${context.destination.uri}") >> {
         context.destination match {
           case destination: TibrvEndpointInfo =>
             context.withDestinationTibrvContext { implicit tibrvContext =>
