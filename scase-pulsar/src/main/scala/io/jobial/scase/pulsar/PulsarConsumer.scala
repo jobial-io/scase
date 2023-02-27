@@ -34,7 +34,8 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
   val subscriptionInitialPublishTime: Option[Instant],
   val subscriptionName: String,
   val subscriptionType: SubscriptionType,
-  val subscriptionMode: SubscriptionMode
+  val subscriptionMode: SubscriptionMode,
+  val redeliverUnacknowledgedMessages: Boolean
 )(implicit context: PulsarContext)
   extends DefaultMessageConsumer[F, M] with CatsUtils with RegexUtils with Logging {
 
@@ -117,7 +118,9 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
     } yield result
 
   override def onStartReceiving =
-    delay(consumer.redeliverUnacknowledgedMessages())
+    whenA(redeliverUnacknowledgedMessages && !subscriptionInitialPosition.orElse(subscriptionInitialPublishTime).isDefined) {
+      delay(consumer.redeliverUnacknowledgedMessages())
+    }
 
   def stop =
     delay(consumer.unsubscribe()) >>
@@ -135,7 +138,8 @@ object PulsarConsumer extends CatsUtils with Logging {
     subscriptionInitialPublishTime: Option[Instant] = None,
     subscriptionName: String = s"subscription-${randomUUID}",
     subscriptionType: SubscriptionType = Exclusive,
-    subscriptionMode: SubscriptionMode = Durable
+    subscriptionMode: SubscriptionMode = Durable,
+    redeliverUnacknowledgedMessages: Boolean = false
   )(implicit context: PulsarContext): F[PulsarConsumer[F, M]] =
     delay(new PulsarConsumer[F, M](
       topic,
@@ -144,6 +148,7 @@ object PulsarConsumer extends CatsUtils with Logging {
       subscriptionInitialPublishTime,
       subscriptionName,
       subscriptionType,
-      subscriptionMode
+      subscriptionMode,
+      redeliverUnacknowledgedMessages
     ))
 }
