@@ -68,8 +68,7 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
         subscriptionInitialPosition.orElse(subscriptionInitialPublishTime.map(_ => Earliest)).map(b.subscriptionInitialPosition)
       )
       .subscribe()
-    
-    consumer.redeliverUnacknowledgedMessages()
+
     consumer
   }
 
@@ -93,7 +92,7 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
       _ <- trace(s"received message ${pulsarMessage.getMessageId} in $this")
       result <-
         if (subscriptionInitialPublishTime.map(pulsarMessage.getPublishTime < _.toEpochMilli).getOrElse(false))
-          trace(s"dropping message ${new String(pulsarMessage.getData).take(200)} with publish time ${pulsarMessage.getPublishTime} < $subscriptionInitialPublishTime on $topic") >>
+          trace(s"dropping message ${new String(pulsarMessage.getData).take(200)} with publish time ${pulsarMessage.getPublishTime} < $subscriptionInitialPublishTime on ${pulsarMessage.getTopicName}") >>
             raiseError(ReceiveTimeout(timeout))
         else for {
           result <- Unmarshaller[M].unmarshal(pulsarMessage.getData) match {
@@ -116,6 +115,9 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
           }
         } yield result
     } yield result
+
+  override def onStartReceiving =
+    delay(consumer.redeliverUnacknowledgedMessages())
 
   def stop =
     delay(consumer.unsubscribe()) >>

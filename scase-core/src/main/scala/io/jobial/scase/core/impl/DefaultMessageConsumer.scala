@@ -51,6 +51,8 @@ abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsu
 
   def initialize = unit
 
+  def onStartReceiving = unit
+
   override def subscribe[T](callback: MessageReceiveResult[F, M] => F[T])(implicit u: Unmarshaller[M]): F[MessageSubscription[F, M]] =
     for {
       _ <- initialize
@@ -71,6 +73,7 @@ abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsu
       }
       _ <- start(receiveMessagesUntilCancelled(callback, cancelled, receiving))
       _ <- receiving.get
+      _ <- onStartReceiving
       _ <- trace(s"new subscription in $this")
     } yield subscription
 }
