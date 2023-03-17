@@ -9,4 +9,8 @@ public class MessageContext {
     public MessageContext(io.jobial.scase.core.MessageContext<IO> context) {
         this.context = context;
     }
+    
+    public io.jobial.scase.core.MessageContext<IO> getContext() {
+        return context;
+    }
 }
