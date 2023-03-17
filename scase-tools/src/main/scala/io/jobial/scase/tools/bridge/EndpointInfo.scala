@@ -44,15 +44,15 @@ object EndpointInfo extends CatsUtils with Logging {
   def destinationClient[F[_] : Concurrent : Timer, M: Marshaller](destination: EndpointInfo, actualDestination: String): F[_ <: SenderClient[F, M]] =
     destination match {
       case destination: TibrvEndpointInfo =>
-        destination.withTibrvContext { implicit tibrvContext =>
+        destination.withTibrvContext { implicit tibrvContext: TibrvContext =>
           TibrvServiceConfiguration.destination[M](actualDestination).client[F]
         }
       case destination: PulsarEndpointInfo =>
-        destination.withPulsarContext { implicit pulsarContext =>
+        destination.withPulsarContext { implicit pulsarContext: PulsarContext =>
           PulsarServiceConfiguration.destination[M](actualDestination).client[F]
         }
       case destination: ActiveMQEndpointInfo =>
-        destination.withJMSSession { implicit session =>
+        destination.withJMSSession { implicit session: Session =>
           JMSServiceConfiguration.destination[M](session.createQueue(actualDestination)).client[F]
         }
       case _ =>
@@ -69,7 +69,7 @@ object EndpointInfo extends CatsUtils with Logging {
   def handlerService[F[_] : Concurrent : Timer, M: Marshaller : Unmarshaller](source: EndpointInfo, messageHandler: MessageHandler[F, M])(implicit ioContextShift: ContextShift[IO]) =
     source match {
       case source: PulsarEndpointInfo =>
-        source.withPulsarContext { implicit pulsarContext =>
+        source.withPulsarContext { implicit pulsarContext: PulsarContext =>
           PulsarServiceConfiguration.handler[M](
             Right(source.topicPattern),
             Some(1.second),
@@ -79,11 +79,11 @@ object EndpointInfo extends CatsUtils with Logging {
           ).service[F](messageHandler)
         }
       case source: TibrvEndpointInfo =>
-        source.withTibrvContext { implicit tibrvContext =>
+        source.withTibrvContext { implicit tibrvContext: TibrvContext =>
           TibrvServiceConfiguration.handler[M](source.subjects).service[F](messageHandler)
         }
       case source: ActiveMQEndpointInfo =>
-        source.withJMSSession { implicit session =>
+        source.withJMSSession { implicit session: Session =>
           JMSServiceConfiguration.handler[M]("", source.destination).service[F](messageHandler)
         }
       case _ =>

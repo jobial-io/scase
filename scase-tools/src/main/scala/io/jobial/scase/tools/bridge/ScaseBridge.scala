@@ -28,7 +28,9 @@ import io.jobial.scase.marshalling.Marshalling
 import io.jobial.scase.marshalling.Marshalling._
 import io.jobial.scase.marshalling.serialization.SerializationMarshalling
 import io.jobial.scase.marshalling.tibrv.raw.TibrvMsgRawMarshalling
+import io.jobial.scase.pulsar.PulsarContext
 import io.jobial.scase.pulsar.PulsarServiceConfiguration
+import io.jobial.scase.tibrv.TibrvContext
 import io.jobial.scase.tibrv.TibrvServiceConfiguration
 import io.jobial.scase.tools.bridge.EndpointInfo.destinationClient
 import io.jobial.scase.util.Cache
@@ -40,6 +42,7 @@ import org.apache.pulsar.client.api.SubscriptionInitialPosition.Earliest
 import java.lang.System.currentTimeMillis
 import java.time.Instant
 import java.util.UUID.randomUUID
+import javax.jms.Session
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 
@@ -176,7 +179,7 @@ See --source for details on pattern matching and substitution examples.""")
   def serviceForSource[M: Marshalling](implicit context: BridgeContext[M]) =
     context.source match {
       case source: PulsarEndpointInfo =>
-        source.withPulsarContext { implicit context =>
+        source.withPulsarContext { implicit context: PulsarContext =>
           delay(PulsarServiceConfiguration.requestResponse[M, M](
             Right(source.topicPattern),
             None,
@@ -188,11 +191,11 @@ See --source for details on pattern matching and substitution examples.""")
           ).service[IO](_))
         }
       case source: TibrvEndpointInfo =>
-        source.withTibrvContext { implicit context =>
+        source.withTibrvContext { implicit context: TibrvContext =>
           delay(TibrvServiceConfiguration.requestResponse[M, M](source.subjects).service[IO](_))
         }
       case source: ActiveMQEndpointInfo =>
-        source.withJMSSession { implicit session =>
+        source.withJMSSession { implicit session: Session =>
           delay(JMSServiceConfiguration.requestResponse[M, M](source.uri.toString, source.destination).service[IO](_))
         }
       case _ =>
@@ -271,15 +274,15 @@ See --source for details on pattern matching and substitution examples.""")
       info[IO](s"Creating request-response client for $d for ${context.destination.uri}") >> {
         context.destination match {
           case destination: PulsarEndpointInfo =>
-            destination.withPulsarContext { implicit pulsarContext =>
+            destination.withPulsarContext { implicit pulsarContext: PulsarContext =>
               PulsarServiceConfiguration.requestResponse[M, M](d).client[IO]
             }
           case destination: TibrvEndpointInfo =>
-            destination.withTibrvContext { implicit tibrvContext =>
+            destination.withTibrvContext { implicit tibrvContext: TibrvContext =>
               TibrvServiceConfiguration.requestResponse[M, M](Seq(d)).client[IO]
             }
           case destination: ActiveMQEndpointInfo =>
-            destination.withJMSSession { implicit session =>
+            destination.withJMSSession { implicit session: Session =>
               JMSServiceConfiguration.requestResponse[M, M](d, session.createQueue(d)).client[IO]
             }
           case _ =>
@@ -297,7 +300,7 @@ See --source for details on pattern matching and substitution examples.""")
   def clientForSource[M: Marshalling](implicit context: BridgeContext[M]) =
     context.source match {
       case source: PulsarEndpointInfo =>
-        source.withPulsarContext { implicit context =>
+        source.withPulsarContext { implicit context: PulsarContext =>
           PulsarServiceConfiguration.source[M](
             Right(source.topicPattern),
             Some(1.second),
@@ -307,11 +310,11 @@ See --source for details on pattern matching and substitution examples.""")
           ).client[IO]
         }
       case source: TibrvEndpointInfo =>
-        source.withTibrvContext { implicit context =>
+        source.withTibrvContext { implicit context: TibrvContext =>
           TibrvServiceConfiguration.source[M](source.subjects).client[IO]
         }
       case source: ActiveMQEndpointInfo =>
-        source.withJMSSession { implicit session =>
+        source.withJMSSession { implicit session: Session =>
           JMSServiceConfiguration.source[M](source.destination).client[IO]
         }
       case _ =>
