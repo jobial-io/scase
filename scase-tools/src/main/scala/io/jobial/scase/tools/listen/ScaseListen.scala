@@ -6,9 +6,9 @@ import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
 import io.jobial.scase.marshalling.rawbytes._
 import io.jobial.scase.marshalling.serialization.serializationMarshalling
-import io.jobial.scase.tools.bridge.EndpointInfo
-import io.jobial.scase.tools.bridge.EndpointInfo.handlerService
-import io.jobial.scase.tools.bridge.EndpointInfoParser
+import io.jobial.scase.tools.endpoint.Endpoint.handlerService
+import io.jobial.scase.tools.endpoint.Endpoint
+import io.jobial.scase.tools.endpoint.EndpointParser
 import io.jobial.scase.util.tryIncludingFatal
 import io.jobial.sclap.CommandLineApp
 
@@ -16,21 +16,21 @@ import java.util.UUID.randomUUID
 import scala.io.AnsiColor._
 import scala.util.Try
 
-object ScaseListen extends CommandLineApp with EndpointInfoParser with Logging {
+object ScaseListen extends CommandLineApp with EndpointParser with Logging {
 
   def run =
     for {
-      source <- opt[EndpointInfo]("source", "s").required
+      source <- opt[Endpoint]("source", "s").required
       messageSizeLimit <- opt[Int]("message-size-limit")
         .description("Truncate message above this size")
       output <- opt[String]("output", "o")
       format <- opt[String]("format").default("text")
         .description("text or binary")
       context = ScaseListenContext(source, messageSizeLimit, output, format match {
-        case "text" =>
-          Text
         case "binary" =>
           Binary
+        case _ =>
+          Text
       })
     } yield run(context)
 
@@ -66,7 +66,7 @@ object ScaseListen extends CommandLineApp with EndpointInfoParser with Logging {
 }
 
 case class ScaseListenContext(
-  source: EndpointInfo,
+  source: Endpoint,
   messageSizeLimit: Option[Int] = None,
   output: Option[String],
   format: Format

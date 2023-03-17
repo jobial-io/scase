@@ -21,7 +21,11 @@ import io.jobial.scase.pulsar.PulsarServiceConfiguration
 import io.jobial.scase.tibrv.TibrvContext
 import io.jobial.scase.tibrv.TibrvServiceConfiguration
 import io.jobial.scase.tools.bridge.ScaseBridge._
+import io.jobial.scase.tools.endpoint.ActiveMQEndpoint
+import io.jobial.scase.tools.endpoint.PulsarEndpoint
+import io.jobial.scase.tools.endpoint.TibrvEndpoint
 import io.jobial.scase.util.Hash.uuid
+
 import scala.concurrent.duration.DurationInt
 
 class ScaseBridgeTest extends ServiceTestSupport {
@@ -94,7 +98,7 @@ class ScaseBridgeTest extends ServiceTestSupport {
     for {
       context <- BridgeContext(s"pulsar://///(${topic})", "pulsar://///$1-destination", true, 300.seconds)
       r <- {
-        implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpointInfo].context
+        implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpoint].context
         testOneWayBridge(
           PulsarServiceConfiguration.source[TestRequest1](s"$topic-destination").client,
           PulsarServiceConfiguration.destination[TestRequest1](topic).client,
@@ -123,11 +127,11 @@ class ScaseBridgeTest extends ServiceTestSupport {
       r <-
         testOneWayBridge(
           {
-            implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpointInfo].context
+            implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpoint].context
             PulsarServiceConfiguration.source[TestRequest1](s"$topic-destination").client
           },
           {
-            implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpointInfo].context
+            implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpoint].context
             PulsarServiceConfiguration.destination[TestRequest1](topic).client
           },
           pure(context)
@@ -143,7 +147,7 @@ class ScaseBridgeTest extends ServiceTestSupport {
     for {
       context <- BridgeContext(s"pulsar://///(${topic})", "pulsar://///$1-destination", false, 300.seconds)
       r <- {
-        implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpointInfo].context
+        implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpoint].context
         testRequestResponseBridge(
           PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"$topic-destination").service(_),
           PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).client,
@@ -165,11 +169,11 @@ class ScaseBridgeTest extends ServiceTestSupport {
       r <- {
         testRequestResponseBridge(
           {
-            implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpointInfo].context
+            implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpoint].context
             PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](s"$topic-destination").service(_)
           },
           {
-            implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpointInfo].context
+            implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpoint].context
             PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).client
           },
           pure(context)
@@ -188,8 +192,8 @@ class ScaseBridgeTest extends ServiceTestSupport {
     for {
       context <- BridgeContext(s"pulsar://///${topic}", "tibrv://", true, 300.seconds)
       r <- {
-        implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpointInfo].context
-        implicit val tibrvContext = context.destination.asInstanceOf[TibrvEndpointInfo].context
+        implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpoint].context
+        implicit val tibrvContext = context.destination.asInstanceOf[TibrvEndpoint].context
         testOneWayBridge(
           TibrvServiceConfiguration.source[TestRequest1](Seq(topic)).client,
           PulsarServiceConfiguration.destination[TestRequest1](topic).client,
@@ -209,8 +213,8 @@ class ScaseBridgeTest extends ServiceTestSupport {
     for {
       context <- BridgeContext(s"pulsar://///${topic}", "tibrv://", false, 300.seconds)
       r <- {
-        implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpointInfo].context
-        implicit val tibrvContext = context.destination.asInstanceOf[TibrvEndpointInfo].context
+        implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpoint].context
+        implicit val tibrvContext = context.destination.asInstanceOf[TibrvEndpoint].context
         testRequestResponseBridge(
           TibrvServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(topic)).service(_),
           PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).client,
@@ -230,8 +234,8 @@ class ScaseBridgeTest extends ServiceTestSupport {
     for {
       context <- BridgeContext(s"tibrv://///${topic}", "pulsar://", false, 300.seconds)
       r <- {
-        implicit val tibrvContext = context.source.asInstanceOf[TibrvEndpointInfo].context
-        implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpointInfo].context
+        implicit val tibrvContext = context.source.asInstanceOf[TibrvEndpoint].context
+        implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpoint].context
         testRequestResponseBridge(
           PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).service(_),
           TibrvServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](Seq(topic)).client,
@@ -248,8 +252,8 @@ class ScaseBridgeTest extends ServiceTestSupport {
     for {
       context <- BridgeContext[Any](s"pulsar://///${topic}", "activemq://", true, 300.seconds)
       r <- {
-        implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpointInfo].context
-        implicit val session = context.destination.asInstanceOf[ActiveMQEndpointInfo].context.session
+        implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpoint].context
+        implicit val session = context.destination.asInstanceOf[ActiveMQEndpoint].context.session
 
         testOneWayBridge(
           JMSServiceConfiguration.source[TestRequest1](session.createQueue(topic)).client,
@@ -267,8 +271,8 @@ class ScaseBridgeTest extends ServiceTestSupport {
     for {
       context <- BridgeContext[Any](s"activemq:///${topic}", "pulsar://", false, 300.seconds)
       r <- {
-        implicit val session = context.source.asInstanceOf[ActiveMQEndpointInfo].context.session
-        implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpointInfo].context
+        implicit val session = context.source.asInstanceOf[ActiveMQEndpoint].context.session
+        implicit val pulsarContext = context.destination.asInstanceOf[PulsarEndpoint].context
 
         testRequestResponseBridge(
           PulsarServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic).service(_),
@@ -287,8 +291,8 @@ class ScaseBridgeTest extends ServiceTestSupport {
     for {
       context <- BridgeContext[Any](s"pulsar://///${topic}", "activemq://", false, 300.seconds)
       r <- {
-        implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpointInfo].context
-        implicit val session = context.destination.asInstanceOf[ActiveMQEndpointInfo].context.session
+        implicit val pulsarContext = context.source.asInstanceOf[PulsarEndpoint].context
+        implicit val session = context.destination.asInstanceOf[ActiveMQEndpoint].context.session
 
         testRequestResponseBridge(
           JMSServiceConfiguration.requestResponse[TestRequest[_ <: TestResponse], TestResponse](topic, session.createQueue(topic)).service(_),

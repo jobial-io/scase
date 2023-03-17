@@ -4,15 +4,20 @@ import io.jobial.scase.activemq.ActiveMQContext
 import io.jobial.scase.core.test.ServiceTestSupport
 import io.jobial.scase.pulsar.PulsarContext
 import io.jobial.scase.tibrv.TibrvContext
+import io.jobial.scase.tools.endpoint.ActiveMQEndpoint
+import io.jobial.scase.tools.endpoint.Endpoint
+import io.jobial.scase.tools.endpoint.PulsarEndpoint
+import io.jobial.scase.tools.endpoint.TibrvEndpoint
 import io.lemonlabs.uri.Uri
+
 import scala.language.postfixOps
 
 class EndpointInfoTest extends ServiceTestSupport {
 
   "parsing pulsar uri" should "work" in {
     def test(uri: String, context: PulsarContext, topic: String) = {
-      EndpointInfo(Uri.parse(uri)) match {
-        case Right(c: PulsarEndpointInfo) =>
+      Endpoint(Uri.parse(uri)) match {
+        case Right(c: PulsarEndpoint) =>
           assert(c.context == context)
           assert(c.topic == topic)
         case Left(t) =>
@@ -34,8 +39,8 @@ class EndpointInfoTest extends ServiceTestSupport {
 
   "parsing activemq uri" should "work" in {
     def test(uri: String, context: ActiveMQContext, destination: String) = {
-      EndpointInfo(Uri.parse(uri)) match {
-        case Right(c: ActiveMQEndpointInfo) =>
+      Endpoint(Uri.parse(uri)) match {
+        case Right(c: ActiveMQEndpoint) =>
           assert(c.context == context)
           assert(c.destinationName == destination)
         case Left(t) =>
@@ -52,8 +57,8 @@ class EndpointInfoTest extends ServiceTestSupport {
 
   "parsing tibrv uri" should "work" in {
     def test(uri: String, context: TibrvContext, subject: String) = {
-      EndpointInfo(Uri.parse(uri)) match {
-        case Right(c: TibrvEndpointInfo) =>
+      Endpoint(Uri.parse(uri)) match {
+        case Right(c: TibrvEndpoint) =>
           assert(c.context == context)
         case Left(t) =>
           fail(t)

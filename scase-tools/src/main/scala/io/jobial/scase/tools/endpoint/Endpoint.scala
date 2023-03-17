@@ -1,4 +1,4 @@
-package io.jobial.scase.tools.bridge
+package io.jobial.scase.tools.endpoint
 
 import cats.effect.Concurrent
 import cats.effect.ContextShift
@@ -28,30 +28,30 @@ import java.util.UUID.randomUUID
 import javax.jms.Session
 import scala.concurrent.duration.DurationInt
 
-object EndpointInfo extends CatsUtils with Logging {
+object Endpoint extends CatsUtils with Logging {
 
-  def apply(uri: Uri): Either[IllegalArgumentException, EndpointInfo] =
+  def apply(uri: Uri): Either[IllegalArgumentException, Endpoint] =
     if (uri.schemeOption === Some("pulsar"))
-      Right(PulsarEndpointInfo(uri))
+      Right(PulsarEndpoint(uri))
     else if (uri.schemeOption === Some("tibrv"))
-      Right(TibrvEndpointInfo(uri))
+      Right(TibrvEndpoint(uri))
     else if (uri.schemeOption === Some("activemq"))
-      Right(ActiveMQEndpointInfo(uri))
+      Right(ActiveMQEndpoint(uri))
     else
       Left(new IllegalArgumentException(s"Not a valid endpoint URI: $uri"))
 
   // TODO: move these somewhere else
-  def destinationClient[F[_] : Concurrent : Timer, M: Marshaller](destination: EndpointInfo, actualDestination: String): F[_ <: SenderClient[F, M]] =
+  def destinationClient[F[_] : Concurrent : Timer, M: Marshaller](destination: Endpoint, actualDestination: String): F[_ <: SenderClient[F, M]] =
     destination match {
-      case destination: TibrvEndpointInfo =>
+      case destination: TibrvEndpoint =>
         destination.withTibrvContext { implicit tibrvContext: TibrvContext =>
           TibrvServiceConfiguration.destination[M](actualDestination).client[F]
         }
-      case destination: PulsarEndpointInfo =>
+      case destination: PulsarEndpoint =>
         destination.withPulsarContext { implicit pulsarContext: PulsarContext =>
           PulsarServiceConfiguration.destination[M](actualDestination).client[F]
         }
-      case destination: ActiveMQEndpointInfo =>
+      case destination: ActiveMQEndpoint =>
         destination.withJMSSession { implicit session: Session =>
           JMSServiceConfiguration.destination[M](session.createQueue(actualDestination)).client[F]
         }
@@ -59,16 +59,16 @@ object EndpointInfo extends CatsUtils with Logging {
         raiseError(new IllegalStateException(s"${destination} not supported"))
     }
 
-  def destinationClient[F[_] : Concurrent : Timer, M: Marshaller](destination: EndpointInfo): F[_ <: SenderClient[F, M]] =
+  def destinationClient[F[_] : Concurrent : Timer, M: Marshaller](destination: Endpoint): F[_ <: SenderClient[F, M]] =
     destinationClient[F, M](destination, destination.destinationName)
 
   val defaultSubscriptionInitialPosition = Some(Earliest)
 
   def defaultSubscriptionInitialPublishTime = Some(Instant.now.minusSeconds(60))
 
-  def handlerService[F[_] : Concurrent : Timer, M: Marshaller : Unmarshaller](source: EndpointInfo, messageHandler: MessageHandler[F, M])(implicit ioContextShift: ContextShift[IO]) =
+  def handlerService[F[_] : Concurrent : Timer, M: Marshaller : Unmarshaller](source: Endpoint, messageHandler: MessageHandler[F, M])(implicit ioContextShift: ContextShift[IO]) =
     source match {
-      case source: PulsarEndpointInfo =>
+      case source: PulsarEndpoint =>
         source.withPulsarContext { implicit pulsarContext: PulsarContext =>
           PulsarServiceConfiguration.handler[M](
             Right(source.topicPattern),
@@ -78,11 +78,11 @@ object EndpointInfo extends CatsUtils with Logging {
             source.subscriptionName.getOrElse(s"subscription-${randomUUID}")
           ).service[F](messageHandler)
         }
-      case source: TibrvEndpointInfo =>
+      case source: TibrvEndpoint =>
         source.withTibrvContext { implicit tibrvContext: TibrvContext =>
           TibrvServiceConfiguration.handler[M](source.subjects).service[F](messageHandler)
         }
-      case source: ActiveMQEndpointInfo =>
+      case source: ActiveMQEndpoint =>
         source.withJMSSession { implicit session: Session =>
           JMSServiceConfiguration.handler[M]("", source.destination).service[F](messageHandler)
         }
@@ -92,7 +92,7 @@ object EndpointInfo extends CatsUtils with Logging {
 
 }
 
-trait EndpointInfo extends CatsUtils {
+trait Endpoint extends CatsUtils {
 
   def uri: Uri
 
@@ -104,11 +104,11 @@ trait EndpointInfo extends CatsUtils {
     else this
     ).canonicalUri.toStringRaw
 
-  def asDestinationUriString(actualSource: EndpointInfo) = (if (pathLast === "") withDestinationName(actualSource.pathLast) else this).canonicalUri.toStringRaw
+  def asDestinationUriString(actualSource: Endpoint) = (if (pathLast === "") withDestinationName(actualSource.pathLast) else this).canonicalUri.toStringRaw
 
   def withDestinationName(destinationName: String) = {
     val destinationPath = UrlPath.parse(destinationName)
-    EndpointInfo.apply(canonicalUri.toUrl.withPath(UrlPath(canonicalUri.path.parts.dropRight(destinationPath.parts.size) ++ destinationPath.parts))).toOption.get
+    Endpoint.apply(canonicalUri.toUrl.withPath(UrlPath(canonicalUri.path.parts.dropRight(destinationPath.parts.size) ++ destinationPath.parts))).toOption.get
   }
 
   def pathLen: Int
@@ -125,7 +125,7 @@ trait EndpointInfo extends CatsUtils {
 
   def asPulsarEndpointInfo =
     this match {
-      case endpointInfo: PulsarEndpointInfo =>
+      case endpointInfo: PulsarEndpoint =>
         Right(endpointInfo)
       case _ =>
         Left(new IllegalStateException("Not a Pulsar endpoint"))
@@ -139,7 +139,7 @@ trait EndpointInfo extends CatsUtils {
 
   def asTibrvEndpointInfo =
     this match {
-      case endpointInfo: TibrvEndpointInfo =>
+      case endpointInfo: TibrvEndpoint =>
         Right(endpointInfo)
       case _ =>
         Left(new IllegalStateException("Not a TibRV endpoint"))
@@ -153,7 +153,7 @@ trait EndpointInfo extends CatsUtils {
 
   def asActiveMQEndpointInfo =
     this match {
-      case endpointInfo: ActiveMQEndpointInfo =>
+      case endpointInfo: ActiveMQEndpoint =>
         Right(endpointInfo)
       case _ =>
         Left(new IllegalStateException("ActiveMQ context is required"))
@@ -166,7 +166,7 @@ trait EndpointInfo extends CatsUtils {
     } yield r
 }
 
-case class PulsarEndpointInfo(uri: Uri) extends EndpointInfo {
+case class PulsarEndpoint(uri: Uri) extends Endpoint {
 
   val topic = pathLast
 
@@ -193,7 +193,7 @@ case class PulsarEndpointInfo(uri: Uri) extends EndpointInfo {
     f(context)
 }
 
-case class TibrvEndpointInfo(uri: Uri) extends EndpointInfo {
+case class TibrvEndpoint(uri: Uri) extends Endpoint {
 
   val subjects = Seq(pathLast.replaceAll("\\.\\*$", ".>"))
 
@@ -214,7 +214,7 @@ case class TibrvEndpointInfo(uri: Uri) extends EndpointInfo {
     f(context)
 }
 
-case class ActiveMQEndpointInfo(uri: Uri) extends EndpointInfo {
+case class ActiveMQEndpoint(uri: Uri) extends Endpoint {
 
   lazy val destination = context.session.createQueue(destinationName)
 

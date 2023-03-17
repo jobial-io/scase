@@ -32,7 +32,12 @@ import io.jobial.scase.pulsar.PulsarContext
 import io.jobial.scase.pulsar.PulsarServiceConfiguration
 import io.jobial.scase.tibrv.TibrvContext
 import io.jobial.scase.tibrv.TibrvServiceConfiguration
-import io.jobial.scase.tools.bridge.EndpointInfo.destinationClient
+import io.jobial.scase.tools.endpoint.ActiveMQEndpoint
+import io.jobial.scase.tools.endpoint.Endpoint
+import io.jobial.scase.tools.endpoint.Endpoint.destinationClient
+import io.jobial.scase.tools.endpoint.EndpointParser
+import io.jobial.scase.tools.endpoint.PulsarEndpoint
+import io.jobial.scase.tools.endpoint.TibrvEndpoint
 import io.jobial.scase.util.Cache
 import io.jobial.sclap.CommandLineApp
 import io.lemonlabs.uri.Uri
@@ -46,14 +51,14 @@ import javax.jms.Session
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 
-object ScaseBridge extends CommandLineApp with EndpointInfoParser with Logging {
+object ScaseBridge extends CommandLineApp with EndpointParser with Logging {
 
   def run =
     command.description(""""
 Forward requests and one-way messages from one transport to another.
 """) {
       for {
-        source <- opt[EndpointInfo]("source", "s").required
+        source <- opt[Endpoint]("source", "s").required
           .description("""The URI for the source. Supported schemes: tibrv://, pulsar://, activemq://.
           
 Patterns with matching groups are supported.
@@ -81,7 +86,7 @@ Actual source: pulsar://host:6650/tenant/namespace/xxx.prod.yyy
 Resulting destination: tibrv://host:7500/network/service/xxx.dev.yyy
 
 Also see --destination.""")
-        destination <- opt[EndpointInfo]("destination", "d").required
+        destination <- opt[Endpoint]("destination", "d").required
           .description("""The URI for the destination. Supported schemes: tibrv://, pulsar://, activemq://. 
 If no subject or topic is specified, it will be copied from the source. Back references to pattern matching groups in --source are supported.
             
@@ -96,11 +101,11 @@ See --source for details on pattern matching and substitution examples.""")
           .description("The maximum number of pending messages before the bridge starts dropping and rolling back")
       } yield for {
         marshalling <- source match {
-          case source: ActiveMQEndpointInfo =>
+          case source: ActiveMQEndpoint =>
             delay(new SerializationMarshalling[Any])
           case _ =>
             destination match {
-              case destination: ActiveMQEndpointInfo =>
+              case destination: ActiveMQEndpoint =>
                 delay(new SerializationMarshalling[Any])
               case _ =>
                 delay(new TibrvMsgRawMarshalling().asInstanceOf[Marshalling[Any]])
@@ -113,8 +118,8 @@ See --source for details on pattern matching and substitution examples.""")
     }
 
   case class BridgeContext[M: Marshalling](
-    source: EndpointInfo,
-    destination: EndpointInfo,
+    source: Endpoint,
+    destination: Endpoint,
     oneWay: Boolean,
     timeout: FiniteDuration,
     maximumPendingMessages: Int,
@@ -136,8 +141,8 @@ See --source for details on pattern matching and substitution examples.""")
   object BridgeContext {
 
     def apply[M: Marshalling](
-      source: EndpointInfo,
-      destination: EndpointInfo,
+      source: Endpoint,
+      destination: Endpoint,
       oneWay: Boolean,
       timeout: FiniteDuration,
       maximumPendingMessages: Int = 3000
@@ -178,7 +183,7 @@ See --source for details on pattern matching and substitution examples.""")
 
   def serviceForSource[M: Marshalling](implicit context: BridgeContext[M]) =
     context.source match {
-      case source: PulsarEndpointInfo =>
+      case source: PulsarEndpoint =>
         source.withPulsarContext { implicit context: PulsarContext =>
           delay(PulsarServiceConfiguration.requestResponse[M, M](
             Right(source.topicPattern),
@@ -190,11 +195,11 @@ See --source for details on pattern matching and substitution examples.""")
             source.subscriptionName.getOrElse(defaultPulsarSubscriptionName)
           ).service[IO](_))
         }
-      case source: TibrvEndpointInfo =>
+      case source: TibrvEndpoint =>
         source.withTibrvContext { implicit context: TibrvContext =>
           delay(TibrvServiceConfiguration.requestResponse[M, M](source.subjects).service[IO](_))
         }
-      case source: ActiveMQEndpointInfo =>
+      case source: ActiveMQEndpoint =>
         source.withJMSSession { implicit session: Session =>
           delay(JMSServiceConfiguration.requestResponse[M, M](source.uri.toString, source.destination).service[IO](_))
         }
@@ -202,13 +207,13 @@ See --source for details on pattern matching and substitution examples.""")
         raiseError(new IllegalStateException(s"${context.source} not supported"))
     }
 
-  def substituteDestinationName(source: EndpointInfo, destination: EndpointInfo, actualSource: EndpointInfo): EndpointInfo =
-    EndpointInfo.apply(Uri.parse(actualSource.uri.toStringRaw.replaceAll(
+  def substituteDestinationName(source: Endpoint, destination: Endpoint, actualSource: Endpoint): Endpoint =
+    Endpoint.apply(Uri.parse(actualSource.uri.toStringRaw.replaceAll(
       source.asSourceUriString,
       destination.asDestinationUriString(actualSource)
     ))).toOption.get
 
-  def substituteDestinationName[M](actualSource: EndpointInfo)(implicit context: BridgeContext[M]): String =
+  def substituteDestinationName[M](actualSource: Endpoint)(implicit context: BridgeContext[M]): String =
     substituteDestinationName(context.source, context.destination, actualSource).destinationName
 
   def substituteDestinationName[M](destinationName: String)(implicit context: BridgeContext[M]): String =
@@ -273,15 +278,15 @@ See --source for details on pattern matching and substitution examples.""")
     createRequestResponseClient(d =>
       info[IO](s"Creating request-response client for $d for ${context.destination.uri}") >> {
         context.destination match {
-          case destination: PulsarEndpointInfo =>
+          case destination: PulsarEndpoint =>
             destination.withPulsarContext { implicit pulsarContext: PulsarContext =>
               PulsarServiceConfiguration.requestResponse[M, M](d).client[IO]
             }
-          case destination: TibrvEndpointInfo =>
+          case destination: TibrvEndpoint =>
             destination.withTibrvContext { implicit tibrvContext: TibrvContext =>
               TibrvServiceConfiguration.requestResponse[M, M](Seq(d)).client[IO]
             }
-          case destination: ActiveMQEndpointInfo =>
+          case destination: ActiveMQEndpoint =>
             destination.withJMSSession { implicit session: Session =>
               JMSServiceConfiguration.requestResponse[M, M](d, session.createQueue(d)).client[IO]
             }
@@ -299,7 +304,7 @@ See --source for details on pattern matching and substitution examples.""")
 
   def clientForSource[M: Marshalling](implicit context: BridgeContext[M]) =
     context.source match {
-      case source: PulsarEndpointInfo =>
+      case source: PulsarEndpoint =>
         source.withPulsarContext { implicit context: PulsarContext =>
           PulsarServiceConfiguration.source[M](
             Right(source.topicPattern),
@@ -309,11 +314,11 @@ See --source for details on pattern matching and substitution examples.""")
             source.subscriptionName.getOrElse(defaultPulsarSubscriptionName)
           ).client[IO]
         }
-      case source: TibrvEndpointInfo =>
+      case source: TibrvEndpoint =>
         source.withTibrvContext { implicit context: TibrvContext =>
           TibrvServiceConfiguration.source[M](source.subjects).client[IO]
         }
-      case source: ActiveMQEndpointInfo =>
+      case source: ActiveMQEndpoint =>
         source.withJMSSession { implicit session: Session =>
           JMSServiceConfiguration.source[M](source.destination).client[IO]
         }

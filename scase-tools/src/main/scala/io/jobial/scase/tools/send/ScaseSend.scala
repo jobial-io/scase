@@ -3,19 +3,19 @@ package io.jobial.scase.tools.send
 import cats.effect.IO
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.rawbytes._
-import io.jobial.scase.tools.bridge.EndpointInfo
-import io.jobial.scase.tools.bridge.EndpointInfo.destinationClient
-import io.jobial.scase.tools.bridge.EndpointInfoParser
+import io.jobial.scase.tools.endpoint.Endpoint.destinationClient
+import io.jobial.scase.tools.endpoint.Endpoint
+import io.jobial.scase.tools.endpoint.EndpointParser
 import io.jobial.sclap.CommandLineApp
 import org.apache.commons.io.IOUtils.toByteArray
 
 import java.io.FileInputStream
 
-object ScaseSend extends CommandLineApp with EndpointInfoParser with Logging {
+object ScaseSend extends CommandLineApp with EndpointParser with Logging {
 
   def run =
     for {
-      destination <- opt[EndpointInfo]("destination", "d").required
+      destination <- opt[Endpoint]("destination", "d").required
       file <- opt[String]("file", "f")
     } yield for {
       client <- destinationClient[IO, Array[Byte]](destination)
