@@ -1,18 +1,14 @@
-package io.jobial.scase.tools.bridge
+package io.jobial.scase.tools.endpoint
 
 import io.jobial.scase.activemq.ActiveMQContext
 import io.jobial.scase.core.test.ServiceTestSupport
 import io.jobial.scase.pulsar.PulsarContext
 import io.jobial.scase.tibrv.TibrvContext
-import io.jobial.scase.tools.endpoint.ActiveMQEndpoint
-import io.jobial.scase.tools.endpoint.Endpoint
-import io.jobial.scase.tools.endpoint.PulsarEndpoint
-import io.jobial.scase.tools.endpoint.TibrvEndpoint
 import io.lemonlabs.uri.Uri
 
 import scala.language.postfixOps
 
-class EndpointInfoTest extends ServiceTestSupport {
+class EndpointTest extends ServiceTestSupport {
 
   "parsing pulsar uri" should "work" in {
     def test(uri: String, context: PulsarContext, topic: String) = {

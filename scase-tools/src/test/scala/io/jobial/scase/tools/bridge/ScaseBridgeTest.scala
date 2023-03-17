@@ -34,55 +34,55 @@ class ScaseBridgeTest extends ServiceTestSupport {
 
   implicit val tibrvContextEq = Eq.fromUniversalEquals[TibrvContext]
 
-  implicit def parseEndpointInfo(v: String) = endpointInfoArgumentValueParser.parse(v).toOption.get
+  implicit def parseEndpoint(v: String) = endpointArgumentValueParser.parse(v).toOption.get
 
   "destination name pattern" should "work" in {
     val pulsarUriPrefix = "pulsar://host:6650/tenant/namespace"
     val tibrvUriPrefix = "tibrv://host:7500/network/service"
 
-    assert(parseEndpointInfo(s"${pulsarUriPrefix}/XXX.DEV.YYY.ZZZ") ==
+    assert(parseEndpoint(s"${pulsarUriPrefix}/XXX.DEV.YYY.ZZZ") ==
       substituteDestinationName(
         s"${pulsarUriPrefix}/([A-Z].*)\\.PROD\\.(.*)",
         s"${pulsarUriPrefix}/$$1.DEV.$$2",
         s"${pulsarUriPrefix}/XXX.PROD.YYY.ZZZ")
     )
 
-    assert(parseEndpointInfo(s"${pulsarUriPrefix}/XXX.DEV.XXX.YYY.ZZZ") ==
+    assert(parseEndpoint(s"${pulsarUriPrefix}/XXX.DEV.XXX.YYY.ZZZ") ==
       substituteDestinationName(
         s"${tibrvUriPrefix}/([A-Z].*)\\.PROD\\.(.*)",
         s"${pulsarUriPrefix}/$$1.DEV.$$2",
         s"${tibrvUriPrefix}/XXX.PROD.XXX.YYY.ZZZ")
     )
 
-    assert(parseEndpointInfo(s"${pulsarUriPrefix}/XXX.DEV.XXX.YYY.ZZZ") ==
+    assert(parseEndpoint(s"${pulsarUriPrefix}/XXX.DEV.XXX.YYY.ZZZ") ==
       substituteDestinationName(
         s"${tibrvUriPrefix}/([A-Z].*)\\.PROD\\.(.*).>",
         s"${pulsarUriPrefix}/$$1.DEV.$$2",
         s"${tibrvUriPrefix}/XXX.PROD.XXX.YYY.ZZZ")
     )
 
-    assert(parseEndpointInfo(s"${tibrvUriPrefix}/XXX.DEV.XXX.YYY.ZZZ") ==
+    assert(parseEndpoint(s"${tibrvUriPrefix}/XXX.DEV.XXX.YYY.ZZZ") ==
       substituteDestinationName(
         s"${pulsarUriPrefix}/XXX.*",
         s"${tibrvUriPrefix}/",
         s"${pulsarUriPrefix}/XXX.DEV.XXX.YYY.ZZZ")
     )
 
-    assert(parseEndpointInfo(s"${pulsarUriPrefix}/XXX.DEV.XXX.YYY.ZZZ") ==
+    assert(parseEndpoint(s"${pulsarUriPrefix}/XXX.DEV.XXX.YYY.ZZZ") ==
       substituteDestinationName(
         s"${tibrvUriPrefix}/.>",
         s"${pulsarUriPrefix}/",
         s"${tibrvUriPrefix}/XXX.DEV.XXX.YYY.ZZZ")
     )
 
-    assert(parseEndpointInfo(s"${tibrvUriPrefix}/XXX.DEV.XXX.YYY.ZZZ") ==
+    assert(parseEndpoint(s"${tibrvUriPrefix}/XXX.DEV.XXX.YYY.ZZZ") ==
       substituteDestinationName(
         s"${pulsarUriPrefix}/",
         s"${tibrvUriPrefix}/",
         s"${pulsarUriPrefix}/XXX.DEV.XXX.YYY.ZZZ")
     )
 
-    assert(parseEndpointInfo(s"${pulsarUriPrefix}/XXX.DEV.XXX.YYY.ZZZ") ==
+    assert(parseEndpoint(s"${pulsarUriPrefix}/XXX.DEV.XXX.YYY.ZZZ") ==
       substituteDestinationName(
         s"${tibrvUriPrefix}/",
         s"${pulsarUriPrefix}/",

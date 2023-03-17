@@ -123,45 +123,45 @@ trait Endpoint extends CatsUtils {
 
   val destinationName = pathLast
 
-  def asPulsarEndpointInfo =
+  def asPulsarEndpoint =
     this match {
-      case endpointInfo: PulsarEndpoint =>
-        Right(endpointInfo)
+      case endpoint: PulsarEndpoint =>
+        Right(endpoint)
       case _ =>
         Left(new IllegalStateException("Not a Pulsar endpoint"))
     }
 
   def withPulsarContext[F[_] : Concurrent, T](f: PulsarContext => F[T]): F[T] =
     for {
-      e <- fromEither(asPulsarEndpointInfo)
+      e <- fromEither(asPulsarEndpoint)
       r <- e.withPulsarContext(f)
     } yield r
 
-  def asTibrvEndpointInfo =
+  def asTibrvEndpoint =
     this match {
-      case endpointInfo: TibrvEndpoint =>
-        Right(endpointInfo)
+      case endpoint: TibrvEndpoint =>
+        Right(endpoint)
       case _ =>
         Left(new IllegalStateException("Not a TibRV endpoint"))
     }
 
   def withTibrvContext[F[_] : Concurrent, T](f: TibrvContext => F[T]): F[T] =
     for {
-      e <- fromEither(asTibrvEndpointInfo)
+      e <- fromEither(asTibrvEndpoint)
       r <- e.withTibrvContext(f)
     } yield r
 
-  def asActiveMQEndpointInfo =
+  def asActiveMQEndpoint =
     this match {
-      case endpointInfo: ActiveMQEndpoint =>
-        Right(endpointInfo)
+      case endpoint: ActiveMQEndpoint =>
+        Right(endpoint)
       case _ =>
         Left(new IllegalStateException("ActiveMQ context is required"))
     }
 
   def withJMSSession[F[_] : Concurrent, T](f: Session => F[T]): F[T] =
     for {
-      e <- fromEither(asActiveMQEndpointInfo)
+      e <- fromEither(asActiveMQEndpoint)
       r <- e.withJMSSession(f)
     } yield r
 }

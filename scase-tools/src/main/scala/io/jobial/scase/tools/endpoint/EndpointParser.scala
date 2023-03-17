@@ -6,7 +6,7 @@ import io.lemonlabs.uri.Uri
 
 trait EndpointParser {
 
-  implicit val endpointInfoArgumentValueParser = new ArgumentValueParser[Endpoint] with EitherUtils() {
+  implicit val endpointArgumentValueParser = new ArgumentValueParser[Endpoint] with EitherUtils() {
     def parse(value: String) =
       Endpoint(Uri.parse(value))
 
