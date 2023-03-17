@@ -28,20 +28,17 @@ import io.jobial.scase.marshalling.Marshalling
 import io.jobial.scase.marshalling.Marshalling._
 import io.jobial.scase.marshalling.serialization.SerializationMarshalling
 import io.jobial.scase.marshalling.tibrv.raw.TibrvMsgRawMarshalling
-import io.jobial.scase.pulsar.PulsarContext
 import io.jobial.scase.pulsar.PulsarServiceConfiguration
-import io.jobial.scase.tibrv.TibrvContext
 import io.jobial.scase.tibrv.TibrvServiceConfiguration
 import io.jobial.scase.util.Cache
 import io.jobial.sclap.CommandLineApp
 import io.lemonlabs.uri.Uri
 import org.apache.pulsar.client.api.Message
-import org.apache.pulsar.client.api.SubscriptionInitialPosition
 import org.apache.pulsar.client.api.SubscriptionInitialPosition.Earliest
+
 import java.lang.System.currentTimeMillis
 import java.time.Instant
 import java.util.UUID.randomUUID
-import javax.jms.Session
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 
@@ -127,48 +124,6 @@ See --source for details on pattern matching and substitution examples.""")
 
     val marshalling = Marshalling[M]
 
-    def withPulsarContext[T](endpointInfo: EndpointInfo)(f: PulsarContext => IO[T]) =
-      endpointInfo match {
-        case endpointInfo: PulsarEndpointInfo =>
-          f(endpointInfo.context)
-        case _ =>
-          raiseError(new IllegalStateException("Pulsar context is required"))
-      }
-
-    def withSourcePulsarContext[T](f: PulsarContext => IO[T]) =
-      withPulsarContext(source)(f)
-
-    def withDestinationPulsarContext[T](f: PulsarContext => IO[T]) =
-      withPulsarContext(destination)(f)
-
-    def withTibrvContext[T](endpointInfo: EndpointInfo)(f: TibrvContext => IO[T]) =
-      endpointInfo match {
-        case endpointInfo: TibrvEndpointInfo =>
-          f(endpointInfo.context)
-        case _ =>
-          raiseError(new IllegalStateException("TibRV context is required"))
-      }
-
-    def withSourceTibrvContext[T](f: TibrvContext => IO[T]) =
-      withTibrvContext(source)(f)
-
-    def withDestinationTibrvContext[T](f: TibrvContext => IO[T]) =
-      withTibrvContext(destination)(f)
-
-    def withJMSSession[T](endpointInfo: EndpointInfo)(f: Session => IO[T]) =
-      endpointInfo match {
-        case endpointInfo: ActiveMQEndpointInfo =>
-          f(endpointInfo.context.session)
-        case _ =>
-          raiseError(new IllegalStateException("ActiveMQ context is required"))
-      }
-
-    def withSourceJMSSession[T](f: Session => IO[T]) =
-      withJMSSession(source)(f)
-
-    def withDestinationJMSSession[T](f: Session => IO[T]) =
-      withJMSSession(destination)(f)
-
     def runBridge =
       startBridge[M](this)
 
@@ -220,7 +175,7 @@ See --source for details on pattern matching and substitution examples.""")
   def serviceForSource[M: Marshalling](implicit context: BridgeContext[M]) =
     context.source match {
       case source: PulsarEndpointInfo =>
-        context.withSourcePulsarContext { implicit context =>
+        source.withPulsarContext { implicit context =>
           delay(PulsarServiceConfiguration.requestResponse[M, M](
             Right(source.topicPattern),
             None,
@@ -232,11 +187,11 @@ See --source for details on pattern matching and substitution examples.""")
           ).service[IO](_))
         }
       case source: TibrvEndpointInfo =>
-        context.withSourceTibrvContext { implicit context =>
+        source.withTibrvContext { implicit context =>
           delay(TibrvServiceConfiguration.requestResponse[M, M](source.subjects).service[IO](_))
         }
       case source: ActiveMQEndpointInfo =>
-        context.withSourceJMSSession { implicit session =>
+        source.withJMSSession { implicit session =>
           delay(JMSServiceConfiguration.requestResponse[M, M](source.uri.toString, source.destination).service[IO](_))
         }
       case _ =>
@@ -315,15 +270,15 @@ See --source for details on pattern matching and substitution examples.""")
       info[IO](s"Creating request-response client for $d for ${context.destination.uri}") >> {
         context.destination match {
           case destination: PulsarEndpointInfo =>
-            context.withDestinationPulsarContext { implicit pulsarContext =>
+            destination.withPulsarContext { implicit pulsarContext =>
               PulsarServiceConfiguration.requestResponse[M, M](d).client[IO]
             }
           case destination: TibrvEndpointInfo =>
-            context.withDestinationTibrvContext { implicit tibrvContext =>
+            destination.withTibrvContext { implicit tibrvContext =>
               TibrvServiceConfiguration.requestResponse[M, M](Seq(d)).client[IO]
             }
           case destination: ActiveMQEndpointInfo =>
-            context.withDestinationJMSSession { implicit session =>
+            destination.withJMSSession { implicit session =>
               JMSServiceConfiguration.requestResponse[M, M](d, session.createQueue(d)).client[IO]
             }
           case _ =>
@@ -337,11 +292,11 @@ See --source for details on pattern matching and substitution examples.""")
   val defaultSubscriptionInitialPosition = Some(Earliest)
 
   def defaultSubscriptionInitialPublishTime = Some(Instant.now.minusSeconds(60))
-  
+
   def clientForSource[M: Marshalling](implicit context: BridgeContext[M]) =
     context.source match {
       case source: PulsarEndpointInfo =>
-        context.withSourcePulsarContext { implicit context =>
+        source.withPulsarContext { implicit context =>
           PulsarServiceConfiguration.source[M](
             Right(source.topicPattern),
             Some(1.second),
@@ -351,11 +306,11 @@ See --source for details on pattern matching and substitution examples.""")
           ).client[IO]
         }
       case source: TibrvEndpointInfo =>
-        context.withSourceTibrvContext { implicit context =>
+        source.withTibrvContext { implicit context =>
           TibrvServiceConfiguration.source[M](source.subjects).client[IO]
         }
       case source: ActiveMQEndpointInfo =>
-        context.withSourceJMSSession { implicit session =>
+        source.withJMSSession { implicit session =>
           JMSServiceConfiguration.source[M](source.destination).client[IO]
         }
       case _ =>
@@ -399,24 +354,8 @@ See --source for details on pattern matching and substitution examples.""")
 
   def clientForDestination[M: Marshalling](implicit context: BridgeContext[M]) =
     createSenderClient(d =>
-      info[IO](s"Creating sender client for $d for destination URI ${context.destination.uri}") >> {
-        context.destination match {
-          case destination: TibrvEndpointInfo =>
-            context.withDestinationTibrvContext { implicit tibrvContext =>
-              TibrvServiceConfiguration.destination[M](d).client[IO]
-            }
-          case destination: PulsarEndpointInfo =>
-            context.withDestinationPulsarContext { implicit pulsarContext =>
-              PulsarServiceConfiguration.destination[M](d).client[IO]
-            }
-          case destination: ActiveMQEndpointInfo =>
-            context.withDestinationJMSSession { implicit session =>
-              JMSServiceConfiguration.destination[M](session.createQueue(d)).client[IO]
-            }
-          case _ =>
-            raiseError(new IllegalStateException(s"${context.destination} not supported"))
-        }
-      }
+      info[IO](s"Creating sender client for $d for destination URI ${context.destination.uri}") >>
+        EndpointInfo.clientForDestination[IO, M](context.destination, d)
     )
 
   def startRequestResponseBridge[M: Marshalling](

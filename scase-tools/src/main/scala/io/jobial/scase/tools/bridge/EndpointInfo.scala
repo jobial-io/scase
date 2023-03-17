@@ -1,16 +1,27 @@
 package io.jobial.scase.tools.bridge
 
+import cats.effect.Concurrent
+import cats.effect.Timer
 import cats.implicits._
 import cats.implicits.catsSyntaxEq
 import io.jobial.scase.activemq.ActiveMQContext
+import io.jobial.scase.core.SenderClient
+import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.scase.jms.JMSServiceConfiguration
+import io.jobial.scase.logging.Logging
+import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.pulsar.PulsarContext
+import io.jobial.scase.pulsar.PulsarServiceConfiguration
 import io.jobial.scase.tibrv.TibrvContext
+import io.jobial.scase.tibrv.TibrvServiceConfiguration
 import io.lemonlabs.uri.Uri
 import io.lemonlabs.uri.UrlPath
 import org.apache.pulsar.client.api.SubscriptionInitialPosition
-import java.time.Instant
 
-object EndpointInfo {
+import java.time.Instant
+import javax.jms.Session
+
+object EndpointInfo extends CatsUtils with Logging {
 
   def apply(uri: Uri): Either[IllegalArgumentException, EndpointInfo] =
     if (uri.schemeOption === Some("pulsar"))
@@ -21,9 +32,31 @@ object EndpointInfo {
       Right(ActiveMQEndpointInfo(uri))
     else
       Left(new IllegalArgumentException(s"Not a valid endpoint URI: $uri"))
+
+  // TODO: move these somewhere else
+  def clientForDestination[F[_] : Concurrent : Timer, M: Marshaller](destination: EndpointInfo, actualDestination: String): F[_ <: SenderClient[F, M]] =
+    destination match {
+      case destination: TibrvEndpointInfo =>
+        destination.withTibrvContext { implicit tibrvContext =>
+          TibrvServiceConfiguration.destination[M](actualDestination).client[F]
+        }
+      case destination: PulsarEndpointInfo =>
+        destination.withPulsarContext { implicit pulsarContext =>
+          PulsarServiceConfiguration.destination[M](actualDestination).client[F]
+        }
+      case destination: ActiveMQEndpointInfo =>
+        destination.withJMSSession { implicit session =>
+          JMSServiceConfiguration.destination[M](session.createQueue(actualDestination)).client[F]
+        }
+      case _ =>
+        raiseError(new IllegalStateException(s"${destination} not supported"))
+    }
+
+  def clientForDestination[F[_] : Concurrent : Timer, M: Marshaller](destination: EndpointInfo): F[_ <: SenderClient[F, M]] =
+    clientForDestination[F, M](destination, destination.destinationName)
 }
 
-trait EndpointInfo {
+trait EndpointInfo extends CatsUtils {
 
   def uri: Uri
 
@@ -53,6 +86,48 @@ trait EndpointInfo {
   val port = uri.toUrl.port
 
   val destinationName = pathLast
+
+  def asPulsarEndpointInfo =
+    this match {
+      case endpointInfo: PulsarEndpointInfo =>
+        Right(endpointInfo)
+      case _ =>
+        Left(new IllegalStateException("Not a Pulsar endpoint"))
+    }
+
+  def withPulsarContext[F[_] : Concurrent, T](f: PulsarContext => F[T]): F[T] =
+    for {
+      e <- fromEither(asPulsarEndpointInfo)
+      r <- e.withPulsarContext(f)
+    } yield r
+
+  def asTibrvEndpointInfo =
+    this match {
+      case endpointInfo: TibrvEndpointInfo =>
+        Right(endpointInfo)
+      case _ =>
+        Left(new IllegalStateException("Not a TibRV endpoint"))
+    }
+
+  def withTibrvContext[F[_] : Concurrent, T](f: TibrvContext => F[T]): F[T] =
+    for {
+      e <- fromEither(asTibrvEndpointInfo)
+      r <- e.withTibrvContext(f)
+    } yield r
+
+  def asActiveMQEndpointInfo =
+    this match {
+      case endpointInfo: ActiveMQEndpointInfo =>
+        Right(endpointInfo)
+      case _ =>
+        Left(new IllegalStateException("ActiveMQ context is required"))
+    }
+
+  def withJMSSession[F[_] : Concurrent, T](f: Session => F[T]): F[T] =
+    for {
+      e <- fromEither(asActiveMQEndpointInfo)
+      r <- e.withJMSSession(f)
+    } yield r
 }
 
 case class PulsarEndpointInfo(uri: Uri) extends EndpointInfo {
@@ -77,6 +152,9 @@ case class PulsarEndpointInfo(uri: Uri) extends EndpointInfo {
   val subscriptionInitialPosition = uri.toUrl.query.param("subscriptionInitialPosition").map(SubscriptionInitialPosition.valueOf)
 
   val subscriptionInitialPublishTime = uri.toUrl.query.param("subscriptionInitialPublishTime").map(Instant.parse)
+
+  def withPulsarContext[F[_], T](f: PulsarContext => F[T]): F[T] =
+    f(context)
 }
 
 case class TibrvEndpointInfo(uri: Uri) extends EndpointInfo {
@@ -95,6 +173,9 @@ case class TibrvEndpointInfo(uri: Uri) extends EndpointInfo {
   val canonicalUri = Uri.parse(s"tibrv://${context.host}:${context.port}/${context.network.getOrElse("")}/${context.service.getOrElse("")}/${subjects.mkString(";")}")
 
   override def asSourceUriString = super.asSourceUriString.replaceAll("\\.>$", ".*")
+
+  def withTibrvContext[F[_], T](f: TibrvContext => F[T]): F[T] =
+    f(context)
 }
 
 case class ActiveMQEndpointInfo(uri: Uri) extends EndpointInfo {
@@ -109,4 +190,8 @@ case class ActiveMQEndpointInfo(uri: Uri) extends EndpointInfo {
   )
 
   val canonicalUri = Uri.parse(s"activemq://${context.host}:${context.port}/${destinationName}")
+
+  def withJMSSession[F[_], T](f: Session => F[T]) =
+    f(context.session)
+
 }
