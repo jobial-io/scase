@@ -1,6 +1,8 @@
 package io.jobial.scase.core
 
 import io.jobial.scase.marshalling.Unmarshaller
+
+import java.time.Instant
 import scala.concurrent.duration._
 
 /**
@@ -67,6 +69,10 @@ trait MessageReceiveResult[F[_], M] {
   def underlyingMessage[T]: F[T]
 
   def underlyingContext[T]: F[T]
+  
+  def sourceName: F[String]
+  
+  def publishTime: F[Instant]
 }
 
 case class DefaultMessageReceiveResult[F[_], M](
@@ -76,7 +82,9 @@ case class DefaultMessageReceiveResult[F[_], M](
   commit: F[Unit],
   rollback: F[Unit],
   underlyingMessageProvided: F[Any],
-  underlyingContextProvided: F[Any]
+  underlyingContextProvided: F[Any],
+  sourceName: F[String],
+  publishTime: F[Instant]
 ) extends MessageReceiveResult[F, M] {
   override def underlyingMessage[T]: F[T] = underlyingMessageProvided.asInstanceOf[F[T]]
 

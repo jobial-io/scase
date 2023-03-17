@@ -12,6 +12,8 @@ import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
+
+import java.time.Instant.ofEpochMilli
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.math.min
@@ -98,7 +100,9 @@ class SqsConsumer[F[_] : Concurrent, M](
                   } yield (),
                 rollback = unit,
                 underlyingMessageProvided = pure(sqsMessage.getBody),
-                underlyingContextProvided = pure(sqsMessage)
+                underlyingContextProvided = pure(sqsMessage),
+                sourceName = pure(queueUrl),
+                publishTime = delay(ofEpochMilli(sqsMessage.getMessageAttributes.get("SentTimestamp").getStringValue.toLong))
                 //                                outstandingMessages.remove(unmarshalledMessage) match {
                 //                                  case Some(receiptHandle) =>
                 //                                    // if the process fails at this point it will still roll back after the visibility timeout

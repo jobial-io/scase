@@ -7,7 +7,7 @@ import scala.util.Try
 /**
  * Extensions for Scala 2.11 support.
  */
-trait EitherUtil {
+trait EitherUtils {
 
   /**
    * This is only needed for Scala 2.11 compatibility.
@@ -34,4 +34,12 @@ trait EitherUtil {
         None
     }
   }
+
+  def tryIncludingFatal[T](r: => T) =
+    try {
+      Try(r)
+    } catch {
+      case t: Throwable =>
+        Failure(t)
+    }
 }

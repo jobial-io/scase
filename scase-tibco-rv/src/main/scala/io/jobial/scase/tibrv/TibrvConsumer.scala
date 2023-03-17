@@ -23,6 +23,7 @@ import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
 
 import java.net.InetAddress
+import java.time.Instant.now
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration.FiniteDuration
 
@@ -95,7 +96,9 @@ class TibrvConsumer[F[_] : Concurrent : Timer, M](
             commit = unit,
             rollback = unit,
             underlyingMessageProvided = pure(tibrvMessage),
-            underlyingContextProvided = pure(listener)
+            underlyingContextProvided = pure(listener),
+            delay(tibrvMessage.getSendSubject),
+            pure(now)
           ))
         case Left(error) =>
           raiseError(error)

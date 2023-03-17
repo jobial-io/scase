@@ -5,7 +5,7 @@ import com.tibco.tibrv.TibrvMsgField
 import io.jobial.scase.marshalling.BinaryFormatMarshaller
 import io.jobial.scase.marshalling.BinaryFormatUnmarshaller
 import io.jobial.scase.marshalling.sprayjson.DefaultFormats
-import io.jobial.scase.util.EitherUtil
+import io.jobial.scase.util.EitherUtils
 import org.apache.commons.io.IOUtils.toByteArray
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
@@ -33,7 +33,7 @@ import scala.util.Try
  * lossy encoding of JSON.
  */
 trait TibrvMsgSprayJsonMarshallingInstances extends ProductFormats with DefaultFormats with AdditionalFormats
-  with CollectionFormats with EitherUtil {
+  with CollectionFormats with EitherUtils {
 
   implicit val stringJsFormat = spray.json.DefaultJsonProtocol.StringJsonFormat
 

@@ -107,10 +107,12 @@ class ConsumerProducerRequestResponseClient[F[_] : Concurrent : Timer, REQ: Mars
       result <- message match {
         case Right(payload) =>
           trace(s"client received success: ${receiveResult.toString.take(500)}") >>
-            pure(DefaultMessageReceiveResult(pure(payload.asInstanceOf[RESPONSE]), receiveResult.attributes, receiveResult.consumer.asInstanceOf[Option[MessageConsumer[F, RESPONSE]]], receiveResult.commit, receiveResult.rollback, receiveResult.underlyingMessage[Any], receiveResult.underlyingContext[Any]))
+            pure(DefaultMessageReceiveResult(pure(payload.asInstanceOf[RESPONSE]), receiveResult.attributes, receiveResult.consumer.asInstanceOf[Option[MessageConsumer[F, RESPONSE]]], receiveResult.commit, receiveResult.rollback, receiveResult.underlyingMessage[Any], receiveResult.underlyingContext[Any],
+              receiveResult.sourceName, receiveResult.publishTime))
         case Left(t) =>
           trace(s"client received failure: ${receiveResult.toString.take(500)}", t) >>
-            pure(DefaultMessageReceiveResult(raiseError[F, RESPONSE](t), receiveResult.attributes, receiveResult.consumer.asInstanceOf[Option[MessageConsumer[F, RESPONSE]]], receiveResult.commit, receiveResult.rollback, receiveResult.underlyingMessage[Any], receiveResult.underlyingContext[Any]))
+            pure(DefaultMessageReceiveResult(raiseError[F, RESPONSE](t), receiveResult.attributes, receiveResult.consumer.asInstanceOf[Option[MessageConsumer[F, RESPONSE]]], receiveResult.commit, receiveResult.rollback, receiveResult.underlyingMessage[Any], receiveResult.underlyingContext[Any],
+              receiveResult.sourceName, receiveResult.publishTime))
       }
     } yield DefaultRequestResponseResult(sendResult, result)
   }

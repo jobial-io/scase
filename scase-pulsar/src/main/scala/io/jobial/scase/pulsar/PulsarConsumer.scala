@@ -17,7 +17,9 @@ import org.apache.pulsar.client.api.SubscriptionMode
 import org.apache.pulsar.client.api.SubscriptionMode.Durable
 import org.apache.pulsar.client.api.SubscriptionType
 import org.apache.pulsar.client.api.SubscriptionType.Exclusive
+
 import java.time.Instant
+import java.time.Instant.ofEpochMilli
 import java.util.UUID.randomUUID
 import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
@@ -108,7 +110,9 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
                     commit = trace(s"committing message $message in $this") >> delay(consumer.acknowledge(pulsarMessage)),
                     rollback = trace(s"rolling back message $message in $this") >> delay(consumer.negativeAcknowledge(pulsarMessage)),
                     underlyingMessageProvided = pure(pulsarMessage),
-                    underlyingContextProvided = raiseError(new IllegalStateException("No underlying context"))
+                    underlyingContextProvided = raiseError(new IllegalStateException("No underlying context")),
+                    sourceName = delay(pulsarMessage.getTopicName),
+                    publishTime = delay(ofEpochMilli(pulsarMessage.getPublishTime))
                   )
                 )
             case Left(error) =>

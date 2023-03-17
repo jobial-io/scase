@@ -1,3 +1,3 @@
 package io.jobial.scase
 
-package object util extends EitherUtil
+package object util extends EitherUtils

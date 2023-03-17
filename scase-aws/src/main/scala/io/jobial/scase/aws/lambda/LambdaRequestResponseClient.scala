@@ -26,7 +26,9 @@ import io.jobial.scase.core.impl.DefaultRequestResponseResult
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
+
 import java.nio.charset.StandardCharsets
+import java.time.Instant.now
 
 
 case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP: Unmarshaller](
@@ -64,7 +66,9 @@ case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP:
           unit,
           unit,
           pure(responsePayload),
-          pure(response)
+          pure(response),
+          pure(functionName),
+          pure(now)
         )
       )
 

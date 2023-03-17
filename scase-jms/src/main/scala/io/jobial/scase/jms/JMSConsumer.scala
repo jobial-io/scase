@@ -10,6 +10,9 @@ import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
+
+import java.time.Instant
+import java.time.Instant.ofEpochMilli
 import javax.jms._
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.FiniteDuration
@@ -62,7 +65,9 @@ class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscripti
             commit = whenA(session.getTransacted)(delay(session.commit)),
             rollback = whenA(session.getTransacted)(delay(session.rollback)),
             underlyingMessageProvided = pure(jmsMessage),
-            underlyingContextProvided = raiseError(new IllegalStateException("No underlying context"))
+            underlyingContextProvided = raiseError(new IllegalStateException("No underlying context")),
+            delay(jmsMessage.getJMSDestination.toString),
+            delay(ofEpochMilli(jmsMessage.getJMSTimestamp))
           )
           pure(messageReceiveResult)
         case Left(error) =>

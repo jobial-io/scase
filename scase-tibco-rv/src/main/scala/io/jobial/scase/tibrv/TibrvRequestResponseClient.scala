@@ -28,6 +28,7 @@ import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
 
+import java.time.Instant.now
 import scala.concurrent.duration._
 
 class TibrvRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP](
@@ -80,7 +81,9 @@ class TibrvRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP](
         unit,
         unit,
         pure(tibrvResponse),
-        pure(transport)
+        pure(transport),
+        delay(tibrvResponse.getSendSubject),
+        pure(now)
       )
     )
 

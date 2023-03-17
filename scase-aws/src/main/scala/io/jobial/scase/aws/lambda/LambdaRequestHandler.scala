@@ -29,8 +29,10 @@ import io.jobial.scase.core.SendResponseResult
 import io.jobial.scase.logging.Logging
 import org.apache.commons.io.IOUtils
 import org.joda.time.DateTime
+
 import java.io.InputStream
 import java.io.OutputStream
+import java.time.Instant.now
 import scala.collection.JavaConverters._
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.DurationInt
@@ -74,7 +76,7 @@ abstract class LambdaRequestHandler[F[_], REQ, RESP]
 
               override def receiveResult[REQUEST](request: REQUEST): MessageReceiveResult[F, REQUEST] =
                 DefaultMessageReceiveResult(pure(request), context.getClientContext.getEnvironment.asScala.toMap, None, unit, unit,
-                  pure(requestString), pure(context))
+                  pure(requestString), pure(context), delay(context.getFunctionName), pure(now))
 
             })(request)
           // TODO: use redeem when Cats is upgraded, 2.0.0 simply doesn't support mapping errors to an F[B]...

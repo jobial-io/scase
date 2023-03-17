@@ -11,6 +11,9 @@ import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 
+import java.time.Instant
+import java.time.Instant.now
+
 
 class InMemoryProducer[F[_] : Concurrent : Timer, M](
   val consumers: Ref[F, List[InMemoryConsumer[F, M]]]
@@ -29,8 +32,11 @@ class InMemoryProducer[F[_] : Concurrent : Timer, M](
             Some(consumer),
             unit,
             unit,
-            raiseError(new IllegalStateException("No underlying message")),
-            raiseError(new IllegalStateException("No underlying context")))
+            raiseError(new IllegalStateException("No underlying message available")),
+            raiseError(new IllegalStateException("No underlying context available")),
+            delay(toString),
+            pure(now)
+          )
           ))
       }.sequence
     } yield new MessageSendResult[F, M] {
