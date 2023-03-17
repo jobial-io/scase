@@ -1,15 +1,19 @@
 package io.jobial.scase.tools.bridge
 
 import cats.effect.Concurrent
+import cats.effect.ContextShift
+import cats.effect.IO
 import cats.effect.Timer
 import cats.implicits._
 import cats.implicits.catsSyntaxEq
 import io.jobial.scase.activemq.ActiveMQContext
+import io.jobial.scase.core.MessageHandler
 import io.jobial.scase.core.SenderClient
 import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.jms.JMSServiceConfiguration
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
+import io.jobial.scase.marshalling.Unmarshaller
 import io.jobial.scase.pulsar.PulsarContext
 import io.jobial.scase.pulsar.PulsarServiceConfiguration
 import io.jobial.scase.tibrv.TibrvContext
@@ -17,9 +21,12 @@ import io.jobial.scase.tibrv.TibrvServiceConfiguration
 import io.lemonlabs.uri.Uri
 import io.lemonlabs.uri.UrlPath
 import org.apache.pulsar.client.api.SubscriptionInitialPosition
+import org.apache.pulsar.client.api.SubscriptionInitialPosition.Earliest
 
 import java.time.Instant
+import java.util.UUID.randomUUID
 import javax.jms.Session
+import scala.concurrent.duration.DurationInt
 
 object EndpointInfo extends CatsUtils with Logging {
 
@@ -34,7 +41,7 @@ object EndpointInfo extends CatsUtils with Logging {
       Left(new IllegalArgumentException(s"Not a valid endpoint URI: $uri"))
 
   // TODO: move these somewhere else
-  def clientForDestination[F[_] : Concurrent : Timer, M: Marshaller](destination: EndpointInfo, actualDestination: String): F[_ <: SenderClient[F, M]] =
+  def destinationClient[F[_] : Concurrent : Timer, M: Marshaller](destination: EndpointInfo, actualDestination: String): F[_ <: SenderClient[F, M]] =
     destination match {
       case destination: TibrvEndpointInfo =>
         destination.withTibrvContext { implicit tibrvContext =>
@@ -52,8 +59,37 @@ object EndpointInfo extends CatsUtils with Logging {
         raiseError(new IllegalStateException(s"${destination} not supported"))
     }
 
-  def clientForDestination[F[_] : Concurrent : Timer, M: Marshaller](destination: EndpointInfo): F[_ <: SenderClient[F, M]] =
-    clientForDestination[F, M](destination, destination.destinationName)
+  def destinationClient[F[_] : Concurrent : Timer, M: Marshaller](destination: EndpointInfo): F[_ <: SenderClient[F, M]] =
+    destinationClient[F, M](destination, destination.destinationName)
+
+  val defaultSubscriptionInitialPosition = Some(Earliest)
+
+  def defaultSubscriptionInitialPublishTime = Some(Instant.now.minusSeconds(60))
+
+  def handlerService[F[_] : Concurrent : Timer, M: Marshaller : Unmarshaller](source: EndpointInfo, messageHandler: MessageHandler[F, M])(implicit ioContextShift: ContextShift[IO]) =
+    source match {
+      case source: PulsarEndpointInfo =>
+        source.withPulsarContext { implicit pulsarContext =>
+          PulsarServiceConfiguration.handler[M](
+            Right(source.topicPattern),
+            Some(1.second),
+            source.subscriptionInitialPosition.orElse(defaultSubscriptionInitialPosition),
+            source.subscriptionInitialPublishTime.orElse(defaultSubscriptionInitialPublishTime),
+            source.subscriptionName.getOrElse(s"subscription-${randomUUID}")
+          ).service[F](messageHandler)
+        }
+      case source: TibrvEndpointInfo =>
+        source.withTibrvContext { implicit tibrvContext =>
+          TibrvServiceConfiguration.handler[M](source.subjects).service[F](messageHandler)
+        }
+      case source: ActiveMQEndpointInfo =>
+        source.withJMSSession { implicit session =>
+          JMSServiceConfiguration.handler[M]("", source.destination).service[F](messageHandler)
+        }
+      case _ =>
+        raiseError(new IllegalStateException(s"${source} not supported"))
+    }
+
 }
 
 trait EndpointInfo extends CatsUtils {

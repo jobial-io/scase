@@ -30,6 +30,7 @@ import io.jobial.scase.marshalling.serialization.SerializationMarshalling
 import io.jobial.scase.marshalling.tibrv.raw.TibrvMsgRawMarshalling
 import io.jobial.scase.pulsar.PulsarServiceConfiguration
 import io.jobial.scase.tibrv.TibrvServiceConfiguration
+import io.jobial.scase.tools.bridge.EndpointInfo.destinationClient
 import io.jobial.scase.util.Cache
 import io.jobial.sclap.CommandLineApp
 import io.lemonlabs.uri.Uri
@@ -355,7 +356,7 @@ See --source for details on pattern matching and substitution examples.""")
   def clientForDestination[M: Marshalling](implicit context: BridgeContext[M]) =
     createSenderClient(d =>
       info[IO](s"Creating sender client for $d for destination URI ${context.destination.uri}") >>
-        EndpointInfo.clientForDestination[IO, M](context.destination, d)
+        destinationClient[IO, M](context.destination, d)
     )
 
   def startRequestResponseBridge[M: Marshalling](

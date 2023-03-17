@@ -4,6 +4,7 @@ import cats.effect.IO
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.rawbytes._
 import io.jobial.scase.tools.bridge.EndpointInfo
+import io.jobial.scase.tools.bridge.EndpointInfo.destinationClient
 import io.jobial.scase.tools.bridge.EndpointInfoParser
 import io.jobial.sclap.CommandLineApp
 import org.apache.commons.io.IOUtils.toByteArray
@@ -17,7 +18,7 @@ object ScaseSend extends CommandLineApp with EndpointInfoParser with Logging {
       destination <- opt[EndpointInfo]("destination", "d").required
       file <- opt[String]("file", "f")
     } yield for {
-      client <- EndpointInfo.clientForDestination[IO, Array[Byte]](destination)
+      client <- destinationClient[IO, Array[Byte]](destination)
       message <- readMessage(file)   
       r <- client.send(message)
     } yield r
