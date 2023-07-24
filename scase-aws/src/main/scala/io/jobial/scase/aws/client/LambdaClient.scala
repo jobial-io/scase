@@ -12,6 +12,7 @@
  */
 package io.jobial.scase.aws.client
 
+import cats.Parallel
 import cats.effect.Concurrent
 import cats.effect.Timer
 import com.amazonaws.services.lambda.AWSLambdaAsync

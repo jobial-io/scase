@@ -13,7 +13,7 @@
 name := "scase"
 
 ThisBuild / organization := "io.jobial"
-ThisBuild / scalaVersion := "2.13.8"
+ThisBuild / scalaVersion := "2.11.12"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.15", "2.13.8")
 ThisBuild / version := "1.3.0"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
@@ -46,7 +46,7 @@ lazy val CatsTestkitScalatestVersion = "1.0.0-RC1"
 lazy val ScalaLoggingVersion = "3.9.2"
 lazy val ScalatestVersion = "3.2.3"
 lazy val SourcecodeVersion = "0.2.3"
-lazy val AwsVersion = "1.11.557"
+lazy val AwsVersion = "1.12.471"
 lazy val AmazonSqsJavaExtendedClientLibVersion = "1.2.2"
 lazy val AwsLambdaJavaCoreVersion = "1.2.1"
 lazy val CommonsIoVersion = "2.8.0"
@@ -105,6 +105,7 @@ lazy val `scase-aws` = project
       "com.amazonaws" % "aws-java-sdk-cloudformation" % AwsVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-lambda-java-core" % AwsLambdaJavaCoreVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-java-sdk-sts" % AwsVersion excludeAll ("commons-logging"),
+      "com.amazonaws" % "aws-java-sdk-ec2" % AwsVersion excludeAll ("commons-logging"),
       "org.typelevel" %% "cats-core" % CatsVersion,
       "org.typelevel" %% "cats-effect" % CatsVersion,
       "com.typesafe.scala-logging" %% "scala-logging" % ScalaLoggingVersion
@@ -218,7 +219,9 @@ lazy val `scase-tools` = project
       "io.lemonlabs" %% "scala-uri" % ScalaUriVersion,
       "org.apache.pulsar" % "pulsar-client-admin" % PulsarVersion
     ),
-    Compile / packageBin / mappings ~= { _.filter(!_._1.getName.endsWith("logback.xml")) }
+    Compile / packageBin / mappings ~= {
+      _.filter(!_._1.getName.endsWith("logback.xml"))
+    }
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-pulsar`)

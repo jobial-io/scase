@@ -68,6 +68,4 @@ class EndpointTest extends ServiceTestSupport {
     test("tibrv://///subject", TibrvContext(), "subject")
     test("tibrv://", TibrvContext(), "")
   }
-  
-  
 }
