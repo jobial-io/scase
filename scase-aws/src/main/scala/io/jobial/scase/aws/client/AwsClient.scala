@@ -21,13 +21,13 @@ import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.client.builder.{AwsAsyncClientBuilder, AwsSyncClientBuilder, ExecutorFactory}
 import com.amazonaws.endpointdiscovery.DaemonThreadFactory
-import io.jobial.scase.core.impl.CatsUtils
-import io.jobial.scase.logging.Logging
+import io.jobial.sprint.logging.Logging
+import io.jobial.sprint.util.CatsUtils
 
 import scala.concurrent.Future.failed
 import scala.concurrent.{ExecutionContext, Future}
 
-trait AwsClient[F[_]] extends CatsUtils with Logging {
+trait AwsClient[F[_]] extends CatsUtils[F] with Logging[F] {
 
   def awsContext: AwsContext
 

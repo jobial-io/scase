@@ -12,8 +12,10 @@
  */
 package io.jobial.scase.aws.client
 
+import cats.effect.Async
 import cats.effect.Concurrent
 import cats.effect.IO
+import cats.effect.Sync
 import cats.effect.Timer
 import cats.implicits._
 import com.amazon.sqs.javamessaging.AmazonSQSExtendedClient
@@ -22,6 +24,10 @@ import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.AmazonSQSAsyncClientBuilder
 import com.amazonaws.services.sqs.buffered.AmazonSQSBufferedAsyncClient
 import com.amazonaws.services.sqs.model._
+import io.jobial.sprint.logging.Logging
+import io.jobial.sprint.util.CatsUtils
+import io.jobial.sprint.util.IOShutdownHook
+
 import java.util
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
@@ -66,21 +72,20 @@ trait SqsClient[F[_]] extends S3Client[F] {
         visibilityTimeout.map(setVisibilityTimeout(queueUrl, _)).getOrElse(unit)
 
     {
-      createQueue(queueUrl) >>
-        whenA(cleanup)(delay(sys.addShutdownHook { () => {
-          trace[IO](s"deleting queue $queueUrl") >>
-            IO(sqs.deleteQueue(queueUrl)).handleErrorWith { t =>
-              raiseError[IO, Unit](new IllegalStateException(s"error deleting queue $queueUrl", t))
-            }
-        }.unsafeRunSync()
-
-        })) >>
+      createQueue(queueUrl) >> whenA(cleanup)(new IOShutdownHook {
+        def run =
+          trace(s"deleting queue $queueUrl") >>
+            pure(sqs.deleteQueue(queueUrl)).handleErrorWith { t =>
+              raiseError[Unit](new IllegalStateException(s"error deleting queue $queueUrl", t))
+            } >> trace(s"deleted queue $queueUrl")
+      }.add) >>
         trace(s"created SQS queue $queueUrl")
     }.handleErrorWith { t =>
       setupQueue >> trace(s"could not create SQS queue $queueUrl")
     } >> setupQueue >>
       trace(s"initialized SQS queue $queueUrl")
   }
+
 
   def sendMessage(queueUrl: String, message: String, attributes: Map[String, String] = Map())(implicit awsContext: AwsContext = AwsContext()) = {
     {

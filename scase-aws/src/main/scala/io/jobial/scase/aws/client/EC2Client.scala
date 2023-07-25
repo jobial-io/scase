@@ -20,7 +20,7 @@ import com.amazonaws.services.ec2.model.SpotFleetRequestConfig
 import com.amazonaws.services.ec2.model.StartInstancesRequest
 import com.amazonaws.services.ec2.model.StopInstancesRequest
 import com.amazonaws.services.ec2.model.TargetCapacitySpecificationRequest
-import io.jobial.scase.core.impl.CatsUtils
+import io.jobial.sprint.util.CatsUtils
 
 import scala.collection.JavaConverters._
 import java.util.concurrent.Executors
@@ -43,7 +43,7 @@ object EC2Client {
     }
 }
 
-trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils {
+trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
 
   def ec2Client = buildAwsAsyncClient[AmazonEC2AsyncClientBuilder, AmazonEC2Async](AmazonEC2AsyncClientBuilder.standard)
 

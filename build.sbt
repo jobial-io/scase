@@ -15,7 +15,7 @@ name := "scase"
 ThisBuild / organization := "io.jobial"
 ThisBuild / scalaVersion := "2.11.12"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.15", "2.13.8")
-ThisBuild / version := "1.3.0"
+ThisBuild / version := "1.3.1"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
 ThisBuild / javacOptions ++= Seq("-source", "11", "-target", "11")
 ThisBuild / Test / packageBin / publishArtifact := true
@@ -53,6 +53,7 @@ lazy val CommonsIoVersion = "2.8.0"
 lazy val CommonsLangVersion = "3.12.0"
 lazy val CloudformationTemplateGeneratorVersion = "3.10.4"
 lazy val SclapVersion = "1.3.6"
+lazy val SprintVersion = "0.0.5"
 lazy val CirceVersion = "0.12.0-M3"
 lazy val SprayJsonVersion = "1.3.6"
 lazy val PulsarVersion = "2.10.3"
@@ -89,7 +90,8 @@ lazy val `scase-core` = project
       "org.apache.commons" % "commons-lang3" % CommonsLangVersion,
       "ch.qos.logback" % "logback-classic" % LogbackVersion % Test,
       "com.chuusai" %% "shapeless" % ShapelessVersion,
-      "com.github.sbt" % "junit-interface" % "0.13.2" % Test
+      "com.github.sbt" % "junit-interface" % "0.13.2" % Test,
+      "io.jobial" %% "sprint" % SprintVersion,
     )
   )
 

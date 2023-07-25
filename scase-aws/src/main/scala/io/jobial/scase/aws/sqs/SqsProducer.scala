@@ -9,6 +9,7 @@ import io.jobial.scase.core._
 import io.jobial.scase.core.impl.DefaultMessageSendResult
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.{Marshaller, Unmarshaller}
+import io.jobial.sprint.util.CatsUtils
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
@@ -24,17 +25,17 @@ class SqsProducer[F[_] : Concurrent, M](
 )(
   implicit val awsContext: AwsContext
 ) extends MessageProducer[F, M]
-  with Logging {
+  with CatsUtils[F] with Logging {
 
-  import awsContext.sqsClient._
+  import awsContext.sqsClient
 
   def initialize =
-    liftIO(initializeQueue(queueUrl, messageRetentionPeriod, visibilityTimeout, cleanup))
+    liftIO(sqsClient.initializeQueue(queueUrl, messageRetentionPeriod, visibilityTimeout, cleanup))
 
   def send(message: M, attributes: Map[String, String] = Map())(implicit m: Marshaller[M]) = {
     for {
       _ <- trace(s"sending to queue $queueUrl ${message.toString.take(200)}")
-      r <- sendMessage(queueUrl, Marshaller[M].marshalToText(message), attributes).to[F]
+      r <- sqsClient.sendMessage(queueUrl, Marshaller[M].marshalToText(message), attributes).to[F]
       _ <- trace(s"successfully sent to queue $queueUrl ${message.toString.take(200)}")
     } yield
       DefaultMessageSendResult[F, M](unit, unit): MessageSendResult[F, M]
