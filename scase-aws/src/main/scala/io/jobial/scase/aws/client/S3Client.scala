@@ -115,7 +115,7 @@ trait S3Client[F[_]] extends AwsClient[F] {
 
 object S3Client {
 
-  def apply[F[_] : Concurrent : Timer](implicit context: AwsContext) =
+  def apply[F[_] : Concurrent : Timer](implicit context: AwsContext = AwsContext()) =
     new S3Client[F] {
       def awsContext = context
 

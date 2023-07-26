@@ -12,6 +12,7 @@
  */
 package io.jobial.scase.aws.client
 
+import cats.effect.Concurrent
 import cats.effect.IO
 import com.amazonaws.auth.AWSCredentials
 import io.jobial.scase.core.impl.blockerContext
@@ -36,4 +37,6 @@ case class AwsContext(
   lazy val stsClient = StsClient[IO]
 
   lazy val s3Client = S3Client[IO]
+  
+  lazy val ec2Client = EC2Client[IO]
 }

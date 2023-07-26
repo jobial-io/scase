@@ -170,7 +170,7 @@ trait SqsClient[F[_]] extends S3Client[F] {
 
 object SqsClient {
 
-  def apply[F[_] : Timer : Concurrent](implicit context: AwsContext) = {
+  def apply[F[_] : Timer : Concurrent](implicit context: AwsContext = AwsContext()) = {
     new SqsClient[F] {
       val awsContext = context
 

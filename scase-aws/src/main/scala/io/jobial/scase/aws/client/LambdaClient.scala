@@ -53,7 +53,7 @@ trait LambdaClient[F[_]] extends AwsClient[F] {
 
 object LambdaClient {
 
-  def apply[F[_] : Concurrent : Timer](implicit context: AwsContext) =
+  def apply[F[_] : Concurrent : Timer](implicit context: AwsContext = AwsContext()) =
     new LambdaClient[F] {
       def awsContext = context
 

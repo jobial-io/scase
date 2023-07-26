@@ -28,7 +28,7 @@ trait StsClient[F[_]] extends AwsClient[F] {
 
 object StsClient {
 
-  def apply[F[_] : Concurrent : Timer](implicit context: AwsContext) =
+  def apply[F[_] : Concurrent : Timer](implicit context: AwsContext = AwsContext()) =
     new StsClient[F] {
       def awsContext = context
 

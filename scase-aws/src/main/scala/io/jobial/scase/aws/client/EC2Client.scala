@@ -27,12 +27,12 @@ import java.util.concurrent.Executors
 
 object EC2Client {
 
-  val client = AmazonEC2AsyncClientBuilder.standard().withExecutorFactory(new ExecutorFactory {
+  lazy val client = AmazonEC2AsyncClientBuilder.standard().withExecutorFactory(new ExecutorFactory {
     def newExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory)
   }).build
 
-  def apply[F[_] : Concurrent : Timer : Parallel](implicit context: AwsContext) =
-    new S3Client[F] {
+  def apply[F[_] : Concurrent : Timer : Parallel](implicit context: AwsContext = AwsContext()) =
+    new EC2Client[F] {
       def awsContext = context
 
       val concurrent = Concurrent[F]
@@ -45,7 +45,7 @@ object EC2Client {
 
 trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
 
-  def ec2Client = buildAwsAsyncClient[AmazonEC2AsyncClientBuilder, AmazonEC2Async](AmazonEC2AsyncClientBuilder.standard)
+  val ec2Client = buildAwsAsyncClient[AmazonEC2AsyncClientBuilder, AmazonEC2Async](AmazonEC2AsyncClientBuilder.standard)
 
   def getInstanceState(id: String) =
     for {
