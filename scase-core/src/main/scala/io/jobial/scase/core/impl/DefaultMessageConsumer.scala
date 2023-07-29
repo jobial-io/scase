@@ -8,15 +8,15 @@ import io.jobial.scase.core.MessageConsumer
 import io.jobial.scase.core.MessageReceiveResult
 import io.jobial.scase.core.MessageSubscription
 import io.jobial.scase.core.ReceiveTimeout
-import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
+import io.jobial.sprint.logging.Logging
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 
 /**
  * Adds cancellation, subscription state. 
  */
-abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsumer[F, M] with CatsUtils with Logging {
+abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsumer[F, M] with io.jobial.sprint.util.CatsUtils[F] with Logging[F] {
 
   val receiveTimeoutInSubscribe = 1.second
 

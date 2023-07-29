@@ -12,31 +12,108 @@
  */
 package io.jobial.scase.aws.client
 
-import cats.effect.Concurrent
-import cats.effect.IO
+import com.amazon.sqs.javamessaging.AmazonSQSExtendedClient
+import com.amazon.sqs.javamessaging.ExtendedClientConfiguration
+import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSCredentials
-import io.jobial.scase.core.impl.blockerContext
+import com.amazonaws.auth.AWSStaticCredentialsProvider
+import com.amazonaws.client.builder.AwsAsyncClientBuilder
+import com.amazonaws.client.builder.AwsSyncClientBuilder
+import com.amazonaws.client.builder.ExecutorFactory
+import com.amazonaws.endpointdiscovery.DaemonThreadFactory
+import com.amazonaws.services.cloudformation.AmazonCloudFormation
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder
+import com.amazonaws.services.ec2.AmazonEC2AsyncClientBuilder
+import com.amazonaws.services.lambda.AWSLambdaAsync
+import com.amazonaws.services.lambda.AWSLambdaAsyncClientBuilder
+import com.amazonaws.services.s3.AmazonS3
+import com.amazonaws.services.s3.AmazonS3ClientBuilder
+import com.amazonaws.services.securitytoken.AWSSecurityTokenService
+import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder
+import com.amazonaws.services.sqs.AmazonSQSAsync
+import com.amazonaws.services.sqs.AmazonSQSAsyncClientBuilder
+import com.amazonaws.services.sqs.buffered.AmazonSQSBufferedAsyncClient
+import java.util.concurrent.Executors
 
-case class AwsContext(
-  credentials: Option[AWSCredentials] = None,
-  region: Option[String] = sys.env.get("AWS_DEFAULT_REGION"),
-  sqsExtendedS3BucketName: Option[String] = None
+class AwsContext(
+  val credentials: Option[AWSCredentials],
+  val region: Option[String],
+  val sqsExtendedS3BucketName: Option[String]
 ) {
 
-  implicit val awsContext = this
+  /**
+   * Clients are supposed to be thread safe: https://forums.aws.amazon.com/message.jspa?messageID=191621
+   */
+  def buildAwsClient[BuilderClass <: AwsSyncClientBuilder[BuilderClass, BuiltClass], BuiltClass](awsClientBuilder: AwsSyncClientBuilder[BuilderClass, BuiltClass]) = {
+    val b1 = region match {
+      case Some(region) =>
+        awsClientBuilder.withRegion(region)
+      case None =>
+        awsClientBuilder
+    }
 
-  implicit val contextShift = IO.contextShift(blockerContext)
+    val b2 = credentials match {
+      case Some(credentials) =>
+        b1.withCredentials(new AWSStaticCredentialsProvider(credentials))
+      case None =>
+        b1
+    }
+
+    val b3 = b2.withClientConfiguration(new ClientConfiguration().withMaxConnections(100))
+
+    b3.build
+  }
+
+  def buildAwsAsyncClient[BuilderClass <: AwsAsyncClientBuilder[BuilderClass, BuiltClass], BuiltClass](awsClientBuilder: AwsAsyncClientBuilder[BuilderClass, BuiltClass]) = {
+    val b1 = region match {
+      case Some(region) =>
+        awsClientBuilder.withRegion(region)
+      case None =>
+        awsClientBuilder
+    }
+
+    val b2 = credentials match {
+      case Some(credentials) =>
+        b1.withCredentials(new AWSStaticCredentialsProvider(credentials))
+      case _ =>
+        b1
+    }
+
+    val b3 = b2.withClientConfiguration(new ClientConfiguration().withMaxConnections(100))
+      .withExecutorFactory(new ExecutorFactory {
+        def newExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory)
+      })
+
+    b3.build
+  }
+
+  lazy val s3 = buildAwsClient[AmazonS3ClientBuilder, AmazonS3](AmazonS3ClientBuilder.standard)
+
+  lazy val ec2Client = AmazonEC2AsyncClientBuilder.standard().withExecutorFactory(new ExecutorFactory {
+    def newExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory)
+  }).build
+
+  lazy val sqs = new AmazonSQSBufferedAsyncClient(buildAwsAsyncClient[AmazonSQSAsyncClientBuilder, AmazonSQSAsync](AmazonSQSAsyncClientBuilder.standard))
+  //lazy val sqs = buildAwsAsyncClient[AmazonSQSAsyncClientBuilder, AmazonSQSAsync](AmazonSQSAsyncClientBuilder.standard)
+
+  lazy val sqsExtended = sqsExtendedS3BucketName.map { sqsExtendedS3BucketName =>
+    new AmazonSQSExtendedClient(sqs, new ExtendedClientConfiguration()
+      .withLargePayloadSupportEnabled(s3, sqsExtendedS3BucketName))
+  }
+
+  lazy val lambda = buildAwsAsyncClient[AWSLambdaAsyncClientBuilder, AWSLambdaAsync](AWSLambdaAsyncClientBuilder.standard)
+
+  lazy val sts = buildAwsClient[AWSSecurityTokenServiceClientBuilder, AWSSecurityTokenService](AWSSecurityTokenServiceClientBuilder.standard)
+
+  lazy val cloudformation = buildAwsClient[AmazonCloudFormationClientBuilder, AmazonCloudFormation](AmazonCloudFormationClientBuilder.standard)
   
-  implicit val timer = IO.timer(blockerContext)
+}
 
-  // Amazon recommends sharing and reusing clients  
-  lazy val sqsClient = SqsClient[IO]
+object AwsContext {
 
-  lazy val lambdaClient = LambdaClient[IO]
-
-  lazy val stsClient = StsClient[IO]
-
-  lazy val s3Client = S3Client[IO]
-  
-  lazy val ec2Client = EC2Client[IO]
+  def apply(
+    credentials: Option[AWSCredentials] = None,
+    region: Option[String] = sys.env.get("AWS_DEFAULT_REGION"),
+    sqsExtendedS3BucketName: Option[String] = None
+  ) = new AwsContext(credentials, region, sqsExtendedS3BucketName)
 }

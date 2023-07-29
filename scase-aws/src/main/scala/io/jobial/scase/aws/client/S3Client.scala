@@ -27,32 +27,30 @@ import scala.concurrent.duration._
 
 trait S3Client[F[_]] extends AwsClient[F] {
 
-  lazy val s3 = buildAwsClient[AmazonS3ClientBuilder, AmazonS3](AmazonS3ClientBuilder.standard)
-
-  def s3PutText(bucketName: String, key: String, data: String, storageClass: StorageClass = StorageClass.IntelligentTiering) =
+  def s3PutText(bucketName: String, key: String, data: String, storageClass: StorageClass = StorageClass.IntelligentTiering)(implicit context: AwsContext = AwsContext(), concurrent: Concurrent[F]) =
     s3PutObject(bucketName, key, data.getBytes("utf-8"), storageClass)
 
-  def s3PutObject(bucketName: String, key: String, data: Array[Byte], storageClass: StorageClass = StorageClass.IntelligentTiering) = delay {
+  def s3PutObject(bucketName: String, key: String, data: Array[Byte], storageClass: StorageClass = StorageClass.IntelligentTiering)(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
     val request = new PutObjectRequest(bucketName, key, new ByteArrayInputStream(data), new ObjectMetadata).withStorageClass(storageClass)
-    s3.putObject(request)
+    context.s3.putObject(request)
   }
 
-  def s3GetObject(bucketName: String, key: String) = delay {
+  def s3GetObject(bucketName: String, key: String)(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
     val request = new GetObjectRequest(bucketName, key)
-    s3.getObject(request)
+    context.s3.getObject(request)
   }
 
-  def s3Exists(bucketName: String, key: String) = delay {
-    s3.doesObjectExist(bucketName, key)
+  def s3Exists(bucketName: String, key: String)(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
+    context.s3.doesObjectExist(bucketName, key)
   }
 
-  def s3GetText(bucketName: String, key: String) =
+  def s3GetText(bucketName: String, key: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
     for {
       o <- s3GetObject(bucketName, key)
     } yield IOUtils.toString(o.getObjectContent)
 
-  def s3GetObjectIfExists(bucketName: String, key: String) =
-    delay(s3.getObject(new GetObjectRequest(bucketName, key))).map(Option(_)).handleErrorWith {
+  def s3GetObjectIfExists(bucketName: String, key: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
+    delay(context.s3.getObject(new GetObjectRequest(bucketName, key))).map(Option(_)).handleErrorWith {
       case t: AmazonServiceException =>
         if (t.getErrorCode == "NoSuchKey") pure(None)
         else throw t
@@ -60,25 +58,25 @@ trait S3Client[F[_]] extends AwsClient[F] {
         throw t
     }
 
-  def s3GetTextIfExists(bucketName: String, key: String) =
+  def s3GetTextIfExists(bucketName: String, key: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
     for {
       r <- s3GetObjectIfExists(bucketName, key)
     } yield r.map(o => IOUtils.toString(o.getObjectContent))
 
-  def s3DeleteObject(bucketName: String, key: String) = delay {
+  def s3DeleteObject(bucketName: String, key: String)(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
     val request = new DeleteObjectRequest(bucketName, key)
-    s3.deleteObject(request)
+    context.s3.deleteObject(request)
   }
 
-  def s3ListAllObjects(s3Path: String): F[List[S3ObjectSummary]] = {
+  def s3ListAllObjects(s3Path: String)(implicit context: AwsContext, concurrent: Concurrent[F]): F[List[S3ObjectSummary]] = {
     val idx = s3Path.indexOf('/')
     s3ListAllObjects(s3Path.substring(0, idx), s3Path.substring(idx + 1))
   }
 
-  def s3ListAllObjects(bucketName: String, prefix: String, maxCount: Option[Int] = None) = delay {
+  def s3ListAllObjects(bucketName: String, prefix: String, maxCount: Option[Int] = None)(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
     def listRemaining(r: ObjectListing): List[S3ObjectSummary] = {
       if (r.isTruncated) {
-        val l = s3.listNextBatchOfObjects(r)
+        val l = context.s3.listNextBatchOfObjects(r)
         val result = l.getObjectSummaries.iterator.asScala.toList
         if (maxCount.map(_ < result.size).getOrElse(false))
           result
@@ -87,12 +85,12 @@ trait S3Client[F[_]] extends AwsClient[F] {
       } else List()
     }
 
-    val l = s3.listObjects(bucketName, prefix)
+    val l = context.s3.listObjects(bucketName, prefix)
 
     l.getObjectSummaries.iterator.asScala.toList ++ listRemaining(l)
   }
 
-  def s3WaitForObjectExists(bucketName: String, key: String, repeat: Int = 10): F[Boolean] =
+  def s3WaitForObjectExists(bucketName: String, key: String, repeat: Int = 10)(implicit context: AwsContext, concurrent: Concurrent[F], timer: Timer[F]): F[Boolean] =
     if (repeat > 0) for {
       exists <- s3Exists(bucketName, key)
       r <- if (exists)
@@ -104,23 +102,11 @@ trait S3Client[F[_]] extends AwsClient[F] {
     } yield r
     else pure(false)
 
-  def httpsUrl(bucketName: String, key: String) =
-    s"https://s3-${awsContext.region.getOrElse("eu-west-1")}.amazonaws.com/$bucketName/$key"
+  def httpsUrl(bucketName: String, key: String)(implicit context: AwsContext) =
+    s"https://s3-${context.region.getOrElse("eu-west-1")}.amazonaws.com/$bucketName/$key"
 
-  def s3CreateBucket(bucketName: String, region: String) = delay {
+  def s3CreateBucket(bucketName: String, region: String)(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
     val request = new CreateBucketRequest(bucketName, region)
-    s3.createBucket(request)
+    context.s3.createBucket(request)
   }
-}
-
-object S3Client {
-
-  def apply[F[_] : Concurrent : Timer](implicit context: AwsContext = AwsContext()) =
-    new S3Client[F] {
-      def awsContext = context
-
-      val concurrent = Concurrent[F]
-
-      val timer = Timer[F]
-    }
 }

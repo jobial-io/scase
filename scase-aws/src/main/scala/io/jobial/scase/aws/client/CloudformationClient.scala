@@ -12,43 +12,41 @@
  */
 package io.jobial.scase.aws.client
 
+import cats.effect.Concurrent
+import cats.effect.Timer
 import cats.implicits._
 import com.amazonaws.services.cloudformation.model._
-import com.amazonaws.services.cloudformation.AmazonCloudFormation
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder
 import io.jobial.scase.util.Hash.uuid
 
 trait CloudformationClient[F[_]] extends AwsClient[F] {
-  lazy val cloudformation = buildAwsClient[AmazonCloudFormationClientBuilder, AmazonCloudFormation](AmazonCloudFormationClientBuilder.standard)
-
-  def createStack(stackName: String, templateUrl: Option[String], templateBody: Option[String]) = delay {
+  def createStack(stackName: String, templateUrl: Option[String], templateBody: Option[String])(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
     val request = new CreateStackRequest().withStackName(stackName)
       .withCapabilities("CAPABILITY_NAMED_IAM")
 
     templateUrl.map(request.withTemplateURL)
     templateBody.map(request.withTemplateBody)
-    cloudformation.createStack(request)
+    context.cloudformation.createStack(request)
   }
 
-  def updateStack(stackName: String, templateUrl: Option[String], templateBody: Option[String]) = delay {
+  def updateStack(stackName: String, templateUrl: Option[String], templateBody: Option[String])(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
     val request = new UpdateStackRequest().withStackName(stackName)
       .withCapabilities("CAPABILITY_NAMED_IAM")
 
     templateUrl.map(request.withTemplateURL)
     templateBody.map(request.withTemplateBody)
 
-    cloudformation.updateStack(request)
+    context.cloudformation.updateStack(request)
   }
 
-  def deleteStack(stackName: String) = delay {
-    cloudformation.deleteStack(new DeleteStackRequest().withStackName(stackName))
+  def deleteStack(stackName: String)(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
+    context.cloudformation.deleteStack(new DeleteStackRequest().withStackName(stackName))
   }
 
-  def describeStackResources(stackName: String) = delay {
-    cloudformation.describeStackResources(new DescribeStackResourcesRequest().withStackName(stackName)).getStackResources
+  def describeStackResources(stackName: String)(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
+    context.cloudformation.describeStackResources(new DescribeStackResourcesRequest().withStackName(stackName)).getStackResources
   }
 
-  def createChangeSet(stackName: String, templateUrl: Option[String], templateBody: Option[String], changeSetName: Option[String] = None) = delay {
+  def createChangeSet(stackName: String, templateUrl: Option[String], templateBody: Option[String], changeSetName: Option[String] = None)(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
     val request = new CreateChangeSetRequest()
       .withStackName(stackName)
       .withChangeSetName(changeSetName.getOrElse(s"$stackName-${uuid()}"))
@@ -57,14 +55,14 @@ trait CloudformationClient[F[_]] extends AwsClient[F] {
     templateUrl.map(request.withTemplateURL)
     templateBody.map(request.withTemplateBody)
 
-    cloudformation.createChangeSet(request)
+    context.cloudformation.createChangeSet(request)
   }
 
-  def describeChangeSet(changeSetName: String) = delay {
-    cloudformation.describeChangeSet(new DescribeChangeSetRequest().withChangeSetName(changeSetName))
+  def describeChangeSet(changeSetName: String)(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
+    context.cloudformation.describeChangeSet(new DescribeChangeSetRequest().withChangeSetName(changeSetName))
   }
 
-  def createChangeSetAndWaitForComplete(stackName: String, templateUrl: Option[String], templateBody: Option[String]) = {
+  def createChangeSetAndWaitForComplete(stackName: String, templateUrl: Option[String], templateBody: Option[String])(implicit context: AwsContext, concurrent: Concurrent[F], timer: Timer[F]) = {
     for {
       changeSet <- createChangeSet(stackName, templateUrl, templateBody)
       describeResult <- waitFor(describeChangeSet(changeSet.getId)) { changeSet =>

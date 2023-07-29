@@ -15,18 +15,16 @@ package io.jobial.scase.aws.lambda
 import cats.effect.Concurrent
 import cats.implicits._
 import io.jobial.scase.aws.client.AwsContext
+import io.jobial.scase.aws.client.LambdaClient
 import io.jobial.scase.core.DefaultMessageReceiveResult
 import io.jobial.scase.core.RequestResponseClient
 import io.jobial.scase.core.RequestResponseMapping
 import io.jobial.scase.core.RequestResponseResult
 import io.jobial.scase.core.SendRequestContext
-import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageSendResult
 import io.jobial.scase.core.impl.DefaultRequestResponseResult
-import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Marshaller
 import io.jobial.scase.marshalling.Unmarshaller
-
 import java.nio.charset.StandardCharsets
 import java.time.Instant.now
 
@@ -35,10 +33,8 @@ case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP:
   functionName: String
 )(
   implicit val awsContext: AwsContext
-) extends RequestResponseClient[F, REQ, RESP] with CatsUtils with Logging {
-
-  import awsContext.lambdaClient._
-
+) extends RequestResponseClient[F, REQ, RESP] with LambdaClient[F] {
+  
   override def sendRequestWithResponseMapping[REQUEST <: REQ, RESPONSE <: RESP](
     request: REQUEST,
     requestResponseMapping: RequestResponseMapping[REQUEST, RESPONSE]
@@ -46,7 +42,7 @@ case class LambdaRequestResponseClient[F[_] : Concurrent, REQ: Marshaller, RESP:
     implicit sendRequestContext: SendRequestContext
   ): F[RequestResponseResult[F, REQUEST, RESPONSE]] =
     for {
-      response <- liftIO(invoke(functionName, Marshaller[REQ].marshalToText(request))).onError { case t =>
+      response <- invoke(functionName, Marshaller[REQ].marshalToText(request)).onError { case t =>
         error(s"error invoking lambda function $functionName", t)
       }
       responsePayload = new String(response.getPayload.array, StandardCharsets.UTF_8)

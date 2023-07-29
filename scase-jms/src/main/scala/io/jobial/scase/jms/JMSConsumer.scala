@@ -6,19 +6,15 @@ import cats.implicits._
 import io.jobial.scase.core.DefaultMessageReceiveResult
 import io.jobial.scase.core.MessageReceiveResult
 import io.jobial.scase.core.ReceiveTimeout
-import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
-import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
-
-import java.time.Instant
 import java.time.Instant.ofEpochMilli
 import javax.jms._
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.FiniteDuration
 
 class JMSConsumer[F[_] : Concurrent, M](destination: Destination, val subscriptions: Ref[F, List[MessageReceiveResult[F, M] => F[_]]])(implicit session: Session)
-  extends DefaultMessageConsumer[F, M] with CatsUtils with Logging {
+  extends DefaultMessageConsumer[F, M] {
 
   val consumer = session.createConsumer(destination)
 

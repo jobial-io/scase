@@ -16,12 +16,10 @@ import com.tibco.tibrv.TibrvRvdTransport
 import io.jobial.scase.core.DefaultMessageReceiveResult
 import io.jobial.scase.core.ReceiveTimeout
 import io.jobial.scase.core.ResponseProducerIdKey
-import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
 import io.jobial.scase.core.impl.blockerContext
-import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
-
+import io.jobial.sprint.util.CatsUtils
 import java.net.InetAddress
 import java.time.Instant.now
 import scala.concurrent.TimeoutException
@@ -31,7 +29,7 @@ class TibrvConsumer[F[_] : Concurrent : Timer, M](
   receiveResult: MVar[IO, (TibrvListener, TibrvMsg)],
   subjects: Seq[String],
   subjectFilter: String => Boolean
-)(implicit context: TibrvContext) extends DefaultMessageConsumer[F, M] with TibrvMsgCallback with Logging {
+)(implicit context: TibrvContext) extends DefaultMessageConsumer[F, M] with TibrvMsgCallback {
 
   val rvListeners = {
     if (!Tibrv.isValid) Tibrv.open(Tibrv.IMPL_NATIVE)
@@ -68,7 +66,7 @@ class TibrvConsumer[F[_] : Concurrent : Timer, M](
     if (subjectFilter(message.getSendSubject))
       receiveResult.put(listener -> message)
     else
-      unit[IO]
+      IO.unit
   }.unsafeRunSync()
 
   // TODO: try to get rid of these
@@ -78,7 +76,7 @@ class TibrvConsumer[F[_] : Concurrent : Timer, M](
   def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]) =
     for {
       _ <- pure(rvListeners)
-      (listener, tibrvMessage) <- liftIO(take(receiveResult, timeout)).handleErrorWith {
+      (listener, tibrvMessage) <- liftIO(CatsUtils[IO].take(receiveResult, timeout)).handleErrorWith {
         case t: TimeoutException =>
           trace(s"Receive timed out after $timeout in $this") >>
             raiseError(ReceiveTimeout(timeout, t))
@@ -111,7 +109,7 @@ class TibrvConsumer[F[_] : Concurrent : Timer, M](
     delay(rvListeners.map(_.destroy()))
 }
 
-object TibrvConsumer extends CatsUtils with Logging {
+object TibrvConsumer {
 
   def apply[F[_] : Concurrent : Timer, M](
     subjects: Seq[String] = Seq("_LOCAL.>"),
@@ -121,6 +119,6 @@ object TibrvConsumer extends CatsUtils with Logging {
     ioConcurrent: Concurrent[IO]
   ) =
     for {
-      receiveResult <- liftIO(MVar.empty[IO, (TibrvListener, TibrvMsg)])(Concurrent[F])
+      receiveResult <- Concurrent[F].liftIO(MVar.empty[IO, (TibrvListener, TibrvMsg)])
     } yield new TibrvConsumer[F, M](receiveResult, subjects, subjectFilter)
 }

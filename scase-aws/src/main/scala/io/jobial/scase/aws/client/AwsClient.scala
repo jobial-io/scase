@@ -12,73 +12,9 @@
  */
 package io.jobial.scase.aws.client
 
-import cats.Parallel
-import cats.effect.Concurrent
-import cats.effect.Timer
-
-import java.util.concurrent.{ExecutionException, ExecutorService, Executors}
-import com.amazonaws.ClientConfiguration
-import com.amazonaws.auth.AWSStaticCredentialsProvider
-import com.amazonaws.client.builder.{AwsAsyncClientBuilder, AwsSyncClientBuilder, ExecutorFactory}
-import com.amazonaws.endpointdiscovery.DaemonThreadFactory
 import io.jobial.sprint.logging.Logging
 import io.jobial.sprint.util.CatsUtils
 
-import scala.concurrent.Future.failed
-import scala.concurrent.{ExecutionContext, Future}
-
 trait AwsClient[F[_]] extends CatsUtils[F] with Logging[F] {
-
-  def awsContext: AwsContext
-
-  protected implicit def concurrent: Concurrent[F]
-
-  protected implicit def timer: Timer[F]
-
-  /**
-   * Clients are supposed to be thread safe: https://forums.aws.amazon.com/message.jspa?messageID=191621
-   */
-  def buildAwsClient[BuilderClass <: AwsSyncClientBuilder[BuilderClass, BuiltClass], BuiltClass](awsClientBuilder: AwsSyncClientBuilder[BuilderClass, BuiltClass]) = {
-    val b1 = awsContext.region match {
-      case Some(region) =>
-        awsClientBuilder.withRegion(region)
-      case None =>
-        awsClientBuilder
-    }
-
-    val b2 = awsContext.credentials match {
-      case Some(credentials) =>
-        b1.withCredentials(new AWSStaticCredentialsProvider(credentials))
-      case None =>
-        b1
-    }
-
-    val b3 = b2.withClientConfiguration(new ClientConfiguration().withMaxConnections(100))
-
-    b3.build
-  }
-
-  def buildAwsAsyncClient[BuilderClass <: AwsAsyncClientBuilder[BuilderClass, BuiltClass], BuiltClass](awsClientBuilder: AwsAsyncClientBuilder[BuilderClass, BuiltClass]) = {
-    val b1 = awsContext.region match {
-      case Some(region) =>
-        awsClientBuilder.withRegion(region)
-      case None =>
-        awsClientBuilder
-    }
-
-    val b2 = awsContext.credentials match {
-      case Some(credentials) =>
-        b1.withCredentials(new AWSStaticCredentialsProvider(credentials))
-      case _ =>
-        b1
-    }
-
-    val b3 = b2.withClientConfiguration(new ClientConfiguration().withMaxConnections(100))
-      .withExecutorFactory(new ExecutorFactory {
-        def newExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory)
-      })
-
-    b3.build
-  }
-
+  
 }

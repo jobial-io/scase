@@ -10,7 +10,6 @@ import io.jobial.scase.core.MessageReceiveResult
 import io.jobial.scase.core.ReceiveTimeout
 import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
-import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration.FiniteDuration
@@ -19,7 +18,7 @@ import scala.concurrent.duration.FiniteDuration
 class InMemoryConsumer[F[_] : Concurrent : Timer, M](
   val receiveResult: MVar[F, MessageReceiveResult[F, M]],
   producerDeferred: Deferred[F, InMemoryProducer[F, M]]
-) extends DefaultMessageConsumer[F, M] with CatsUtils with Logging {
+) extends DefaultMessageConsumer[F, M] {
 
   def receive(timeout: Option[FiniteDuration])(implicit u: Unmarshaller[M]) =
     take(receiveResult, timeout).handleErrorWith {

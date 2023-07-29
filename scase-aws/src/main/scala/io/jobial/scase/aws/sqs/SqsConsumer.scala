@@ -7,12 +7,10 @@ import cats.implicits._
 import com.amazonaws.services.sqs.model.Message
 import io.jobial.scase.aws.client.AwsContext
 import io.jobial.scase.aws.client.IdentityMap.identityTrieMap
+import io.jobial.scase.aws.client.SqsClient
 import io.jobial.scase.core._
-import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
-import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
-
 import java.time.Instant.ofEpochMilli
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
@@ -32,13 +30,10 @@ class SqsConsumer[F[_] : Concurrent, M](
 )(
   implicit val awsContext: AwsContext
 ) extends DefaultMessageConsumer[F, M]
-  with CatsUtils
-  with Logging {
-
-  import awsContext.sqsClient._
+  with SqsClient[F] {
 
   override def initialize =
-    liftIO(initializeQueue(queueUrl, messageRetentionPeriod, visibilityTimeout, cleanup))
+    initializeQueue(queueUrl, messageRetentionPeriod, visibilityTimeout, cleanup)
 
   def receiveMessagesFromQueue(timeout: Option[FiniteDuration]) =
     (for {
@@ -50,7 +45,7 @@ class SqsConsumer[F[_] : Concurrent, M](
             newMessages <-
               trace(s"waiting for messages on $queueUrl") >>
                 // TODO: handle timeout more precisely
-                liftIO(receiveMessage(queueUrl, 10, timeout.map(t => min(1, t.toSeconds.toInt)).getOrElse(Int.MaxValue)).map(_.getMessages.asScala))
+                receiveMessage(queueUrl, 10, timeout.map(t => min(1, t.toSeconds.toInt)).getOrElse(Int.MaxValue)).map(_.getMessages.asScala)
             _ <- trace(s"received messages ${newMessages.toString.take(500)} on queue $queueUrl")
           } yield newMessages
         else
@@ -66,7 +61,7 @@ class SqsConsumer[F[_] : Concurrent, M](
     } yield message) handleErrorWith { t =>
       for {
         _ <- receivedMessagesSemaphore.release
-        _ <- raiseError[F, Option[Message]](t)
+        _ <- raiseError[Option[Message]](t)
       } yield None
     }
 

@@ -7,7 +7,6 @@ import io.jobial.scase.core.DefaultMessageReceiveResult
 import io.jobial.scase.core.ReceiveTimeout
 import io.jobial.scase.core.impl.CatsUtils
 import io.jobial.scase.core.impl.DefaultMessageConsumer
-import io.jobial.scase.core.impl.RegexUtils
 import io.jobial.scase.logging.Logging
 import io.jobial.scase.marshalling.Unmarshaller
 import org.apache.pulsar.client.api.ConsumerBuilder
@@ -17,7 +16,6 @@ import org.apache.pulsar.client.api.SubscriptionMode
 import org.apache.pulsar.client.api.SubscriptionMode.Durable
 import org.apache.pulsar.client.api.SubscriptionType
 import org.apache.pulsar.client.api.SubscriptionType.Exclusive
-
 import java.time.Instant
 import java.time.Instant.ofEpochMilli
 import java.util.UUID.randomUUID
@@ -28,6 +26,7 @@ import scala.concurrent.TimeoutException
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 import scala.util.matching.Regex
+import io.jobial.scase.core.impl.blockerContext
 
 class PulsarConsumer[F[_] : Concurrent : Timer, M](
   val topic: Either[String, Regex],
@@ -39,7 +38,7 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
   val subscriptionMode: SubscriptionMode,
   val redeliverUnacknowledgedMessages: Boolean
 )(implicit context: PulsarContext)
-  extends DefaultMessageConsumer[F, M] with CatsUtils with RegexUtils with Logging {
+  extends DefaultMessageConsumer[F, M] {
 
   implicit class ConsumerBuilderExt[T](builder: ConsumerBuilder[T]) {
     def apply(f: ConsumerBuilder[T] => Option[ConsumerBuilder[T]]): ConsumerBuilder[T] =

@@ -12,20 +12,15 @@
  */
 package io.jobial.scase.aws.client
 
-import cats.Parallel
 import cats.effect.Concurrent
-import cats.effect.Timer
-import com.amazonaws.services.lambda.AWSLambdaAsync
-import com.amazonaws.services.lambda.AWSLambdaAsyncClientBuilder
-import com.amazonaws.services.lambda.model.InvokeRequest
 import cats.implicits._
+import com.amazonaws.services.lambda.model.InvokeRequest
 
 trait LambdaClient[F[_]] extends AwsClient[F] {
-  lazy val lambda = buildAwsAsyncClient[AWSLambdaAsyncClientBuilder, AWSLambdaAsync](AWSLambdaAsyncClientBuilder.standard)
 
-  def invoke(functionName: String, payload: String) =
+  def invoke(functionName: String, payload: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
     for {
-      result <- fromJavaFuture(lambda.invokeAsync(new InvokeRequest()
+      result <- fromJavaFuture(context.lambda.invokeAsync(new InvokeRequest()
         .withFunctionName(functionName)
         .withPayload(payload)))
       //    result <-
@@ -49,16 +44,4 @@ trait LambdaClient[F[_]] extends AwsClient[F] {
   //    // TODO: handle non-java errors...
   //  }
   //
-}
-
-object LambdaClient {
-
-  def apply[F[_] : Concurrent : Timer](implicit context: AwsContext = AwsContext()) =
-    new LambdaClient[F] {
-      def awsContext = context
-
-      val concurrent = Concurrent[F]
-
-      val timer = Timer[F]
-    }
 }

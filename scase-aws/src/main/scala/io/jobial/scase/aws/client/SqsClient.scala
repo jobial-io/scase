@@ -18,36 +18,26 @@ import cats.effect.IO
 import cats.effect.Sync
 import cats.effect.Timer
 import cats.implicits._
-import com.amazon.sqs.javamessaging.AmazonSQSExtendedClient
-import com.amazon.sqs.javamessaging.ExtendedClientConfiguration
-import com.amazonaws.services.sqs.AmazonSQSAsync
-import com.amazonaws.services.sqs.AmazonSQSAsyncClientBuilder
 import com.amazonaws.services.sqs.buffered.AmazonSQSBufferedAsyncClient
-import com.amazonaws.services.sqs.model._
+import com.amazonaws.services.sqs.model.CreateQueueRequest
+import com.amazonaws.services.sqs.model.MessageAttributeValue
+import com.amazonaws.services.sqs.model.QueueAttributeName
+import com.amazonaws.services.sqs.model.ReceiveMessageRequest
+import com.amazonaws.services.sqs.model.SendMessageRequest
+import com.amazonaws.services.sqs.model.SetQueueAttributesRequest
 import io.jobial.sprint.logging.Logging
 import io.jobial.sprint.util.CatsUtils
 import io.jobial.sprint.util.IOShutdownHook
-
 import java.util
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.DurationInt
 
 trait SqsClient[F[_]] extends S3Client[F] {
-
-  // TODO: find way to share sqs client and/or inject config; by default, each client creates hundreds of threads
-  //  - see https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/services/sqs/AmazonSQSAsyncClient.html 
-  lazy val sqs = new AmazonSQSBufferedAsyncClient(buildAwsAsyncClient[AmazonSQSAsyncClientBuilder, AmazonSQSAsync](AmazonSQSAsyncClientBuilder.standard))
-  //lazy val sqs = buildAwsAsyncClient[AmazonSQSAsyncClientBuilder, AmazonSQSAsync](AmazonSQSAsyncClientBuilder.standard)
-
-  lazy val sqsExtended = awsContext.sqsExtendedS3BucketName.map { sqsExtendedS3BucketName =>
-    new AmazonSQSExtendedClient(sqs, new ExtendedClientConfiguration()
-      .withLargePayloadSupportEnabled(s3, sqsExtendedS3BucketName))
-  }
-
+  
   val defaultMaxReceiveMessageWaitTime = 20
 
-  def createQueue(queueName: String) =
+  def createQueue(queueName: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
     for {
       r <-
         trace(s"creating SQS queue $queueName") >>
@@ -56,16 +46,16 @@ trait SqsClient[F[_]] extends S3Client[F] {
               .addAttributesEntry("ReceiveMessageWaitTimeSeconds", defaultMaxReceiveMessageWaitTime.toString)
               .addAttributesEntry("MessageRetentionPeriod", "86400")
 
-            sqs.createQueue(request)
+            context.sqs.createQueue(request)
           }.handleErrorWith { t =>
-            enableLongPolling(sqs.getQueueUrl(queueName).getQueueUrl) >>
+            enableLongPolling(context.sqs.getQueueUrl(queueName).getQueueUrl) >>
               raiseError(t)
           }
       _ <- enableLongPolling(r.getQueueUrl)
     } yield r
 
   def initializeQueue(queueUrl: String, messageRetentionPeriod: Option[Duration],
-    visibilityTimeout: Option[Duration], cleanup: Boolean) = {
+    visibilityTimeout: Option[Duration], cleanup: Boolean)(implicit context: AwsContext, concurrent: Concurrent[F]) = {
 
     def setupQueue =
       messageRetentionPeriod.map(setMessageRetentionPeriod(queueUrl, _)).getOrElse(unit) >>
@@ -75,7 +65,7 @@ trait SqsClient[F[_]] extends S3Client[F] {
       createQueue(queueUrl) >> whenA(cleanup)(new IOShutdownHook {
         def run =
           trace(s"deleting queue $queueUrl") >>
-            pure(sqs.deleteQueue(queueUrl)).handleErrorWith { t =>
+            pure(context.sqs.deleteQueue(queueUrl)).handleErrorWith { t =>
               raiseError[Unit](new IllegalStateException(s"error deleting queue $queueUrl", t))
             } >> trace(s"deleted queue $queueUrl")
       }.add) >>
@@ -87,7 +77,7 @@ trait SqsClient[F[_]] extends S3Client[F] {
   }
 
 
-  def sendMessage(queueUrl: String, message: String, attributes: Map[String, String] = Map())(implicit awsContext: AwsContext = AwsContext()) = {
+  def sendMessage(queueUrl: String, message: String, attributes: Map[String, String] = Map())(implicit context: AwsContext, concurrent: Concurrent[F]) = {
     {
       for {
         request <- delay {
@@ -107,7 +97,7 @@ trait SqsClient[F[_]] extends S3Client[F] {
           trace(s"calling sendMessage on queue $queueUrl with ${
             request.toString.take(200)
           }") >>
-          delay(sqsExtended.getOrElse(sqs).sendMessage(request))
+          delay(context.sqsExtended.getOrElse(context.sqs).sendMessage(request))
       } yield r
     } handleErrorWith {
       case t =>
@@ -119,31 +109,31 @@ trait SqsClient[F[_]] extends S3Client[F] {
   //  def sendMessage(queueUrl: String, message: JsValue): Try[SendMessageResult] =
   //    sendMessage(queueUrl, message.prettyPrint)
   //
-  def enableLongPolling(queueUrl: String) = delay {
-    sqs.setQueueAttributes(new SetQueueAttributesRequest().withQueueUrl(queueUrl)
+  def enableLongPolling(queueUrl: String)(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
+    context.sqs.setQueueAttributes(new SetQueueAttributesRequest().withQueueUrl(queueUrl)
       .addAttributesEntry(QueueAttributeName.ReceiveMessageWaitTimeSeconds.toString, defaultMaxReceiveMessageWaitTime.toString))
   }
 
-  def setMessageRetentionPeriod(queueUrl: String, messageRetentionPeriod: Duration) = delay {
-    sqs.setQueueAttributes(new SetQueueAttributesRequest().withQueueUrl(queueUrl)
+  def setMessageRetentionPeriod(queueUrl: String, messageRetentionPeriod: Duration)(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
+    context.sqs.setQueueAttributes(new SetQueueAttributesRequest().withQueueUrl(queueUrl)
       .addAttributesEntry(QueueAttributeName.MessageRetentionPeriod
         .toString, messageRetentionPeriod.toSeconds.toString))
   }
 
-  def setVisibilityTimeout(queueUrl: String, visibilityTimeout: Duration) = delay {
+  def setVisibilityTimeout(queueUrl: String, visibilityTimeout: Duration)(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
     // TODO: report this bug
-    assert(!sqs.isInstanceOf[AmazonSQSBufferedAsyncClient] || visibilityTimeout > (0.seconds),
+    assert(!context.sqs.isInstanceOf[AmazonSQSBufferedAsyncClient] || visibilityTimeout > (0.seconds),
       "Cannot set visibility timeout to 0 seconds on a buffered client due to a bug which casues hanging in receiveMessages")
 
-    sqs.setQueueAttributes(new SetQueueAttributesRequest().withQueueUrl(queueUrl)
+    context.sqs.setQueueAttributes(new SetQueueAttributesRequest().withQueueUrl(queueUrl)
       .addAttributesEntry(QueueAttributeName.VisibilityTimeout
         .toString, visibilityTimeout.toSeconds.toString))
   }
 
   // TODO: using async client
-  def receiveMessage(queueUrl: String, maxNumberOfMessages: Int = 10, maxReceiveMessageWaitTime: Int = defaultMaxReceiveMessageWaitTime) =
+  def receiveMessage(queueUrl: String, maxNumberOfMessages: Int = 10, maxReceiveMessageWaitTime: Int = defaultMaxReceiveMessageWaitTime)(implicit context: AwsContext, concurrent: Concurrent[F]) =
     delay {
-      sqsExtended.getOrElse(sqs).receiveMessage(new ReceiveMessageRequest()
+      context.sqsExtended.getOrElse(context.sqs).receiveMessage(new ReceiveMessageRequest()
         .withQueueUrl(queueUrl)
         .withAttributeNames("All")
         .withMessageAttributeNames("All")
@@ -152,31 +142,18 @@ trait SqsClient[F[_]] extends S3Client[F] {
       )
     }
 
-  def deleteMessage(queueUrl: String, receiptHandle: String) =
-    sqsExtended.getOrElse(sqs).deleteMessage(queueUrl, receiptHandle)
+  def deleteMessage(queueUrl: String, receiptHandle: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
+    context.sqsExtended.getOrElse(context.sqs).deleteMessage(queueUrl, receiptHandle)
 
-  def changeMessageVisibility(queueUrl: String, receiptHandle: String, visibilityTimeout: Int) =
-    sqsExtended.getOrElse(sqs).changeMessageVisibility(queueUrl, receiptHandle, visibilityTimeout)
+  def changeMessageVisibility(queueUrl: String, receiptHandle: String, visibilityTimeout: Int)(implicit context: AwsContext, concurrent: Concurrent[F]) =
+    context.sqsExtended.getOrElse(context.sqs).changeMessageVisibility(queueUrl, receiptHandle, visibilityTimeout)
 
-  def deleteQueue(queueUrl: String) = delay {
-    sqs.deleteQueue(queueUrl)
+  def deleteQueue(queueUrl: String)(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
+    context.sqs.deleteQueue(queueUrl)
   } handleErrorWith {
     case t =>
       error(s"deleting queue failed for $queueUrl: ", t) >>
         raiseError(t)
   }
 
-}
-
-object SqsClient {
-
-  def apply[F[_] : Timer : Concurrent](implicit context: AwsContext = AwsContext()) = {
-    new SqsClient[F] {
-      val awsContext = context
-
-      val concurrent = Concurrent[F]
-
-      val timer = Timer[F]
-    }
-  }
 }
