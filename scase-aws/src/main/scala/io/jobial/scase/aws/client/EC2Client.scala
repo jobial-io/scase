@@ -22,33 +22,33 @@ trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
 
   def getInstanceState(id: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
     for {
-      r <- fromJavaFuture(context.ec2Client.describeInstancesAsync(
+      r <- fromJavaFuture(context.ec2.describeInstancesAsync(
         new DescribeInstancesRequest().withInstanceIds(id)
       ))
     } yield r.getReservations.asScala.flatMap(_.getInstances.asScala).headOption.map(_.getState)
 
   def startInstance(id: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
-    fromJavaFuture(context.ec2Client.startInstancesAsync(
+    fromJavaFuture(context.ec2.startInstancesAsync(
       new StartInstancesRequest().withInstanceIds(id)
     ))
 
   def stopInstance(id: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
-    fromJavaFuture(context.ec2Client.stopInstancesAsync(
+    fromJavaFuture(context.ec2.stopInstancesAsync(
       new StopInstancesRequest().withInstanceIds(id)
     ))
 
   def describeSpotFleetRequests(implicit context: AwsContext, concurrent: Concurrent[F]) =
-    fromJavaFuture(context.ec2Client.describeSpotFleetRequestsAsync(
+    fromJavaFuture(context.ec2.describeSpotFleetRequestsAsync(
       new DescribeSpotFleetRequestsRequest()
     ))
 
   def describeFleets(implicit context: AwsContext, concurrent: Concurrent[F]) =
-    fromJavaFuture(context.ec2Client.describeFleetsAsync(
+    fromJavaFuture(context.ec2.describeFleetsAsync(
       new DescribeFleetsRequest()
     ))
 
   def modifySpotFleetRequests(request: ModifySpotFleetRequestRequest)(implicit context: AwsContext, concurrent: Concurrent[F]) =
-    fromJavaFuture(context.ec2Client
+    fromJavaFuture(context.ec2
       .modifySpotFleetRequestAsync(request))
 
   def setSpotFleetTargetCapacity(id: String, capacity: Int)(implicit context: AwsContext, concurrent: Concurrent[F]) =
@@ -56,12 +56,12 @@ trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
       .withSpotFleetRequestId(id).withTargetCapacity(capacity))
 
   def describeSpotFleetInstances(spotFleetRequestId: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
-    fromJavaFuture(context.ec2Client.describeSpotFleetInstancesAsync(
+    fromJavaFuture(context.ec2.describeSpotFleetInstancesAsync(
       new DescribeSpotFleetInstancesRequest().withSpotFleetRequestId(spotFleetRequestId)
     ))
 
   def describeFleetInstances(fleetId: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
-    fromJavaFuture(context.ec2Client.describeFleetInstancesAsync(
+    fromJavaFuture(context.ec2.describeFleetInstancesAsync(
       new DescribeFleetInstancesRequest().withFleetId(fleetId)
     ))
 
@@ -87,7 +87,7 @@ trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
 
   def setFleetSpotTargetCapacity(id: String, capacity: Int)(implicit context: AwsContext, concurrent: Concurrent[F]) =
     for {
-      r <- fromJavaFuture(context.ec2Client.modifyFleetAsync(
+      r <- fromJavaFuture(context.ec2.modifyFleetAsync(
         new ModifyFleetRequest()
           .withFleetId(id).withTargetCapacitySpecification(
           new TargetCapacitySpecificationRequest()
