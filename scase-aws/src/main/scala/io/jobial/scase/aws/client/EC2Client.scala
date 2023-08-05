@@ -22,11 +22,14 @@ import scala.collection.JavaConverters._
 
 trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
 
+  def describeInstance(id: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
+    fromJavaFuture(context.ec2.describeInstancesAsync(
+      new DescribeInstancesRequest().withInstanceIds(id)
+    ))
+
   def getInstanceState(id: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
     for {
-      r <- fromJavaFuture(context.ec2.describeInstancesAsync(
-        new DescribeInstancesRequest().withInstanceIds(id)
-      ))
+      r <- describeInstance(id)
     } yield r.getReservations.asScala.flatMap(_.getInstances.asScala).headOption.map(_.getState)
 
   def startInstance(id: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
@@ -43,8 +46,7 @@ trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
     fromJavaFuture(context.ec2.describeSpotInstanceRequestsAsync(
       new DescribeSpotInstanceRequestsRequest()
     ))
-
-
+  
   def describeSpotFleetRequests(implicit context: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(context.ec2.describeSpotFleetRequestsAsync(
       new DescribeSpotFleetRequestsRequest()
