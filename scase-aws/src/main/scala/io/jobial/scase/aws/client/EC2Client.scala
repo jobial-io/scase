@@ -22,6 +22,11 @@ import scala.collection.JavaConverters._
 
 trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
 
+  def describeInstances(implicit context: AwsContext, concurrent: Concurrent[F]) =
+    fromJavaFuture(context.ec2.describeInstancesAsync(
+      new DescribeInstancesRequest()
+    ))
+
   def describeInstance(id: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(context.ec2.describeInstancesAsync(
       new DescribeInstancesRequest().withInstanceIds(id)
