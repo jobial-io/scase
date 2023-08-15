@@ -21,11 +21,14 @@ import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model._
 import com.amazonaws.util.IOUtils
+import io.jobial.sprint.process.ProcessContext
+import io.jobial.sprint.process.ProcessManagement
+
 import java.io.ByteArrayInputStream
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
-trait S3Client[F[_]] extends AwsClient[F] {
+trait S3Client[F[_]] extends AwsClient[F] with ProcessManagement[F] {
 
   def s3PutText(bucketName: String, key: String, data: String, storageClass: StorageClass = StorageClass.IntelligentTiering)(implicit context: AwsContext = AwsContext(), concurrent: Concurrent[F]) =
     s3PutObject(bucketName, key, data.getBytes("utf-8"), storageClass)
@@ -109,4 +112,8 @@ trait S3Client[F[_]] extends AwsClient[F] {
     val request = new CreateBucketRequest(bucketName, region)
     context.s3.createBucket(request)
   }
+
+  def s3Sync(from: String, to: String, opts: List[String] = List())(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
+    runProcessAndWait(List("aws", "s3", "sync") ++ opts ++ List(from, to))
+
 }
