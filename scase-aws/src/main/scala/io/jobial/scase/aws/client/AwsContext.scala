@@ -24,6 +24,7 @@ import com.amazonaws.endpointdiscovery.DaemonThreadFactory
 import com.amazonaws.services.cloudformation.AmazonCloudFormation
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder
 import com.amazonaws.services.ec2.AmazonEC2AsyncClientBuilder
+import com.amazonaws.services.ecs.AmazonECSAsyncClientBuilder
 import com.amazonaws.services.lambda.AWSLambdaAsync
 import com.amazonaws.services.lambda.AWSLambdaAsyncClientBuilder
 import com.amazonaws.services.s3.AmazonS3
@@ -35,7 +36,6 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder
 import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.AmazonSQSAsyncClientBuilder
 import com.amazonaws.services.sqs.buffered.AmazonSQSBufferedAsyncClient
-
 import java.util.concurrent.Executors
 
 class AwsContext(
@@ -93,6 +93,10 @@ class AwsContext(
   lazy val s3 = buildAwsClient[AmazonS3ClientBuilder, AmazonS3](AmazonS3ClientBuilder.standard)
 
   lazy val ec2 = AmazonEC2AsyncClientBuilder.standard().withExecutorFactory(new ExecutorFactory {
+    def newExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory)
+  }).build
+
+  lazy val ecs = AmazonECSAsyncClientBuilder.standard().withExecutorFactory(new ExecutorFactory {
     def newExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory)
   }).build
 

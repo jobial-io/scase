@@ -12,12 +12,12 @@ import com.amazonaws.services.ec2.model.DescribeSpotInstanceRequestsRequest
 import com.amazonaws.services.ec2.model.FleetData
 import com.amazonaws.services.ec2.model.ModifyFleetRequest
 import com.amazonaws.services.ec2.model.ModifySpotFleetRequestRequest
+import com.amazonaws.services.ec2.model.RebootInstancesRequest
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfig
 import com.amazonaws.services.ec2.model.StartInstancesRequest
 import com.amazonaws.services.ec2.model.StopInstancesRequest
 import com.amazonaws.services.ec2.model.TargetCapacitySpecificationRequest
 import io.jobial.sprint.util.CatsUtils
-
 import scala.collection.JavaConverters._
 
 trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
@@ -47,6 +47,11 @@ trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
       new StopInstancesRequest().withInstanceIds(id)
     ))
 
+  def rebootInstance(id: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
+    fromJavaFuture(context.ec2.rebootInstancesAsync(
+      new RebootInstancesRequest().withInstanceIds(id)
+    ))
+    
   def describeSpotInstanceRequests(implicit context: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(context.ec2.describeSpotInstanceRequestsAsync(
       new DescribeSpotInstanceRequestsRequest()

@@ -108,6 +108,7 @@ lazy val `scase-aws` = project
       "com.amazonaws" % "aws-lambda-java-core" % AwsLambdaJavaCoreVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-java-sdk-sts" % AwsVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-java-sdk-ec2" % AwsVersion excludeAll ("commons-logging"),
+      "com.amazonaws" % "aws-java-sdk-ecs" % AwsVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-java-sdk-secretsmanager" % AwsVersion excludeAll ("commons-logging"),
       "org.typelevel" %% "cats-core" % CatsVersion,
       "org.typelevel" %% "cats-effect" % CatsVersion,
