@@ -18,6 +18,7 @@ import com.amazonaws.services.ec2.model.SpotFleetRequestConfig
 import com.amazonaws.services.ec2.model.StartInstancesRequest
 import com.amazonaws.services.ec2.model.StopInstancesRequest
 import com.amazonaws.services.ec2.model.TargetCapacitySpecificationRequest
+import io.jobial.scase.aws.client.Tagged.TaggedSyntax
 import io.jobial.sprint.util.CatsUtils
 
 import scala.collection.JavaConverters._
@@ -28,6 +29,12 @@ trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
     fromJavaFuture(context.ec2.describeInstancesAsync(
       new DescribeInstancesRequest()
     ))
+
+  def listInstances(implicit context: AwsContext, concurrent: Concurrent[F]) =
+    for {
+      r <- describeInstances
+    } yield
+      r.getReservations.asScala.toList.flatMap(_.getInstances.asScala)
 
   def describeInstance(id: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(context.ec2.describeInstancesAsync(
@@ -53,12 +60,12 @@ trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
     fromJavaFuture(context.ec2.rebootInstancesAsync(
       new RebootInstancesRequest().withInstanceIds(id)
     ))
-    
+
   def describeSpotInstanceRequests(implicit context: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(context.ec2.describeSpotInstanceRequestsAsync(
       new DescribeSpotInstanceRequestsRequest()
     ))
-  
+
   def describeSpotFleetRequests(implicit context: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(context.ec2.describeSpotFleetRequestsAsync(
       new DescribeSpotFleetRequestsRequest()
@@ -112,15 +119,21 @@ trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
       r <- fromJavaFuture(context.ec2.modifyFleetAsync(
         new ModifyFleetRequest()
           .withFleetId(id).withTargetCapacitySpecification(
-          new TargetCapacitySpecificationRequest()
-            .withSpotTargetCapacity(capacity)
-            .withTotalTargetCapacity(capacity)
-        ))
+            new TargetCapacitySpecificationRequest()
+              .withSpotTargetCapacity(capacity)
+              .withTotalTargetCapacity(capacity)
+          ))
       )
     } yield r
 
   implicit val instanceTagged = new Tagged[Instance] {
     def tags(tagged: Instance) = tagged.getTags.asScala.toList.map(t => Tag(t.getKey, t.getValue))
   }
-}
+
+  def findLiveInstanceByTag(key: String, value: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
+    for {
+      instances <- listInstances
+    } yield instances.filter(_.getState.getName =!= "terminated")
+      .find(_.tagValue(key) === Some(value))
+}  
 
