@@ -1,5 +1,6 @@
 package io.jobial.scase.aws.client
 
+import cats.implicits._
 import cats.effect.Concurrent
 import com.amazonaws.services.ecs.model.Cluster
 import com.amazonaws.services.ecs.model.ContainerInstance
@@ -24,38 +25,56 @@ trait ECSClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
       new ListClustersRequest()
     ))
 
-  def describeClusters(implicit context: AwsContext, concurrent: Concurrent[F]) =
+  def describeClusters(clusters: List[String])(implicit context: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(context.ecs.describeClustersAsync(
-      new DescribeClustersRequest()
+      new DescribeClustersRequest().withClusters(clusters.asJava)
     ))
-
+    
+  def describeAllClusters(implicit context: AwsContext, concurrent: Concurrent[F]) =
+    for {
+      clusters <- listClusters
+      clusters <- describeClusters(clusters.getClusterArns.asScala.toList)
+    } yield clusters.getClusters.asScala.toList
+  
   implicit val clusterTagged = new Tagged[Cluster] {
     def tags(tagged: Cluster) = tagged.getTags.asScala.toList.map(t => Tag(t.getKey, t.getValue))
   }
 
-  def listServices(implicit context: AwsContext, concurrent: Concurrent[F]) =
+  def listServices(clusterId: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(context.ecs.listServicesAsync(
-      new ListServicesRequest()
+      new ListServicesRequest().withCluster(clusterId)
     ))
 
-  def describeServices(implicit context: AwsContext, concurrent: Concurrent[F]) =
+  def describeServices(clusterId: String, services: List[String])(implicit context: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(context.ecs.describeServicesAsync(
-      new DescribeServicesRequest()
+      new DescribeServicesRequest().withCluster(clusterId).withServices(services.asJava)
     ))
+
+  def describeAllServices(clusterId: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
+    for {
+      services <- listServices(clusterId)
+      services <- describeServices(clusterId, services.getServiceArns.asScala.toList)
+    } yield services.getServices.asScala.toList
 
   implicit val serviceTagged = new Tagged[Service] {
     def tags(tagged: Service) = tagged.getTags.asScala.toList.map(t => Tag(t.getKey, t.getValue))
   }
 
-  def listTasks(implicit context: AwsContext, concurrent: Concurrent[F]) =
+  def listTasks(clusterId: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(context.ecs.listTasksAsync(
-      new ListTasksRequest()
+      new ListTasksRequest().withCluster(clusterId)
     ))
 
-  def describeTasks(implicit context: AwsContext, concurrent: Concurrent[F]) =
+  def describeTasks(clusterId: String, tasks: List[String])(implicit context: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(context.ecs.describeTasksAsync(
-      new DescribeTasksRequest()
+      new DescribeTasksRequest().withCluster(clusterId).withTasks(tasks.asJava)
     ))
+
+  def describeAllTasks(clusterId: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
+    for {
+      tasks <- listTasks(clusterId)
+      tasks <- describeTasks(clusterId, tasks.getTaskArns.asScala.toList)
+    } yield tasks.getTasks.asScala.toList
 
   implicit val taskTagged = new Tagged[Task] {
     def tags(tagged: Task) = tagged.getTags.asScala.toList.map(t => Tag(t.getKey, t.getValue))
