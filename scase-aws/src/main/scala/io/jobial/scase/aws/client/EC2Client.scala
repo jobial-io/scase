@@ -10,6 +10,7 @@ import com.amazonaws.services.ec2.model.DescribeSpotFleetInstancesRequest
 import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsRequest
 import com.amazonaws.services.ec2.model.DescribeSpotInstanceRequestsRequest
 import com.amazonaws.services.ec2.model.FleetData
+import com.amazonaws.services.ec2.model.Instance
 import com.amazonaws.services.ec2.model.ModifyFleetRequest
 import com.amazonaws.services.ec2.model.ModifySpotFleetRequestRequest
 import com.amazonaws.services.ec2.model.RebootInstancesRequest
@@ -18,6 +19,7 @@ import com.amazonaws.services.ec2.model.StartInstancesRequest
 import com.amazonaws.services.ec2.model.StopInstancesRequest
 import com.amazonaws.services.ec2.model.TargetCapacitySpecificationRequest
 import io.jobial.sprint.util.CatsUtils
+
 import scala.collection.JavaConverters._
 
 trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
@@ -117,5 +119,8 @@ trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
       )
     } yield r
 
+  implicit val instanceTagged = new Tagged[Instance] {
+    def tags(tagged: Instance) = tagged.getTags.asScala.toList.map(t => Tag(t.getKey, t.getValue))
+  }
 }
 
