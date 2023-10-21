@@ -13,12 +13,9 @@
 package io.jobial.scase.aws.client
 
 import cats.effect.Concurrent
-import cats.effect.IO
 import cats.effect.Timer
 import cats.implicits._
 import com.amazonaws.AmazonServiceException
-import com.amazonaws.services.s3.AmazonS3
-import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model._
 import com.amazonaws.util.IOUtils
 import io.jobial.sprint.process.ProcessContext
@@ -115,5 +112,19 @@ trait S3Client[F[_]] extends AwsClient[F] with ProcessManagement[F] {
 
   def s3Sync(from: String, to: String, opts: List[String] = List())(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
     runProcessAndWait(List("aws", "s3", "sync") ++ opts ++ List(from, to))
+
+  def setObjectTagging(bucketName: String, key: String, tags: List[(String, String)])(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
+    context.s3.setObjectTagging(new SetObjectTaggingRequest(bucketName, key, new ObjectTagging(
+      tags.map(t => new Tag(t._1, t._2)).asJava
+    )))
+  }
+
+  def getObjectTagging(bucketName: String, key: String)(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
+    context.s3.getObjectTagging(new GetObjectTaggingRequest(bucketName, key))
+  }
+
+  implicit val getObjectTaggingResultTagged = new Tagged[GetObjectTaggingResult] {
+    def tags(tagged: GetObjectTaggingResult) = tagged.getTagSet.asScala.toList.map(t => io.jobial.scase.aws.client.Tag(t.getKey, t.getValue))
+  }
 
 }
