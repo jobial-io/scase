@@ -15,7 +15,7 @@ import com.amazonaws.services.ecs.model.Service
 import com.amazonaws.services.ecs.model.Task
 import io.jobial.sprint.util.CatsUtils
 
-import scala.jdk.CollectionConverters.IterableHasAsScala
+import scala.collection.JavaConverters._
 
 trait ECSClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
 
