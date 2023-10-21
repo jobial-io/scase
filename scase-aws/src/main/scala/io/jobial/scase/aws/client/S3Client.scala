@@ -115,7 +115,7 @@ trait S3Client[F[_]] extends AwsClient[F] with ProcessManagement[F] {
 
   def setObjectTagging(bucketName: String, key: String, tags: List[(String, String)])(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
     context.s3.setObjectTagging(new SetObjectTaggingRequest(bucketName, key, new ObjectTagging(
-      tags.map(t => new Tag(t._1, t._2)).asJava
+      tags.map(t => new com.amazonaws.services.s3.model.Tag(t._1, t._2)).asJava
     )))
   }
 
