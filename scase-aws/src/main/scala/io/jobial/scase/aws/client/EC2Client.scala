@@ -30,7 +30,7 @@ trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
       new DescribeInstancesRequest()
     ))
 
-  def listInstances(implicit context: AwsContext, concurrent: Concurrent[F]) =
+  def describeAllInstances(implicit context: AwsContext, concurrent: Concurrent[F]) =
     for {
       r <- describeInstances
     } yield
@@ -132,8 +132,8 @@ trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
 
   def findLiveInstanceByTag(key: String, value: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
     for {
-      instances <- listInstances
-    } yield instances.filter(_.getState.getName =!= "terminated")
+      instances <- describeAllInstances
+    } yield instances.filterNot(_.getState.getName === "terminated")
       .find(_.tagValue(key) === Some(value))
 }  
 
