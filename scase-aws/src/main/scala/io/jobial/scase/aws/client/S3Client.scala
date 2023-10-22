@@ -113,13 +113,13 @@ trait S3Client[F[_]] extends AwsClient[F] with ProcessManagement[F] {
   def s3Sync(from: String, to: String, opts: List[String] = List())(implicit processContext: ProcessContext, concurrent: Concurrent[F], timer: Timer[F]) =
     runProcessAndWait(List("aws", "s3", "sync") ++ opts ++ List(from, to))
 
-  def setObjectTagging(bucketName: String, key: String, tags: List[(String, String)])(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
+  def s3SetObjectTagging(bucketName: String, key: String, tags: List[(String, String)])(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
     context.s3.setObjectTagging(new SetObjectTaggingRequest(bucketName, key, new ObjectTagging(
       tags.map(t => new Tag(t._1, t._2)).asJava
     )))
   }
 
-  def getObjectTagging(bucketName: String, key: String)(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
+  def s3GetObjectTagging(bucketName: String, key: String)(implicit context: AwsContext, concurrent: Concurrent[F]) = delay {
     context.s3.getObjectTagging(new GetObjectTaggingRequest(bucketName, key))
   }
 
