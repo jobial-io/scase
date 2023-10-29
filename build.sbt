@@ -15,7 +15,7 @@ name := "scase"
 ThisBuild / organization := "io.jobial"
 ThisBuild / scalaVersion := "2.13.8"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.15", "2.13.8")
-ThisBuild / version := "1.3.12"
+ThisBuild / version := "1.3.13"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
 ThisBuild / javacOptions ++= Seq("-source", "11", "-target", "11")
 ThisBuild / Test / packageBin / publishArtifact := true
@@ -110,6 +110,7 @@ lazy val `scase-aws` = project
       "com.amazonaws" % "aws-java-sdk-ec2" % AwsVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-java-sdk-ecs" % AwsVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-java-sdk-secretsmanager" % AwsVersion excludeAll ("commons-logging"),
+      "com.amazonaws" % "aws-java-sdk-route53" % AwsVersion excludeAll ("commons-logging"),
       "org.typelevel" %% "cats-core" % CatsVersion,
       "org.typelevel" %% "cats-effect" % CatsVersion,
       "com.typesafe.scala-logging" %% "scala-logging" % ScalaLoggingVersion
