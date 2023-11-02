@@ -13,9 +13,9 @@
 name := "scase"
 
 ThisBuild / organization := "io.jobial"
-ThisBuild / scalaVersion := "2.13.8"
+ThisBuild / scalaVersion := "2.11.12"
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.15", "2.13.8")
-ThisBuild / version := "1.3.14"
+ThisBuild / version := "1.3.15"
 ThisBuild / scalacOptions += "-target:jvm-1.8"
 ThisBuild / javacOptions ++= Seq("-source", "11", "-target", "11")
 ThisBuild / Test / packageBin / publishArtifact := true
@@ -114,7 +114,12 @@ lazy val `scase-aws` = project
       "org.typelevel" %% "cats-core" % CatsVersion,
       "org.typelevel" %% "cats-effect" % CatsVersion,
       "com.typesafe.scala-logging" %% "scala-logging" % ScalaLoggingVersion
-    )
+    ),
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-core",
+      "io.circe" %% "circe-generic",
+      "io.circe" %% "circe-parser"
+    ).map(_ % CirceVersion)
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
   .dependsOn(`scase-circe` % "test->test")
