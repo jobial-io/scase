@@ -36,7 +36,8 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
   val subscriptionName: String,
   val subscriptionType: SubscriptionType,
   val subscriptionMode: SubscriptionMode,
-  val redeliverUnacknowledgedMessages: Boolean
+  val redeliverUnacknowledgedMessages: Boolean,
+  val consumerBuilder: ConsumerBuilder[Array[Byte]] => ConsumerBuilder[Array[Byte]]
 )(implicit context: PulsarContext)
   extends DefaultMessageConsumer[F, M] {
 
@@ -46,7 +47,7 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
   }
 
   val consumer = {
-    val consumer = context
+    val builder = context
       .client
       .newConsumer
       .consumerName(s"consumer-${randomUUID}")
@@ -69,7 +70,8 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
       .apply(b =>
         subscriptionInitialPosition.orElse(subscriptionInitialPublishTime.map(_ => Earliest)).map(b.subscriptionInitialPosition)
       )
-      .subscribe()
+      
+    val consumer = consumerBuilder(builder).subscribe()
 
     consumer
   }
@@ -142,7 +144,8 @@ object PulsarConsumer extends CatsUtils with Logging {
     subscriptionName: String = s"subscription-${randomUUID}",
     subscriptionType: SubscriptionType = Exclusive,
     subscriptionMode: SubscriptionMode = Durable,
-    redeliverUnacknowledgedMessages: Boolean = false
+    redeliverUnacknowledgedMessages: Boolean = false,
+    consumerBuilder: ConsumerBuilder[Array[Byte]] => ConsumerBuilder[Array[Byte]] = identity
   )(implicit context: PulsarContext): F[PulsarConsumer[F, M]] =
     delay(new PulsarConsumer[F, M](
       topic,
@@ -152,6 +155,7 @@ object PulsarConsumer extends CatsUtils with Logging {
       subscriptionName,
       subscriptionType,
       subscriptionMode,
-      redeliverUnacknowledgedMessages
+      redeliverUnacknowledgedMessages,
+      consumerBuilder
     ))
 }

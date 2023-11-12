@@ -25,8 +25,10 @@ import io.jobial.scase.marshalling.Unmarshaller
 import io.jobial.scase.pulsar.PulsarServiceConfiguration.destination
 import io.jobial.scase.pulsar.PulsarServiceConfiguration.requestResponse
 import io.jobial.scase.pulsar.PulsarServiceConfiguration.source
+import org.apache.pulsar.client.api.ConsumerBuilder
 import org.apache.pulsar.client.api.SubscriptionInitialPosition
 import org.apache.pulsar.client.api.SubscriptionInitialPosition.Latest
+
 import java.time.Instant
 import java.util.UUID.randomUUID
 import scala.concurrent.duration._
@@ -38,7 +40,8 @@ class PulsarMessageHandlerServiceConfiguration[M: Marshaller : Unmarshaller](
   val patternAutoDiscoveryPeriod: Option[FiniteDuration],
   val subscriptionInitialPosition: Option[SubscriptionInitialPosition],
   val subscriptionInitialPublishTime: Option[Instant],
-  val subscriptionName: String
+  val subscriptionName: String,
+  val consumerBuilder: ConsumerBuilder[Array[Byte]] => ConsumerBuilder[Array[Byte]]
 ) extends ServiceConfiguration with CatsUtils with Logging {
 
   def service[F[_] : Concurrent : Timer](messageHandler: MessageHandler[F, M])(
@@ -50,7 +53,8 @@ class PulsarMessageHandlerServiceConfiguration[M: Marshaller : Unmarshaller](
         patternAutoDiscoveryPeriod,
         subscriptionInitialPosition,
         subscriptionInitialPublishTime,
-        subscriptionName
+        subscriptionName,
+        consumerBuilder = consumerBuilder
       )
       service = new ConsumerMessageHandlerService(
         consumer,
@@ -214,7 +218,8 @@ class PulsarMessageSourceServiceConfiguration[M: Unmarshaller](
   val patternAutoDiscoveryPeriod: Option[FiniteDuration] = Some(1.second),
   val subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Latest),
   val subscriptionInitialPublishTime: Option[Instant] = None,
-  val subscriptionName: String = s"subscription-${randomUUID}"
+  val subscriptionName: String = s"subscription-${randomUUID}",
+  val consumerBuilder: ConsumerBuilder[Array[Byte]] => ConsumerBuilder[Array[Byte]] = identity
 ) {
   def client[F[_] : Concurrent : Timer](
     implicit context: PulsarContext
@@ -225,7 +230,8 @@ class PulsarMessageSourceServiceConfiguration[M: Unmarshaller](
         patternAutoDiscoveryPeriod,
         subscriptionInitialPosition,
         subscriptionInitialPublishTime,
-        subscriptionName
+        subscriptionName,
+        consumerBuilder = consumerBuilder
       )
       client <- ConsumerReceiverClient[F, M](consumer)
     } yield client
@@ -392,7 +398,8 @@ object PulsarServiceConfiguration {
     patternAutoDiscoveryPeriod: Option[FiniteDuration],
     subscriptionInitialPosition: Option[SubscriptionInitialPosition],
     subscriptionInitialPublishTime: Option[Instant],
-    subscriptionName: String
+    subscriptionName: String,
+    consumerBuilder: ConsumerBuilder[Array[Byte]] => ConsumerBuilder[Array[Byte]]
   ) =
     new PulsarMessageHandlerServiceConfiguration[M](
       subscriptionName,
@@ -400,7 +407,8 @@ object PulsarServiceConfiguration {
       patternAutoDiscoveryPeriod,
       subscriptionInitialPosition,
       subscriptionInitialPublishTime,
-      subscriptionName
+      subscriptionName,
+      consumerBuilder
     )
 
   def handler[M: Marshaller : Unmarshaller](
@@ -408,7 +416,8 @@ object PulsarServiceConfiguration {
     patternAutoDiscoveryPeriod: Option[FiniteDuration] = Some(1.second),
     subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Latest),
     subscriptionInitialPublishTime: Option[Instant] = None,
-    subscriptionName: String = s"subscription-${randomUUID}"
+    subscriptionName: String = s"subscription-${randomUUID}",
+    consumerBuilder: ConsumerBuilder[Array[Byte]] => ConsumerBuilder[Array[Byte]] = identity
   ) =
     new PulsarMessageHandlerServiceConfiguration[M](
       requestTopic,
@@ -416,7 +425,8 @@ object PulsarServiceConfiguration {
       patternAutoDiscoveryPeriod,
       subscriptionInitialPosition,
       subscriptionInitialPublishTime,
-      subscriptionName
+      subscriptionName,
+      consumerBuilder
     )
 
   def handler[M: Marshaller : Unmarshaller](
@@ -424,7 +434,8 @@ object PulsarServiceConfiguration {
     patternAutoDiscoveryPeriod: Option[FiniteDuration],
     subscriptionInitialPosition: Option[SubscriptionInitialPosition],
     subscriptionInitialPublishTime: Option[Instant],
-    subscriptionName: String
+    subscriptionName: String,
+    consumerBuilder: ConsumerBuilder[Array[Byte]] => ConsumerBuilder[Array[Byte]]
   ) =
     new PulsarMessageHandlerServiceConfiguration[M](
       requestTopic.toString,
@@ -432,14 +443,16 @@ object PulsarServiceConfiguration {
       patternAutoDiscoveryPeriod,
       subscriptionInitialPosition,
       subscriptionInitialPublishTime,
-      subscriptionName
+      subscriptionName,
+      consumerBuilder
     )
 
   def handler[M: Marshaller : Unmarshaller](
     requestTopic: Regex,
     subscriptionInitialPosition: Option[SubscriptionInitialPosition],
     subscriptionInitialPublishTime: Option[Instant],
-    subscriptionName: String
+    subscriptionName: String,
+    consumerBuilder: ConsumerBuilder[Array[Byte]] => ConsumerBuilder[Array[Byte]]
   ) =
     new PulsarMessageHandlerServiceConfiguration[M](
       requestTopic.toString,
@@ -447,7 +460,8 @@ object PulsarServiceConfiguration {
       Some(1.second),
       subscriptionInitialPosition,
       subscriptionInitialPublishTime,
-      subscriptionName
+      subscriptionName,
+      consumerBuilder
     )
 
   def handler[M: Marshaller : Unmarshaller](
@@ -460,7 +474,8 @@ object PulsarServiceConfiguration {
       Some(1.second),
       subscriptionInitialPosition,
       None,
-      s"subscription-${randomUUID}"
+      s"subscription-${randomUUID}",
+      identity
     )
 
   def handler[M: Marshaller : Unmarshaller](
@@ -472,7 +487,8 @@ object PulsarServiceConfiguration {
       Some(1.second),
       Some(Latest),
       None,
-      s"subscription-${randomUUID}"
+      s"subscription-${randomUUID}",
+      identity
     )
 
   def source[M: Unmarshaller](
@@ -505,12 +521,14 @@ object PulsarServiceConfiguration {
     sourceTopic: String,
     patternAutoDiscoveryPeriod: Option[FiniteDuration] = Some(1.second),
     subscriptionInitialPosition: Option[SubscriptionInitialPosition] = Some(Latest),
-    subscriptionInitialPublishTime: Option[Instant] = None
+    subscriptionInitialPublishTime: Option[Instant] = None,
+    consumerBuilder: ConsumerBuilder[Array[Byte]] => ConsumerBuilder[Array[Byte]] = identity
   ) = new PulsarMessageSourceServiceConfiguration(
     Left(sourceTopic),
     patternAutoDiscoveryPeriod,
     subscriptionInitialPosition,
-    subscriptionInitialPublishTime
+    subscriptionInitialPublishTime,
+    consumerBuilder = consumerBuilder
   )
 
   def source[M: Unmarshaller](

@@ -20,6 +20,7 @@ import io.jobial.scase.tibrv.TibrvContext
 import io.jobial.scase.tibrv.TibrvServiceConfiguration
 import io.lemonlabs.uri.Uri
 import io.lemonlabs.uri.UrlPath
+import org.apache.pulsar.client.api.ConsumerBuilder
 import org.apache.pulsar.client.api.SubscriptionInitialPosition
 import org.apache.pulsar.client.api.SubscriptionInitialPosition.Earliest
 
@@ -75,7 +76,8 @@ object Endpoint extends CatsUtils with Logging {
             Some(1.second),
             source.subscriptionInitialPosition.orElse(defaultSubscriptionInitialPosition),
             source.subscriptionInitialPublishTime.orElse(defaultSubscriptionInitialPublishTime),
-            source.subscriptionName.getOrElse(s"subscription-${randomUUID}")
+            source.subscriptionName.getOrElse(s"subscription-${randomUUID}"),
+            identity[ConsumerBuilder[Array[Byte]]](_) // TODO: fix this
           ).service[F](messageHandler)
         }
       case source: TibrvEndpoint =>

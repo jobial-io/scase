@@ -204,6 +204,7 @@ public class PulsarServiceConfiguration {
                 javaOptionalToScala(subscriptionInitialPosition),
                 javaOptionalToScala(subscriptionInitialPublishTime),
                 subscriptionName,
+                PulsarServiceConfiguration$.MODULE$.handler$default$6(),
                 marshalling.marshaller(),
                 marshalling.unmarshaller()
         ));
