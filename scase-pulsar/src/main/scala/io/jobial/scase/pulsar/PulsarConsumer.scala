@@ -70,12 +70,14 @@ class PulsarConsumer[F[_] : Concurrent : Timer, M](
       .apply(b =>
         subscriptionInitialPosition.orElse(subscriptionInitialPublishTime.map(_ => Earliest)).map(b.subscriptionInitialPosition)
       )
-      
+
     val consumer = consumerBuilder(builder).subscribe()
 
+    subscriptionInitialPublishTime.map(t => consumer.seek(t.toEpochMilli))
+    
     consumer
   }
-
+  
   sys.addShutdownHook { () =>
     if (consumer.isConnected)
       consumer.unsubscribe()
