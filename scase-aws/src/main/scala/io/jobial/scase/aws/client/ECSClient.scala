@@ -8,6 +8,7 @@ import com.amazonaws.services.ecs.model.DescribeClustersRequest
 import com.amazonaws.services.ecs.model.DescribeContainerInstancesRequest
 import com.amazonaws.services.ecs.model.DescribeServicesRequest
 import com.amazonaws.services.ecs.model.DescribeTasksRequest
+import com.amazonaws.services.ecs.model.InvalidParameterException
 import com.amazonaws.services.ecs.model.ListClustersRequest
 import com.amazonaws.services.ecs.model.ListContainerInstancesRequest
 import com.amazonaws.services.ecs.model.ListServicesRequest
@@ -32,13 +33,13 @@ trait ECSClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
     fromJavaFuture(context.ecs.describeClustersAsync(
       new DescribeClustersRequest().withClusters(clusters.asJava)
     ))
-    
+
   def describeAllClusters(implicit context: AwsContext, concurrent: Concurrent[F]) =
     for {
       clusters <- listClusters
       clusters <- describeClusters(clusters.getClusterArns.asScala.toList)
     } yield clusters.getClusters.asScala.toList
-  
+
   def listServices(clusterId: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(context.ecs.listServicesAsync(
       new ListServicesRequest().withCluster(clusterId)
@@ -49,11 +50,12 @@ trait ECSClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
       new DescribeServicesRequest().withCluster(clusterId).withServices(services.asJava)
     ))
 
-  def describeAllServices(clusterId: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
+  def describeAllServices(clusterId: String)(implicit context: AwsContext, concurrent: Concurrent[F]) = {
     for {
       services <- listServices(clusterId)
       services <- describeServices(clusterId, services.getServiceArns.asScala.toList)
     } yield services.getServices.asScala.toList
+  }.recover { case t: InvalidParameterException => List() }
 
   def listTasks(clusterId: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(context.ecs.listTasksAsync(
@@ -65,11 +67,12 @@ trait ECSClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
       new DescribeTasksRequest().withCluster(clusterId).withTasks(tasks.asJava)
     ))
 
-  def describeAllTasks(clusterId: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
+  def describeAllTasks(clusterId: String)(implicit context: AwsContext, concurrent: Concurrent[F]) = {
     for {
       tasks <- listTasks(clusterId)
       tasks <- describeTasks(clusterId, tasks.getTaskArns.asScala.toList)
     } yield tasks.getTasks.asScala.toList
+  }.recover { case t: InvalidParameterException => List() }
 
   def listContainerInstances(implicit context: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(context.ecs.listContainerInstancesAsync(
