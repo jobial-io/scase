@@ -130,10 +130,14 @@ trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
     def tags(tagged: Instance) = tagged.getTags.asScala.toList.map(t => Tag(t.getKey, t.getValue))
   }
 
-  def findLiveInstanceByTag(key: String, value: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
+  def findLiveInstanceByTag(key: String, value: String)(implicit awsContext: AwsContext, concurrent: Concurrent[F]) =
+    findLiveInstancesByTag(key, value).map(_.headOption)
+    
+  def findLiveInstancesByTag(key: String, value: String)(implicit awsContext: AwsContext, concurrent: Concurrent[F]) =
     for {
       instances <- describeAllInstances
     } yield instances.filterNot(_.getState.getName === "terminated")
-      .find(_.tagValue(key) === Some(value))
+      .filter(_.tagValue(key) === Some(value))
+
 }  
 
