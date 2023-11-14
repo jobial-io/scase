@@ -1,9 +1,7 @@
 package io.jobial.scase.aws.client
 
-import cats.implicits._
 import cats.effect.Concurrent
-import com.amazonaws.services.ecs.model.Cluster
-import com.amazonaws.services.ecs.model.ContainerInstance
+import cats.implicits._
 import com.amazonaws.services.ecs.model.DescribeClustersRequest
 import com.amazonaws.services.ecs.model.DescribeContainerInstancesRequest
 import com.amazonaws.services.ecs.model.DescribeServicesRequest
@@ -14,9 +12,9 @@ import com.amazonaws.services.ecs.model.ListContainerInstancesRequest
 import com.amazonaws.services.ecs.model.ListServicesRequest
 import com.amazonaws.services.ecs.model.ListTagsForResourceRequest
 import com.amazonaws.services.ecs.model.ListTagsForResourceResult
-import com.amazonaws.services.ecs.model.ListTagsForResourceResult
 import com.amazonaws.services.ecs.model.ListTasksRequest
-import com.amazonaws.services.ecs.model.Service
+import com.amazonaws.services.ecs.model.StopTaskRequest
+import com.amazonaws.services.ecs.model.StopTaskResult
 import com.amazonaws.services.ecs.model.Task
 import io.jobial.sprint.util.CatsUtils
 
@@ -111,5 +109,11 @@ trait ECSClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
   implicit val listTagsForResourceResultTagged = new Tagged[ListTagsForResourceResult] {
     def tags(tagged: ListTagsForResourceResult) = tagged.getTags.asScala.toList.map(t => Tag(t.getKey, t.getValue))
   }
+
+  def stopTask(task: Task)(implicit awsContext: AwsContext, concurrent: Concurrent[F]): F[StopTaskResult] =
+    stopTask(task.getClusterArn, task.getTaskArn)
+
+  def stopTask(cluster: String, taskArn: String)(implicit awsContext: AwsContext, concurrent: Concurrent[F]) =
+    fromJavaFuture(awsContext.ecs.stopTaskAsync(new StopTaskRequest().withCluster(cluster).withTask(taskArn)))
 }
 

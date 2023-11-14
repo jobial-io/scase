@@ -138,6 +138,5 @@ trait EC2Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
       instances <- describeAllInstances
     } yield instances.filterNot(_.getState.getName === "terminated")
       .filter(_.tagValue(key) === Some(value))
-
 }  
 

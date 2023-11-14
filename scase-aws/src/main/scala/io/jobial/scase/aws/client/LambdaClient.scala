@@ -15,6 +15,7 @@ package io.jobial.scase.aws.client
 import cats.effect.Concurrent
 import cats.implicits._
 import com.amazonaws.services.lambda.model.GetFunctionRequest
+import com.amazonaws.services.lambda.model.GetFunctionResult
 import com.amazonaws.services.lambda.model.InvokeRequest
 import com.amazonaws.services.lambda.model.ListFunctionsRequest
 
@@ -55,4 +56,9 @@ trait LambdaClient[F[_]] extends AwsClient[F] {
 
   def getFunction(implicit awsContext: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(awsContext.lambda.getFunctionAsync(new GetFunctionRequest()))
+
+  implicit val getFunctionResultTagged = new Tagged[GetFunctionResult] {
+    def tags(tagged: GetFunctionResult) = tagged.getTags.asScala.toList.map(t => Tag(t._1, t._2))
+  }
+
 }
