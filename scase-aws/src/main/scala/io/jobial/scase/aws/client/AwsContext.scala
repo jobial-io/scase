@@ -23,10 +23,12 @@ import com.amazonaws.client.builder.ExecutorFactory
 import com.amazonaws.endpointdiscovery.DaemonThreadFactory
 import com.amazonaws.services.cloudformation.AmazonCloudFormation
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder
+import com.amazonaws.services.cloudwatch.AmazonCloudWatchAsyncClientBuilder
 import com.amazonaws.services.ec2.AmazonEC2AsyncClientBuilder
 import com.amazonaws.services.ecs.AmazonECSAsyncClientBuilder
 import com.amazonaws.services.lambda.AWSLambdaAsync
 import com.amazonaws.services.lambda.AWSLambdaAsyncClientBuilder
+import com.amazonaws.services.logs.AWSLogsAsyncClientBuilder
 import com.amazonaws.services.route53.AmazonRoute53AsyncClientBuilder
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
@@ -115,12 +117,20 @@ class AwsContext(
   lazy val sts = buildAwsClient[AWSSecurityTokenServiceClientBuilder, AWSSecurityTokenService](AWSSecurityTokenServiceClientBuilder.standard)
 
   lazy val cloudformation = buildAwsClient[AmazonCloudFormationClientBuilder, AmazonCloudFormation](AmazonCloudFormationClientBuilder.standard)
-  
+
+  lazy val route53 = AmazonRoute53AsyncClientBuilder.standard().withExecutorFactory(new ExecutorFactory {
+    def newExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory)
+  }).build
+
   lazy val secretsManager = AWSSecretsManagerAsyncClientBuilder.standard().withExecutorFactory(new ExecutorFactory {
     def newExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory)
   }).build
 
-  lazy val route53 = AmazonRoute53AsyncClientBuilder.standard().withExecutorFactory(new ExecutorFactory {
+  lazy val cloudwatch = AmazonCloudWatchAsyncClientBuilder.standard().withExecutorFactory(new ExecutorFactory {
+    def newExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory)
+  }).build
+
+  lazy val logs = AWSLogsAsyncClientBuilder.standard().withExecutorFactory(new ExecutorFactory {
     def newExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory)
   }).build
 }
