@@ -1,6 +1,7 @@
 package io.jobial.scase.aws.client
 
 import cats.effect.Concurrent
+import cats.effect.Timer
 import cats.implicits._
 import com.amazonaws.services.logs.model.DescribeLogGroupsRequest
 import com.amazonaws.services.logs.model.DescribeLogStreamsRequest
@@ -13,7 +14,10 @@ import com.amazonaws.services.logs.model.OrderBy
 import com.amazonaws.services.logs.model.OutputLogEvent
 import io.jobial.sprint.util.CatsUtils
 
+import java.lang.System.currentTimeMillis
 import scala.collection.JavaConverters._
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.FiniteDuration
 
 trait CloudWatchLogsClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
 
@@ -62,7 +66,7 @@ trait CloudWatchLogsClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
         .withEndTime(endTime)
     }).map(_.getEvents.asScala.toVector)
 
-  def filterLogEvents(logGroup: String, startTime: Long, endTime: Long, filterPattern: Option[String], limit: Int = 10000, nextToken: Option[String] = None)(implicit awsContext: AwsContext, concurrent: Concurrent[F]): F[List[FilteredLogEvent]] =
+  def filterLogEvents(logGroup: String, startTime: Long, endTime: Long, filterPattern: Option[String] = None, limit: Int = 10000, nextToken: Option[String] = None)(implicit awsContext: AwsContext, concurrent: Concurrent[F]): F[List[FilteredLogEvent]] =
     for {
       r <- fromJavaFuture(awsContext.logs.filterLogEventsAsync {
         val request = new FilterLogEventsRequest()
@@ -83,6 +87,15 @@ trait CloudWatchLogsClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
           pure(List())
       }
     } yield r.getEvents.asScala.take(limit).toList ++ rest
+
+  def watchLogEvents[T](group: String, from: Long, filterPattern: Option[String], delay: FiniteDuration = 2.seconds, seen: Set[String] = Set())(f: List[FilteredLogEvent] => F[T])(implicit awsContext: AwsContext, concurrent: Concurrent[F], timer: Timer[F]): F[Unit] =
+    for {
+      events <- filterLogEvents(group, from, currentTimeMillis, filterPattern)
+      t = events.lastOption.map(_.getTimestamp.toLong).getOrElse(from)
+      events <- pure(events.filterNot(e => seen.contains(e.getEventId)))
+      r <- f(events) >> sleep(delay) >> watchLogEvents(group, t, filterPattern, delay, seen ++ events.map(_.getEventId))(f)
+    } yield r
+
 
 }  
 
