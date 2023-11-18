@@ -96,23 +96,28 @@ trait CloudWatchLogsClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
     } yield r.getEvents.asScala.take(limit).toVector ++ rest
 
   def forLogEventSequences[T](
-    group: String, from: Long, to: Option[Long], filterPattern: Option[String] = None,
+    group: String, stream: Option[String], 
+    from: Long, to: Option[Long] = None, filterPattern: Option[String] = None,
     delay: FiniteDuration = 2.seconds, seen: Set[String] = Set()
   )(f: Vector[FilteredLogEvent] => F[T])(implicit awsContext: AwsContext, concurrent: Concurrent[F], timer: Timer[F]): F[Unit] =
     for {
       events <- filterLogEvents(group, from, currentTimeMillis, filterPattern)
       t = events.lastOption.map(_.getTimestamp.toLong).getOrElse(from)
-      events <- pure(events.filterNot(e => seen.contains(e.getEventId)).filter(e => to.map(e.getTimestamp < _).getOrElse(true)))
+      events <- pure(events.filterNot(e => seen.contains(e.getEventId))
+        .filter(e => to.map(e.getTimestamp < _).getOrElse(true))
+        .filter(e => stream.map(e.getLogStreamName.contains).getOrElse(true))
+      )
       r <- f(events) >>
         sleep(delay) >>
-        whenA(to.map(_ > t).getOrElse(true))(forLogEventSequences(group, t, to, filterPattern, delay, seen ++ events.map(_.getEventId))(f))
+        whenA(to.map(_ > t).getOrElse(true))(forLogEventSequences(group, stream, t, to, filterPattern, delay, seen ++ events.map(_.getEventId))(f))
     } yield r
 
   def forLogEvents[T](
-    group: String, from: Long, to: Option[Long], filterPattern: Option[String] = None,
+    group: String, stream: Option[String],
+    from: Long, to: Option[Long], filterPattern: Option[String] = None,
     delay: FiniteDuration = 2.seconds, seen: Set[String] = Set()
   )(f: FilteredLogEvent => F[T])(implicit awsContext: AwsContext, concurrent: Concurrent[F], timer: Timer[F]): F[Unit] =
-    forLogEventSequences(group, from, to, filterPattern, delay, seen)(_.map(f).sequence)
+    forLogEventSequences(group, stream, from, to, filterPattern, delay, seen)(_.map(f).sequence)
 
   def streams(from: Long, groupLimit: Int = 1000, streamLimit: Int = 10)(implicit awsContext: AwsContext, concurrent: Concurrent[F], parallel: Parallel[F]) =
     for {
@@ -132,7 +137,7 @@ trait CloudWatchLogsClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
       }
     } yield r
 
-  def forStreams[T](groupOrStream: String, stream: Option[String], from: Long, to: Option[Long])(f: (String, Option[String]) => F[T])
+  def forGroupOrStream[T](groupOrStream: String, stream: Option[String], from: Long, to: Option[Long] = None)(f: (String, Option[String]) => F[T])
     (implicit awsContext: AwsContext, concurrent: Concurrent[F], parallel: Parallel[F]) = {
     val streamFilter = stream match {
       case Some(stream) =>
