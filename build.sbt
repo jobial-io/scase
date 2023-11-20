@@ -124,7 +124,7 @@ lazy val `scase-aws` = project
     ).map(_ % CirceVersion)
   )
   .dependsOn(`scase-core` % "compile->compile;test->test")
-  .dependsOn(`scase-circe` % "test->test")
+  .dependsOn(`scase-circe` % "compile->compile;test->test")
 
 //lazy val `scase-aws-test` = project
 //  .settings(commonSettings)
