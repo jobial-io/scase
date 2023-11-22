@@ -1,9 +1,10 @@
 package io.jobial.scase.aws.client
 
+import scala.Console.RESET
 import scala.Console._
 import scala.util.matching.Regex
 
-object CloudWatchLogsUtils {
+trait CloudWatchLogsUtils {
 
   implicit class ColorStringEx(s: String) {
     def replaceFirst(r: Regex, t: String) =
@@ -16,6 +17,8 @@ object CloudWatchLogsUtils {
   val datePattern = "^()([12][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] (?:[0-9][0-9]:[0-9][0-9]:[0-9][0-9]\\.[0-9][0-9][0-9])?)(.+)".r
   val threadPattern = "(.+? )(\\[[^]]+\\])( .+ - )".r
   val logLevelPattern = "(.+? )(TRACE|DEBUG|INFO|WARN|ERROR)( .+ - )".r
-  val classPattern = "(.+? )((?:[a-z]+\\.)+[a-zA-Z\\$]+)(.+ - )".r
+  val errorLogLevelPattern = "(.+? )(ERROR)( .+ - )".r
+  val warnLogLevelPattern = "(.+? )(WARN)( .+ - )".r
+  val classPattern = "(.+? )((?:[^ :\\-\\.]+\\.)+[^ :\\-\\.]+)(.*- )".r
 }  
 
