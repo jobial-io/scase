@@ -27,7 +27,7 @@ abstract class AppLambda[C <: {def main(args: Array[String])}](app: C) extends I
   // To decode empty request as an empty arg list
   implicit val argsDecoder = Decoder.decodeArray[String].prepare { cursor =>
     cursor.withFocus(json => if (json.toString() === "\"\"") Json.arr() else json)
-  }
+  }.handleErrorWith(_ => Decoder.decodeJson.map(_ => Array()))
 
   def serviceConfiguration = requestResponse[Array[String], Unit](functionName)
 }
