@@ -54,8 +54,8 @@ trait LambdaClient[F[_]] extends AwsClient[F] {
     fromJavaFuture(awsContext.lambda.listFunctionsAsync(new ListFunctionsRequest()))
       .map(_.getFunctions.asScala.toList)
 
-  def getFunction(implicit awsContext: AwsContext, concurrent: Concurrent[F]) =
-    fromJavaFuture(awsContext.lambda.getFunctionAsync(new GetFunctionRequest()))
+  def getFunction(functionName: String)(implicit awsContext: AwsContext, concurrent: Concurrent[F]) =
+    fromJavaFuture(awsContext.lambda.getFunctionAsync(new GetFunctionRequest().withFunctionName(functionName)))
 
   implicit val getFunctionResultTagged = new Tagged[GetFunctionResult] {
     def tags(tagged: GetFunctionResult) = tagged.getTags.asScala.toList.map(t => Tag(t._1, t._2))
