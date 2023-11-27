@@ -16,6 +16,8 @@ import cats.effect.Concurrent
 import cats.implicits._
 import com.amazonaws.services.lambda.model.GetFunctionRequest
 import com.amazonaws.services.lambda.model.GetFunctionResult
+import com.amazonaws.services.lambda.model.InvocationType
+import com.amazonaws.services.lambda.model.InvocationType.RequestResponse
 import com.amazonaws.services.lambda.model.InvokeRequest
 import com.amazonaws.services.lambda.model.ListFunctionsRequest
 
@@ -23,11 +25,14 @@ import scala.collection.JavaConverters._
 
 trait LambdaClient[F[_]] extends AwsClient[F] {
 
-  def invoke(functionName: String, payload: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
+  def invoke(functionName: String, payload: String, invocationType: InvocationType = RequestResponse)(implicit context: AwsContext, concurrent: Concurrent[F]) =
     for {
       result <- fromJavaFuture(context.lambda.invokeAsync(new InvokeRequest()
         .withFunctionName(functionName)
-        .withPayload(payload)))
+        .withPayload(payload)
+        .withInvocationType(invocationType)
+      ))
+
       //    result <-
       //      // TODO: review if this is correct...
       //      if (Option(result.getFunctionError).isDefined)
@@ -49,7 +54,7 @@ trait LambdaClient[F[_]] extends AwsClient[F] {
   //    // TODO: handle non-java errors...
   //  }
   //
-  
+
   def listFunctions(implicit awsContext: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(awsContext.lambda.listFunctionsAsync(new ListFunctionsRequest()))
       .map(_.getFunctions.asScala.toList)
