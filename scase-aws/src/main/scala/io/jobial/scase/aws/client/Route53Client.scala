@@ -35,7 +35,7 @@ trait Route53Client[F[_]] extends AwsClient[F] with CatsUtils[F] {
     for {
       hostedZones <- listHostedZones
       records <- hostedZones.map { z => listResourceRecordSets(z.getId) }.sequence.map(_.flatten)
-    } yield records.filter(_.getType === "A").find(_.getName === name)
+    } yield records.filter(_.getType === "A").find(_.getName === s"$name.")
       .flatMap(_.getResourceRecords.asScala.headOption.map(_.getValue))
 
   def changeResourceRecordSets(request: ChangeResourceRecordSetsRequest)(implicit context: AwsContext, concurrent: Concurrent[F]) =
