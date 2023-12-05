@@ -12,9 +12,36 @@
  */
 package io.jobial.scase.aws.client
 
+import cats.effect.Concurrent
+import cats.implicits._
 import io.jobial.sprint.logging.Logging
 import io.jobial.sprint.util.CatsUtils
 
+import scala.collection.JavaConverters.asScalaBufferConverter
+
 trait AwsClient[F[_]] extends CatsUtils[F] with Logging[F] {
-  
+
+  def getPaginatedResult[R, A](
+    f: Option[String] => F[R]
+  )(
+    getResultList: R => java.util.List[A],
+    getNextToken: R => String,
+    limit: Int,
+    nextToken: Option[String] = None
+  )(implicit awsContext: AwsContext, concurrent: Concurrent[F]): F[Vector[A]] =
+    for {
+      r <- f(nextToken)
+      l = getResultList(r).asScala.toVector
+      rest <- Option(getNextToken(r)) match {
+        case Some(token) =>
+          val remaining = limit - l.size
+          if (remaining > 0)
+            getPaginatedResult(f)(getResultList, getNextToken, remaining, Some(token))
+          else
+            pure(List())
+        case None =>
+          pure(List())
+      }
+    } yield (l ++ rest).take(limit)
+
 }

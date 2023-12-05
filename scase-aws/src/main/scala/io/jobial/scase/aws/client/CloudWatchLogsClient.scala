@@ -23,43 +23,23 @@ import scala.concurrent.duration.FiniteDuration
 
 trait CloudWatchLogsClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
 
-  def describeLogGroups(limit: Int = 1000, nextToken: Option[String] = None)(implicit awsContext: AwsContext, concurrent: Concurrent[F]): F[List[LogGroup]] =
-    for {
-      r <- fromJavaFuture(awsContext.logs.describeLogGroupsAsync {
+  def describeLogGroups(limit: Int = 100)(implicit awsContext: AwsContext, concurrent: Concurrent[F]) =
+    getPaginatedResult { nextToken =>
+      fromJavaFuture(awsContext.logs.describeLogGroupsAsync {
         val request = new DescribeLogGroupsRequest()
         nextToken.map(request.withNextToken).getOrElse(request)
       })
-      rest <- Option(r.getNextToken) match {
-        case Some(token) =>
-          val remaining = limit - r.getLogGroups.size
-          if (remaining > 0)
-            describeLogGroups(remaining, Some(token))
-          else
-            pure(List())
-        case None =>
-          pure(List())
-      }
-    } yield r.getLogGroups.asScala.take(limit).toList ++ rest
-
-  def describeLogStreams(logGroup: String, limit: Int = 1000, nextToken: Option[String] = None)(implicit awsContext: AwsContext, concurrent: Concurrent[F]): F[List[LogStream]] =
-    for {
-      r <- fromJavaFuture(awsContext.logs.describeLogStreamsAsync {
+    }(_.getLogGroups, _.getNextToken, limit)
+  
+  def describeLogStreams(logGroup: String, limit: Int = 1000, nextToken: Option[String] = None)(implicit awsContext: AwsContext, concurrent: Concurrent[F]) =
+    getPaginatedResult { nextToken =>
+      fromJavaFuture(awsContext.logs.describeLogStreamsAsync {
         val request = new DescribeLogStreamsRequest().withLogGroupName(logGroup)
           .withOrderBy(OrderBy.LastEventTime).withDescending(true)
         nextToken.map(request.withNextToken).getOrElse(request)
       })
-      rest <- Option(r.getNextToken) match {
-        case Some(token) =>
-          val remaining = limit - r.getLogStreams.size
-          if (remaining > 0)
-            describeLogStreams(logGroup, remaining, Some(token))
-          else
-            pure(List())
-        case None =>
-          pure(List())
-      }
-    } yield r.getLogStreams.asScala.take(limit).toList ++ rest
-
+    }(_.getLogStreams, _.getNextToken, limit)
+  
   def listTagsForResource(groupArn: String)(implicit awsContext: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(awsContext.logs.listTagsForResourceAsync {
       new ListTagsForResourceRequest().withResourceArn(groupArn)
@@ -96,7 +76,7 @@ trait CloudWatchLogsClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
     } yield r.getEvents.asScala.take(limit).toVector ++ rest
 
   def forLogEventSequences[T](
-    group: String, stream: Option[String], 
+    group: String, stream: Option[String],
     from: Long, to: Option[Long] = None, filterPattern: Option[String] = None,
     delay: FiniteDuration = 2.seconds, seen: Set[String] = Set()
   )(f: Vector[FilteredLogEvent] => F[T])(implicit awsContext: AwsContext, concurrent: Concurrent[F], timer: Timer[F]): F[Unit] =

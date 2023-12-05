@@ -22,26 +22,32 @@ import scala.collection.JavaConverters._
 
 trait ECSClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
 
-  def listClusters(implicit context: AwsContext, concurrent: Concurrent[F]) =
-    fromJavaFuture(context.ecs.listClustersAsync(
-      new ListClustersRequest()
-    ))
+  def listClusters(limit: Int = 1000)(implicit context: AwsContext, concurrent: Concurrent[F]) =
+    getPaginatedResult { nextToken =>
+      fromJavaFuture(context.ecs.listClustersAsync {
+        val request = new ListClustersRequest()
+        nextToken.map(request.withNextToken).getOrElse(request)
+      })
+    }(_.getClusterArns, _.getNextToken, limit)
 
   def describeClusters(clusters: List[String])(implicit context: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(context.ecs.describeClustersAsync(
       new DescribeClustersRequest().withClusters(clusters.asJava)
     ))
 
-  def describeAllClusters(implicit context: AwsContext, concurrent: Concurrent[F]) =
+  def describeAllClusters(limit: Int = 1000)(implicit context: AwsContext, concurrent: Concurrent[F]) =
     for {
-      clusters <- listClusters
-      clusters <- describeClusters(clusters.getClusterArns.asScala.toList)
+      clusters <- listClusters(limit)
+      clusters <- describeClusters(clusters.toList)
     } yield clusters.getClusters.asScala.toList
 
-  def listServices(clusterId: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
-    fromJavaFuture(context.ecs.listServicesAsync(
-      new ListServicesRequest().withCluster(clusterId)
-    ))
+  def listServices(clusterId: String, limit: Int = 1000)(implicit context: AwsContext, concurrent: Concurrent[F]) =
+    getPaginatedResult { nextToken =>
+      fromJavaFuture(context.ecs.listServicesAsync {
+        val request = new ListServicesRequest().withCluster(clusterId)
+        nextToken.map(request.withNextToken).getOrElse(request)
+      })
+    }(_.getServiceArns, _.getNextToken, limit)
 
   def describeServices(clusterId: String, services: List[String])(implicit context: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(context.ecs.describeServicesAsync(
@@ -51,14 +57,17 @@ trait ECSClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
   def describeAllServices(clusterId: String)(implicit context: AwsContext, concurrent: Concurrent[F]) = {
     for {
       services <- listServices(clusterId)
-      services <- describeServices(clusterId, services.getServiceArns.asScala.toList)
+      services <- describeServices(clusterId, services.toList)
     } yield services.getServices.asScala.toList
   }.recover { case t: InvalidParameterException => List() }
 
-  def listTasks(clusterId: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
-    fromJavaFuture(context.ecs.listTasksAsync(
-      new ListTasksRequest().withCluster(clusterId)
-    ))
+  def listTasks(clusterId: String, limit: Int = 1000)(implicit context: AwsContext, concurrent: Concurrent[F]) =
+    getPaginatedResult { nextToken =>
+      fromJavaFuture(context.ecs.listTasksAsync {
+        val request = new ListTasksRequest().withCluster(clusterId)
+        nextToken.map(request.withNextToken).getOrElse(request)
+      })
+    }(_.getTaskArns, _.getNextToken, limit)
 
   def describeTasks(clusterId: String, tasks: List[String])(implicit context: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(context.ecs.describeTasksAsync(
@@ -68,24 +77,21 @@ trait ECSClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
   def describeAllTasks(clusterId: String)(implicit context: AwsContext, concurrent: Concurrent[F]) = {
     for {
       tasks <- listTasks(clusterId)
-      tasks <- describeTasks(clusterId, tasks.getTaskArns.asScala.toList)
+      tasks <- describeTasks(clusterId, tasks.toList)
     } yield tasks.getTasks.asScala.toList
   }.recover { case t: InvalidParameterException => List() }
 
-  def listContainerInstances(implicit context: AwsContext, concurrent: Concurrent[F]) =
-    fromJavaFuture(context.ecs.listContainerInstancesAsync(
-      new ListContainerInstancesRequest()
-    ))
+  def listContainerInstances(clusterId: String, limit: Int = 1000)(implicit context: AwsContext, concurrent: Concurrent[F]) =
+    getPaginatedResult { nextToken =>
+      fromJavaFuture(context.ecs.listContainerInstancesAsync {
+        val request = new ListContainerInstancesRequest().withCluster(clusterId)
+        nextToken.map(request.withNextToken).getOrElse(request)
+      })
+    }(_.getContainerInstanceArns, _.getNextToken, limit)
 
   def describeContainerInstances(implicit context: AwsContext, concurrent: Concurrent[F]) =
     fromJavaFuture(context.ecs.describeContainerInstancesAsync(
       new DescribeContainerInstancesRequest()
-    ))
-
-  def listContainerInstances(clusterId: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
-    fromJavaFuture(context.ecs.listContainerInstancesAsync(
-      new ListContainerInstancesRequest()
-        .withCluster(clusterId)
     ))
 
   def describeContainerInstances(clusterId: String, containerInstances: List[String])(implicit context: AwsContext, concurrent: Concurrent[F]) =
@@ -98,7 +104,7 @@ trait ECSClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
   def describeAllContainerInstances(clusterId: String)(implicit awsContext: AwsContext, concurrent: Concurrent[F]) =
     for {
       containerInstances <- listContainerInstances(clusterId)
-      containerInstances <- describeContainerInstances(clusterId, containerInstances.getContainerInstanceArns.asScala.toList)
+      containerInstances <- describeContainerInstances(clusterId, containerInstances.toList)
     } yield containerInstances.getContainerInstances.asScala.toList
 
   def listTagsForResource(resourceArn: String)(implicit context: AwsContext, concurrent: Concurrent[F]) =
