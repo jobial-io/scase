@@ -1,5 +1,6 @@
 package io.jobial.scase.aws.client
 
+import cats.Parallel
 import cats.effect.Concurrent
 import cats.implicits._
 import com.amazonaws.services.ecs.model.DescribeClustersRequest
@@ -35,11 +36,11 @@ trait ECSClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
       new DescribeClustersRequest().withClusters(clusters.asJava)
     ))
 
-  def describeAllClusters(limit: Int = 1000)(implicit context: AwsContext, concurrent: Concurrent[F]) =
+  def describeAllClusters(limit: Int = 1000)(implicit context: AwsContext, concurrent: Concurrent[F], parallel: Parallel[F]) =
     for {
       clusters <- listClusters(limit)
-      clusters <- describeClusters(clusters.toList)
-    } yield clusters.getClusters.asScala.toList
+      clusters <- clusters.grouped(10).map(clusters => describeClusters(clusters.toList).map(_.getClusters.asScala.toList)).toList.parSequence.map(_.flatten)
+    } yield clusters
 
   def listServices(clusterId: String, limit: Int = 1000)(implicit context: AwsContext, concurrent: Concurrent[F]) =
     getPaginatedResult { nextToken =>
@@ -54,11 +55,11 @@ trait ECSClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
       new DescribeServicesRequest().withCluster(clusterId).withServices(services.asJava)
     ))
 
-  def describeAllServices(clusterId: String)(implicit context: AwsContext, concurrent: Concurrent[F]) = {
+  def describeAllServices(clusterId: String)(implicit context: AwsContext, concurrent: Concurrent[F], parallel: Parallel[F]) = {
     for {
       services <- listServices(clusterId)
-      services <- describeServices(clusterId, services.toList)
-    } yield services.getServices.asScala.toList
+      services <- services.grouped(10).map(services => describeServices(clusterId, services.toList).map(_.getServices.asScala.toList)).toList.parSequence.map(_.flatten)
+    } yield services
   }.recover { case t: InvalidParameterException => List() }
 
   def listTasks(clusterId: String, limit: Int = 1000)(implicit context: AwsContext, concurrent: Concurrent[F]) =
