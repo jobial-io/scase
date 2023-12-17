@@ -35,7 +35,7 @@ lazy val commonSettings = Seq(
   sonatypeProjectHosting := Some(GitHubHosting("jobial-io", "scase", "orbang@jobial.io")),
   organizationName := "Jobial OÜ",
   licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
-  description := "Run functional Scala code as a portable serverless function or microservice",
+  description := "Run functional Scala code seamlessly as a portable serverless function or microservice",
   addCompilerPlugin("org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full),
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
   scalacOptions ++= (if (scalaBinaryVersion.value != "2.13") Seq("-Ypartial-unification") else Seq())
