@@ -111,6 +111,7 @@ lazy val `scase-aws` = project
       "com.amazonaws" % "aws-java-sdk-sts" % AwsVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-java-sdk-ec2" % AwsVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-java-sdk-ecs" % AwsVersion excludeAll ("commons-logging"),
+      "com.amazonaws" % "aws-java-sdk-ecr" % AwsVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-java-sdk-secretsmanager" % AwsVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-java-sdk-route53" % AwsVersion excludeAll ("commons-logging"),
       "com.amazonaws" % "aws-java-sdk-cloudwatch" % AwsVersion excludeAll ("commons-logging"),

@@ -25,6 +25,7 @@ import com.amazonaws.services.cloudformation.AmazonCloudFormation
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchAsyncClientBuilder
 import com.amazonaws.services.ec2.AmazonEC2AsyncClientBuilder
+import com.amazonaws.services.ecr.AmazonECRAsyncClientBuilder
 import com.amazonaws.services.ecs.AmazonECSAsyncClientBuilder
 import com.amazonaws.services.lambda.AWSLambdaAsync
 import com.amazonaws.services.lambda.AWSLambdaAsyncClientBuilder
@@ -131,6 +132,10 @@ class AwsContext(
   }).build
 
   lazy val logs = AWSLogsAsyncClientBuilder.standard().withExecutorFactory(new ExecutorFactory {
+    def newExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory)
+  }).build
+
+  lazy val ecr = AmazonECRAsyncClientBuilder.standard().withExecutorFactory(new ExecutorFactory {
     def newExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory)
   }).build
 }
