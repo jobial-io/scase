@@ -43,7 +43,8 @@ abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsu
       case t: ReceiveTimeout =>
         continueIfNotCancelled
       case t =>
-        error(s"subscription stopped receiving messages in consumer $this", t)
+        error(s"error receiving in $this", t) >>
+          continueIfNotCancelled
     }
   }
 
