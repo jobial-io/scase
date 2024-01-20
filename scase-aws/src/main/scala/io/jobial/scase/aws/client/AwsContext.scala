@@ -30,6 +30,7 @@ import com.amazonaws.services.ecs.AmazonECSAsyncClientBuilder
 import com.amazonaws.services.lambda.AWSLambdaAsync
 import com.amazonaws.services.lambda.AWSLambdaAsyncClientBuilder
 import com.amazonaws.services.logs.AWSLogsAsyncClientBuilder
+import com.amazonaws.services.rds.AmazonRDSAsyncClientBuilder
 import com.amazonaws.services.route53.AmazonRoute53AsyncClientBuilder
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
@@ -136,6 +137,10 @@ class AwsContext(
   }).build
 
   lazy val ecr = AmazonECRAsyncClientBuilder.standard().withExecutorFactory(new ExecutorFactory {
+    def newExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory)
+  }).build
+
+  lazy val rds = AmazonRDSAsyncClientBuilder.standard().withExecutorFactory(new ExecutorFactory {
     def newExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory)
   }).build
 }

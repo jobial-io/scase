@@ -14,7 +14,7 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 
 /**
- * Adds cancellation, subscription state. 
+ * Adds default logic (cancellation, subscription state, ...) to MessageConsumer. 
  */
 abstract class DefaultMessageConsumer[F[_] : Concurrent, M] extends MessageConsumer[F, M] with io.jobial.sprint.util.CatsUtils[F] with Logging[F] {
 
