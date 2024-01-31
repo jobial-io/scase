@@ -15,6 +15,7 @@ import com.amazonaws.services.logs.model.LogStream
 import com.amazonaws.services.logs.model.OrderBy
 import com.amazonaws.services.logs.model.OutputLogEvent
 import io.jobial.sprint.util.CatsUtils
+import io.jobial.sprint.util.RateLimiter
 
 import java.lang.System.currentTimeMillis
 import scala.collection.JavaConverters._
@@ -99,11 +100,12 @@ trait CloudWatchLogsClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
   )(f: FilteredLogEvent => F[T])(implicit awsContext: AwsContext, concurrent: Concurrent[F], timer: Timer[F]): F[Unit] =
     forLogEventSequences(group, stream, from, to, filterPattern, delay, seen)(_.map(f).sequence)
 
-  def streams(from: Long, groupLimit: Int = 1000, streamLimit: Int = 10)(implicit awsContext: AwsContext, concurrent: Concurrent[F], parallel: Parallel[F]) =
+  def streams(from: Long, groupLimit: Int = 1000, streamLimit: Int = 10)(implicit awsContext: AwsContext, concurrent: Concurrent[F], parallel: Parallel[F], timer: Timer[F]) =
     for {
+      rateLimiter <- RateLimiter(5)
       groups <- describeLogGroups(groupLimit)
       groupsAndStreams <- groups.map { g =>
-        describeLogStreams(g.getLogGroupName, streamLimit).map(s => g.getLogGroupName -> s.take(1))
+        rateLimiter(describeLogStreams(g.getLogGroupName, streamLimit)).map(s => g.getLogGroupName -> s.take(1))
       }.parSequence
       r = for {
         (group, streams) <- groupsAndStreams if streams.headOption.flatMap(s => Option(s.getLastEventTimestamp).map(_ > from)).getOrElse(false)
@@ -118,7 +120,7 @@ trait CloudWatchLogsClient[F[_]] extends AwsClient[F] with CatsUtils[F] {
     } yield r
 
   def forGroupOrStream[T](groupOrStream: String, stream: Option[String], from: Long, to: Option[Long] = None)(f: (String, Option[String]) => F[T])
-    (implicit awsContext: AwsContext, concurrent: Concurrent[F], parallel: Parallel[F]) = {
+    (implicit awsContext: AwsContext, concurrent: Concurrent[F], parallel: Parallel[F], timer: Timer[F]) = {
     val streamFilter = stream match {
       case Some(stream) =>
         stream
